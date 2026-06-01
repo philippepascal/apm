@@ -16,6 +16,7 @@ interface LayoutStore {
   logPanelOpen: boolean
   workflowOpen: boolean
   epicFilter: string | null
+  transitionError: string | null
   setSelectedTicketId: (id: string | null) => void
   selectTicketRange: (ids: string[]) => void
   selectColumn: (ids: string[]) => void
@@ -31,6 +32,7 @@ interface LayoutStore {
   setLogPanelOpen: (v: boolean) => void
   setWorkflowOpen: (v: boolean) => void
   setEpicFilter: (id: string | null) => void
+  setTransitionError: (msg: string | null) => void
 }
 
 export const useLayoutStore = create<LayoutStore>((set) => ({
@@ -47,6 +49,7 @@ export const useLayoutStore = create<LayoutStore>((set) => ({
   logPanelOpen: false,
   workflowOpen: false,
   epicFilter: null,
+  transitionError: null,
   setSelectedTicketId: (id) => set({ selectedTicketId: id, selectedTicketIds: [], lastClickedTicketId: id }),
   selectTicketRange: (ids) => set({ selectedTicketIds: ids, lastClickedTicketId: ids[ids.length - 1] ?? null }),
   selectColumn: (ids) => set((state) => ({ selectedTicketIds: [...new Set([...state.selectedTicketIds, ...ids])] })),
@@ -68,4 +71,5 @@ export const useLayoutStore = create<LayoutStore>((set) => ({
   setLogPanelOpen: (v) => set({ logPanelOpen: v }),
   setWorkflowOpen: (v) => set({ workflowOpen: v }),
   setEpicFilter: (id) => set({ epicFilter: id }),
+  setTransitionError: (msg) => set({ transitionError: msg }),
 }))

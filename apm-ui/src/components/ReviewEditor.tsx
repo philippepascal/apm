@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { flushSync } from 'react-dom'
 import { EditorView, basicSetup } from 'codemirror'
 import { EditorState } from '@codemirror/state'
 import type { Range } from '@codemirror/state'
@@ -111,6 +110,7 @@ function Editor({ ticket }: { ticket: TicketDetail }) {
   const [error, setError] = useState<string | null>(null)
   const queryClient = useQueryClient()
   const setReviewMode = useLayoutStore((s) => s.setReviewMode)
+  const setTransitionError = useLayoutStore((s) => s.setTransitionError)
   const isDirtyRef = useRef(false)
   isDirtyRef.current = isDirty
 
@@ -176,27 +176,31 @@ function Editor({ ticket }: { ticket: TicketDetail }) {
   }
 
   async function handleTransition(to: string) {
+    setTransitionError(null)
     if (isDirtyRef.current) {
       const saved = await handleSave()
       if (!saved) return
     }
-    try {
-      const res = await fetch(`/api/tickets/${ticket.id}/transition`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to }),
+    setReviewMode(false)
+    const ticketId = ticket.id
+    fetch(`/api/tickets/${ticketId}/transition`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to }),
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}))
+          setTransitionError((data as { error?: string }).error ?? `Transition failed: ${res.status}`)
+        }
+        queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] })
+        queryClient.invalidateQueries({ queryKey: ['tickets'] })
       })
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        setError((data as { error?: string }).error ?? `Transition failed: ${res.status}`)
-        return
-      }
-      flushSync(() => setReviewMode(false))
-      queryClient.invalidateQueries({ queryKey: ['ticket', ticket.id] })
-      queryClient.invalidateQueries({ queryKey: ['tickets'] })
-    } catch (e) {
-      setError(String(e))
-    }
+      .catch((e) => {
+        setTransitionError(String(e))
+        queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] })
+        queryClient.invalidateQueries({ queryKey: ['tickets'] })
+      })
   }
 
   const shortcuts = assignShortcuts(ticket.valid_transitions.map(t => t.to))

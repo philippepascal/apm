@@ -34,7 +34,7 @@ const CONTENT: Record<ColumnKey, (onMinimize: () => void) => React.ReactNode> = 
 const ARROW_KEYS = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']
 
 export default function WorkScreen() {
-  const { columnVisibility, toggleColumn, selectedTicketId, setSelectedTicketId, clearMultiSelection, reviewMode, newTicketOpen, setNewTicketOpen, newEpicOpen, setNewEpicOpen, cleanOpen, setCleanOpen, syncOpen, setSyncOpen } =
+  const { columnVisibility, toggleColumn, selectedTicketId, setSelectedTicketId, clearMultiSelection, reviewMode, newTicketOpen, setNewTicketOpen, newEpicOpen, setNewEpicOpen, cleanOpen, setCleanOpen, syncOpen, setSyncOpen, transitionError, setTransitionError } =
     useLayoutStore()
   const queryClient = useQueryClient()
 
@@ -167,6 +167,12 @@ export default function WorkScreen() {
   if (reviewMode) {
     return (
       <div className="h-screen w-screen flex flex-col overflow-hidden">
+        {transitionError && (
+          <div className="fixed top-2 right-2 z-50 max-w-sm bg-red-50 border border-red-300 text-red-700 text-sm px-3 py-2 rounded shadow flex items-center gap-2">
+            <span className="flex-1">Transition failed: {transitionError}</span>
+            <button onClick={() => setTransitionError(null)} className="shrink-0 hover:text-red-900">✕</button>
+          </div>
+        )}
         <NewTicketModal open={newTicketOpen} onOpenChange={setNewTicketOpen} />
         <NewEpicModal open={newEpicOpen} onOpenChange={setNewEpicOpen} />
         <CleanModal open={cleanOpen} onOpenChange={setCleanOpen} />
@@ -186,6 +192,12 @@ export default function WorkScreen() {
 
   return (
     <div className="h-screen w-screen flex flex-col">
+      {transitionError && (
+        <div className="fixed top-2 right-2 z-50 max-w-sm bg-red-50 border border-red-300 text-red-700 text-sm px-3 py-2 rounded shadow flex items-center gap-2">
+          <span className="flex-1">Transition failed: {transitionError}</span>
+          <button onClick={() => setTransitionError(null)} className="shrink-0 hover:text-red-900">✕</button>
+        </div>
+      )}
       <NewTicketModal open={newTicketOpen} onOpenChange={setNewTicketOpen} />
       <NewEpicModal open={newEpicOpen} onOpenChange={setNewEpicOpen} />
       <CleanModal open={cleanOpen} onOpenChange={setCleanOpen} />
