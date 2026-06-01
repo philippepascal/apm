@@ -40,7 +40,7 @@ Reference: run_refresh_epic in apm/src/cmd/epic.rs already implements the --merg
 - [x] Tickets with a live `.apm-worker.pid` are never included in the auto-close prompt — they appear only in the genuine-blocker error message.
 - [x] On a non-TTY, no prompt is shown; merged-but-unclosed tickets remain in the blocker error and the command exits non-zero.
 - [x] `apm epic close <id> --merge` merges the epic branch into the default branch locally and creates no PR.
-- [ ] `apm epic close <id> --auto` merges locally when the merge would be clean; falls back to opening a PR when it would conflict.
+- [x] `apm epic close <id> --auto` merges locally when the merge would be clean; falls back to opening a PR when it would conflict.
 - [ ] Without a flag (or with `--pr`), the command pushes the epic branch and opens or updates a PR — identical to the current behavior.
 - [ ] `--merge`, `--pr`, and `--auto` are mutually exclusive; clap rejects combinations with a usage error.
 - [ ] The already-merged shortcut (delete branch, skip PR/merge) is preserved regardless of which flag is given.
