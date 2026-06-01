@@ -43,7 +43,7 @@ Reference: run_refresh_epic in apm/src/cmd/epic.rs already implements the --merg
 - [x] `apm epic close <id> --auto` merges locally when the merge would be clean; falls back to opening a PR when it would conflict.
 - [x] Without a flag (or with `--pr`), the command pushes the epic branch and opens or updates a PR — identical to the current behavior.
 - [x] `--merge`, `--pr`, and `--auto` are mutually exclusive; clap rejects combinations with a usage error.
-- [ ] The already-merged shortcut (delete branch, skip PR/merge) is preserved regardless of which flag is given.
+- [x] The already-merged shortcut (delete branch, skip PR/merge) is preserved regardless of which flag is given.
 
 ### Out of scope
 
