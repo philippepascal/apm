@@ -86,7 +86,7 @@ pub fn run_refresh_epic(
 ) -> Result<()>
 ```
 
-After the successful `merge_ref` branch (following the `None => bail!` arm at line 198–201), insert the push decision:
+After the successful `merge_ref` branch (following the `None =>` conflict-bail arm in `run_refresh_epic`'s `do_merge` block), insert the push decision:
 
 ```rust
 let should_push = if push {
