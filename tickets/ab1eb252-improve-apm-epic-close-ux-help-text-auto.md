@@ -1,7 +1,7 @@
 +++
 id = "ab1eb252"
 title = "Improve apm epic close UX: help text, auto-sync mergeable tickets, --merge/--pr/--auto"
-state = "implemented"
+state = "merge_failed"
 priority = 0
 effort = 5
 risk = 3
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/ab1eb252-improve-apm-epic-close-ux-help-text-auto"
 created_at = "2026-05-30T18:53:24.160398Z"
-updated_at = "2026-06-01T08:32:46.267214Z"
+updated_at = "2026-06-01T08:32:48.376861Z"
 depends_on = ["e96593f5"]
 +++
 
@@ -273,3 +273,4 @@ merge conflict — resolve manually and push:
 | 2026-06-01T08:31Z | in_progress | implemented | claude |
 | 2026-06-01T08:31Z | implemented | merge_failed | claude |
 | 2026-06-01T08:32Z | merge_failed | implemented | claude |
+| 2026-06-01T08:32Z | implemented | merge_failed | claude |
