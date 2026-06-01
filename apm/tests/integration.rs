@@ -2074,19 +2074,18 @@ fn spawn_new_ticket_transitions_to_in_design() {
 }
 
 #[test]
-fn spawn_ammend_ticket_transitions_to_in_design() {
-    let dir = setup_for_prompt_dispatch();
+fn ammend_to_groomed_succeeds() {
+    let dir = init_repo();
     let p = dir.path();
-    std::fs::write(p.join(".apm/apm.spec-writer.md"), "SPEC WRITER PROMPT").unwrap();
-    let (id, branch) = write_ticket_to_branch(p, "ammend", "fix spec");
+    let (id, branch) = write_ticket_to_branch(p, "ammend", "needs revision");
+    let rel = ticket_rel_path(&branch);
 
-    std::env::set_var("APM_AGENT_NAME", "test-agent");
-    let out = apm_core::start::run(p, &id, true, true, false, "test-agent").unwrap();
-    let pid = out.worker_pid.unwrap();
-    wait_for_pid(pid);
-
-    let content = branch_content(p, &branch, &ticket_rel_path(&branch));
-    assert!(content.contains("state = \"specd\""), "ammend ticket should transition to specd: {content}");
+    apm::cmd::state::run(p, &id, "groomed".into(), false, false).unwrap();
+    let content = branch_content(p, &branch, &rel);
+    assert!(
+        content.contains("state = \"groomed\""),
+        "expected groomed state:\n{content}"
+    );
 }
 
 #[test]
@@ -6580,30 +6579,22 @@ fn merge_failed_to_implemented_does_not_trigger_another_merge() {
 }
 
 #[test]
-fn merge_failed_to_in_progress_succeeds() {
-    let dir = setup_with_merge_workflow();
+fn merge_failed_to_in_progress_rejected() {
+    let dir = init_repo();
     let p = dir.path();
-
-    // Create ticket and force it to merge_failed state directly.
-    apm::cmd::new::run(p, "Retry merge".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
-    let branch = find_ticket_branch(p, "retry-merge");
-    let id = find_ticket_id(p, "retry-merge");
+    let (id, branch) = write_ticket_to_branch(p, "merge_failed", "retry rejected");
     let rel = ticket_rel_path(&branch);
 
-    let existing = branch_content(p, &branch, &rel);
-    let updated = existing.replace("state = \"new\"", "state = \"merge_failed\"");
-    git(p, &["checkout", &branch]);
-    std::fs::write(p.join(&rel), &updated).unwrap();
-    git(p, &["-c", "commit.gpgsign=false", "add", &rel]);
-    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "set merge_failed"]);
-    git(p, &["checkout", "main"]);
-
-    apm::cmd::state::run(p, &id, "in_progress".into(), false, false).unwrap();
-    let content = branch_content(p, &branch, &rel);
+    let result = apm::cmd::state::run(p, &id, "in_progress".into(), false, false);
+    assert!(result.is_err(), "expected merge_failed → in_progress to be rejected");
+    let msg = result.unwrap_err().to_string();
     assert!(
-        content.contains("state = \"in_progress\""),
-        "expected in_progress state:\n{content}"
+        msg.contains("no transition"),
+        "expected 'no transition' in error message: {msg}"
     );
+    // State must not have changed.
+    let content = branch_content(p, &branch, &rel);
+    assert!(content.contains("state = \"merge_failed\""), "state should remain merge_failed:\n{content}");
 }
 
 #[test]
