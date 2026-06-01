@@ -212,6 +212,7 @@ Note: when `--merge` is given and `merge_ref` encounters a conflict, it returns 
 
 ### Amendment requests
 
+- [ ] Reconcile with sibling ticket e96593f5 (now a dependency). e96593f5 introduces a non-terminal-ticket guard in run_close that fires before any auto-close logic. Specify how ab1eb252's auto-sync flow fits on top: when e96593f5's check finds non-terminal tickets AND all of them are merged-and-eligible-for-close AND the supervisor is on a TTY, prompt for auto-close instead of failing. When non-eligible tickets exist (blocked, question, etc.), e96593f5's failure remains the outcome. Also refactor classify_epic_quiescence (the proposed new helper) to share logic with epic_is_quiescent rather than duplicating, so a future change to the blocker definition does not need to be made in two places.
 
 ### Code review
 
