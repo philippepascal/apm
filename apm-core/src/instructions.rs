@@ -2,68 +2,30 @@ use anyhow::Result;
 use std::collections::HashSet;
 use std::path::Path;
 
-use crate::config::{Config, TransitionConfig};
+use crate::config::Config;
 
 // ---------------------------------------------------------------------------
 // Static fallback content
 // ---------------------------------------------------------------------------
 
-static STATIC_STATE_MACHINE: &str = "Standard APM workflow states and transitions:\n\
-\n\
-### new\n\
-A ticket has been created but not yet groomed.\n\
-Actionable by: supervisor, engineer\n\
-  → groomed (trigger: manual, role: supervisor)\n\
-  → closed (trigger: cancel, role: supervisor)\n\
-\n\
-### groomed\n\
-Ticket is ready for spec writing.\n\
-Actionable by: agent\n\
-  → in_design (trigger: apm state <id> in_design, role: spec-writer)\n\
-  → closed (trigger: cancel, role: supervisor)\n\
-\n\
-### in_design\n\
-Spec is being actively written or revised.\n\
-Actionable by: agent\n\
-  → specd (trigger: apm state <id> specd, role: spec-writer)\n\
-  → question (trigger: apm state <id> question, role: spec-writer)\n\
-\n\
-### specd\n\
-Spec is complete; awaiting supervisor review.\n\
-Actionable by: supervisor\n\
-  → ready (trigger: approve, role: supervisor)\n\
-  → ammend (trigger: request changes, role: supervisor)\n\
-  → in_design (trigger: reject, role: supervisor)\n\
-\n\
-### ammend\n\
-Spec requires revisions per supervisor requests.\n\
-Actionable by: agent\n\
-  → in_design (trigger: apm state <id> in_design, role: spec-writer)\n\
-\n\
-### ready\n\
-Ticket is approved and queued for implementation.\n\
-Actionable by: agent\n\
-  → in_progress (trigger: apm start <id>, role: worker)\n\
-\n\
-### in_progress\n\
-Implementation is in progress.\n\
-Actionable by: agent\n\
-  → implemented (trigger: apm state <id> implemented, role: worker)\n\
-  → blocked (trigger: apm state <id> blocked, role: worker)\n\
-\n\
-### blocked\n\
-Implementation is blocked on a supervisor decision.\n\
-Actionable by: supervisor\n\
-  → ready (trigger: unblock, role: supervisor)\n\
-\n\
-### implemented\n\
-Implementation complete; awaiting supervisor review.\n\
-Actionable by: supervisor\n\
-  → closed (trigger: approve, role: supervisor)\n\
-  → ready (trigger: reject, role: supervisor)\n\
-\n\
-### closed\n\
-Terminal state. Ticket is done. No further transitions.\n";
+static STATIC_STATE_MACHINE: &str = "| From | To | Command |\n\
+|------|----|----------|\n\
+| new | groomed | apm state <id> groomed |\n\
+| new | closed | apm state <id> closed |\n\
+| groomed | in_design | apm state <id> in_design |\n\
+| groomed | closed | apm state <id> closed |\n\
+| in_design | specd | apm state <id> specd |\n\
+| in_design | question | apm state <id> question |\n\
+| specd | ready | apm state <id> ready |\n\
+| specd | ammend | apm state <id> ammend |\n\
+| specd | in_design | apm state <id> in_design |\n\
+| ammend | groomed | apm state <id> groomed |\n\
+| ready | in_progress | apm start <id> |\n\
+| in_progress | implemented | apm state <id> implemented |\n\
+| in_progress | blocked | apm state <id> blocked |\n\
+| blocked | ready | apm state <id> ready |\n\
+| implemented | closed | apm state <id> closed |\n\
+| implemented | ready | apm state <id> ready |\n";
 
 static STATIC_TICKET_FORMAT: &str = "Standard frontmatter fields (TOML between +++ delimiters):\n\
 \n\
@@ -133,12 +95,20 @@ Engineers set APM_AGENT_NAME to their own username when working directly.\n";
 /// - `root` — project root used to load `Config` (workflow + ticket config).
 ///   Falls back to static built-in descriptions when config is absent.
 /// - `role` — optional role name (e.g. `"worker"`, `"spec-writer"`).
-///   Scopes the state-machine and command-reference sections.
+///   When absent, returns a role index listing available roles instead of
+///   the full system-knowledge sections.
+/// - `ticket_id` — optional ticket id. When present, every occurrence of the
+///   literal placeholder `<id>` in the rendered output is substituted.
 /// - `commands` — `(name, about)` pairs extracted from the CLI by the caller.
 ///   Keeps `apm-core` free of a clap dependency.
 ///
 /// Returns a plain-text string with no ANSI escape codes.
-pub fn generate(root: &Path, role: Option<&str>, commands: &[(String, String)]) -> Result<String> {
+pub fn generate(root: &Path, role: Option<&str>, ticket_id: Option<&str>, commands: &[(String, String)]) -> Result<String> {
+    // No-role: return role index immediately (no state machine, no sections).
+    if role.is_none() {
+        return Ok(role_index_body(root));
+    }
+
     let config = Config::load(root).ok();
     let mut out = String::new();
 
@@ -162,6 +132,11 @@ pub fn generate(root: &Path, role: Option<&str>, commands: &[(String, String)]) 
         out.push_str(&cr);
     }
 
+    // Ticket-id substitution: replace every <id> placeholder with the actual id.
+    if let Some(id) = ticket_id {
+        out = out.replace("<id>", id);
+    }
+
     Ok(out)
 }
 
@@ -180,75 +155,28 @@ fn state_machine_body(config: Option<&Config>, role: Option<&str>) -> String {
 
 fn format_live_state_machine(config: &Config, role: Option<&str>) -> String {
     let mut out = String::new();
-
-    // Build filter set when a role is requested.
-    let filter: Option<HashSet<String>> = if let Some(role_name) = role {
-        let mut source_states: HashSet<String> = HashSet::new();
-        let mut target_states: HashSet<String> = HashSet::new();
-
-        for state in &config.workflow.states {
-            for transition in &state.transitions {
-                let t_role = derive_transition_role(transition);
-                if t_role == role_name {
-                    source_states.insert(state.id.clone());
-                    target_states.insert(transition.to.clone());
-                }
-            }
-        }
-
-        if source_states.is_empty() && target_states.is_empty() {
-            None
-        } else {
-            let mut combined = source_states;
-            combined.extend(target_states);
-            Some(combined)
-        }
-    } else {
-        None
-    };
+    out.push_str("| From | To | Command |\n");
+    out.push_str("|------|----|----------|\n");
 
     for state in &config.workflow.states {
-        if let Some(ref filter_set) = filter {
-            if !filter_set.contains(&state.id) {
-                continue;
-            }
-        }
+        let state_role: Option<&str> = state.worker_profile.as_deref()
+            .and_then(|wp| wp.split_once('/').map(|(_, r)| r));
 
-        // State heading
-        out.push_str(&format!("### {} ({})\n", state.label, state.id));
-
-        if !state.description.is_empty() {
-            out.push_str(&state.description);
-            out.push('\n');
-        }
-        if !state.actionable.is_empty() {
-            out.push_str(&format!("Actionable by: {}\n", state.actionable.join(", ")));
-        }
-        if state.terminal {
-            out.push_str("Terminal state\n");
-        }
-
-        // Transitions — emit all when unscoped, or only role-matching ones.
         for transition in &state.transitions {
-            if filter.is_some() {
-                let t_role = derive_transition_role(transition);
-                if t_role != role.unwrap_or("") {
+            if let Some(role_name) = role {
+                if state_role != Some(role_name) {
                     continue;
                 }
             }
-            let t_role = derive_transition_role(transition);
-            let mut line = format!("  → {}", transition.to);
-            if !transition.trigger.is_empty() {
-                line.push_str(&format!(", trigger: {}", transition.trigger));
-            }
-            line.push_str(&format!(", role: {}", t_role));
-            out.push_str(&line);
-            out.push('\n');
+            let command = if transition.trigger == "command:start" {
+                "apm start <id>".to_string()
+            } else {
+                format!("apm state <id> {}", transition.to)
+            };
+            out.push_str(&format!("| {} | {} | {} |\n", state.id, transition.to, command));
         }
-
-        out.push('\n');
     }
-
+    out.push('\n');
     out
 }
 
@@ -299,6 +227,56 @@ fn format_live_ticket_format(config: &Config) -> String {
     out
 }
 
+fn role_index_body(root: &Path) -> String {
+    let mut out = String::from("## Available Roles\n\n");
+
+    let hardcoded: &[(&str, &str)] = &[
+        ("coder", "Implements tickets in a git worktree"),
+        ("spec-writer", "Writes and revises ticket specs"),
+        ("main-agent", "Project management companion for the supervisor"),
+    ];
+
+    let hardcoded_names: HashSet<&str> = hardcoded.iter().map(|(n, _)| *n).collect();
+    let mut extra_roles: Vec<String> = Vec::new();
+
+    let agents_dir = root.join(".apm/agents");
+    if agents_dir.is_dir() {
+        if let Ok(entries) = std::fs::read_dir(&agents_dir) {
+            for entry in entries.filter_map(|e| e.ok()) {
+                let agent_dir = entry.path();
+                if !agent_dir.is_dir() {
+                    continue;
+                }
+                if let Ok(files) = std::fs::read_dir(&agent_dir) {
+                    for file in files.filter_map(|e| e.ok()) {
+                        if let Ok(name) = file.file_name().into_string() {
+                            if let Some(rest) = name.strip_prefix("apm.") {
+                                if let Some(role) = rest.strip_suffix(".md") {
+                                    if !hardcoded_names.contains(role)
+                                        && !extra_roles.iter().any(|r| r == role)
+                                    {
+                                        extra_roles.push(role.to_string());
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    extra_roles.sort();
+
+    for (name, desc) in hardcoded {
+        out.push_str(&format!("  {:<16}{}\n", name, desc));
+    }
+    for role in &extra_roles {
+        out.push_str(&format!("  {:<16}(custom role)\n", role));
+    }
+    out.push('\n');
+    out
+}
+
 fn command_reference_body(role: Option<&str>, commands: &[(String, String)]) -> String {
     let allowlist = role.and_then(role_command_allowlist);
 
@@ -331,23 +309,24 @@ fn command_reference_body(role: Option<&str>, commands: &[(String, String)]) -> 
 // Helpers
 // ---------------------------------------------------------------------------
 
-fn derive_transition_role(t: &TransitionConfig) -> String {
-    if let Some(ref wp) = t.worker_profile {
-        if let Some((_, role)) = wp.split_once('/') {
-            if !role.is_empty() {
-                return role.to_string();
-            }
-        }
-    }
-    "worker".to_string()
-}
+const WORKER_COMMAND_ALLOWLIST: &[&str] = &["show", "state", "spec", "set", "new", "instructions"];
 
-fn role_command_allowlist(role: &str) -> Option<&'static [&'static str]> {
-    match role {
-        "spec-writer" => Some(&["show", "spec", "set", "state", "new", "sync", "list", "next"]),
-        "worker" => Some(&["show", "start", "state", "spec", "new", "sync", "list", "next"]),
-        _ => None,
-    }
+/// Name + description tuples for the six worker-permitted `apm` commands.
+/// Names must stay in sync with WORKER_COMMAND_ALLOWLIST (ticket 9c66e199).
+/// Descriptions are purpose-built for agent consumption; they are NOT copied
+/// from clap `///` doc comments. If a subcommand's fundamental purpose changes,
+/// update both this const and the clap string in apm/src/main.rs in the same commit.
+pub(crate) const WORKER_COMMANDS: &[(&str, &str)] = &[
+    ("instructions", "Output APM system knowledge for agents: state machine, ticket format, session identity, and command reference"),
+    ("new",          "Create a new ticket"),
+    ("set",          "Set a field on a ticket"),
+    ("show",         "Show a ticket"),
+    ("spec",         "Read or write individual spec sections of a ticket"),
+    ("state",        "Transition a ticket's state"),
+];
+
+fn role_command_allowlist(_role: &str) -> Option<&'static [&'static str]> {
+    Some(WORKER_COMMAND_ALLOWLIST)
 }
 
 // ---------------------------------------------------------------------------
@@ -374,38 +353,34 @@ mod tests {
             ("next".to_string(), "Return next actionable ticket".to_string()),
             ("set".to_string(), "Set a field on a ticket".to_string()),
             ("prompt".to_string(), "Print system prompt".to_string()),
+            ("instructions".to_string(), "Print APM system knowledge".to_string()),
         ]
     }
 
     #[test]
-    fn generate_no_role_contains_all_sections() {
+    fn generate_no_role_lists_roles() {
         let tmp = tempfile::tempdir().unwrap();
-        let out = generate(tmp.path(), None, &empty_commands()).unwrap();
-        assert!(out.contains("## State Machine"), "State Machine header missing");
-        assert!(out.contains("## Ticket Format"), "Ticket Format header missing");
-        assert!(out.contains("## Session Identity"), "Session Identity header missing");
-        // Command Reference is omitted when no commands are passed
-        assert!(!out.contains("## Command Reference"), "Command Reference header should be absent with empty commands");
+        let out = generate(tmp.path(), None, None, &empty_commands()).unwrap();
+        assert!(out.contains("coder"), "coder missing from role index");
+        assert!(out.contains("spec-writer"), "spec-writer missing from role index");
+        assert!(out.contains("main-agent"), "main-agent missing from role index");
+        assert!(!out.contains("## State Machine"), "State Machine should be absent with no role");
     }
 
     #[test]
-    fn generate_no_role_sections_in_order() {
+    fn generate_role_table_precedes_command_reference() {
         let tmp = tempfile::tempdir().unwrap();
         // Use sample_commands so Command Reference is present for ordering check
-        let out = generate(tmp.path(), None, &sample_commands()).unwrap();
+        let out = generate(tmp.path(), Some("worker"), None, &sample_commands()).unwrap();
         let pos_sm = out.find("## State Machine").unwrap();
-        let pos_tf = out.find("## Ticket Format").unwrap();
-        let pos_si = out.find("## Session Identity").unwrap();
         let pos_cr = out.find("## Command Reference").unwrap();
-        assert!(pos_sm < pos_tf, "State Machine must precede Ticket Format");
-        assert!(pos_tf < pos_si, "Ticket Format must precede Session Identity");
-        assert!(pos_si < pos_cr, "Session Identity must precede Command Reference");
+        assert!(pos_sm < pos_cr, "State Machine must precede Command Reference");
     }
 
     #[test]
     fn generate_no_ansi() {
         let tmp = tempfile::tempdir().unwrap();
-        let out = generate(tmp.path(), None, &sample_commands()).unwrap();
+        let out = generate(tmp.path(), None, None, &sample_commands()).unwrap();
         assert!(!out.contains('\x1b'), "ANSI escape code found in output");
     }
 
@@ -413,23 +388,25 @@ mod tests {
     fn generate_is_idempotent() {
         let tmp = tempfile::tempdir().unwrap();
         let commands = sample_commands();
-        let out1 = generate(tmp.path(), Some("worker"), &commands).unwrap();
-        let out2 = generate(tmp.path(), Some("worker"), &commands).unwrap();
+        let out1 = generate(tmp.path(), Some("worker"), None, &commands).unwrap();
+        let out2 = generate(tmp.path(), Some("worker"), None, &commands).unwrap();
         assert_eq!(out1, out2, "generate is not idempotent");
     }
 
     #[test]
     fn generate_role_independent_sections() {
         let tmp = tempfile::tempdir().unwrap();
-        let out = generate(tmp.path(), Some("worker"), &sample_commands()).unwrap();
+        let out = generate(tmp.path(), Some("worker"), None, &sample_commands()).unwrap();
         assert!(out.contains("## Session Identity"), "Session Identity missing with role");
         assert!(out.contains("APM_AGENT_NAME"), "APM_AGENT_NAME identity missing");
+        // State machine must use table format
+        assert!(out.contains("| From | To | Command |"), "table header missing");
     }
 
     #[test]
     fn shell_discipline_absent_from_instructions() {
         let tmp = tempfile::tempdir().unwrap();
-        let out = generate(tmp.path(), None, &empty_commands()).unwrap();
+        let out = generate(tmp.path(), None, None, &empty_commands()).unwrap();
         assert!(!out.contains("## Shell Discipline"), "Shell Discipline must not appear in apm instructions");
         assert!(!out.contains("Do not batch tool calls in parallel"), "parallel batching rule must not appear in apm instructions");
     }
@@ -437,91 +414,112 @@ mod tests {
     #[test]
     fn generate_worker_scopes_commands() {
         let tmp = tempfile::tempdir().unwrap();
-        let out = generate(tmp.path(), Some("worker"), &sample_commands()).unwrap();
+        let out = generate(tmp.path(), Some("worker"), None, &sample_commands()).unwrap();
 
-        // worker allowlist includes "start"
-        assert!(out.contains("apm start"), "'apm start' not found for worker role");
-
-        // worker allowlist excludes "prompt" (not in worker list)
-        // find the Command Reference section and assert "apm prompt" absent there
         let cr_pos = out.find("## Command Reference").unwrap();
         let cr_section = &out[cr_pos..];
-        assert!(
-            !cr_section.contains("apm prompt"),
-            "'apm prompt' found in worker command reference but should be excluded"
-        );
 
-        // Static fallback includes in_progress (worker acts there)
-        assert!(
-            out.contains("in_progress"),
-            "in_progress state missing from worker output"
-        );
+        // Six unified commands are present
+        assert!(cr_section.contains("apm show"), "'apm show' missing for worker role");
+        assert!(cr_section.contains("apm state"), "'apm state' missing for worker role");
+        assert!(cr_section.contains("apm spec"), "'apm spec' missing for worker role");
+        assert!(cr_section.contains("apm set"), "'apm set' missing for worker role");
+        assert!(cr_section.contains("apm new"), "'apm new' missing for worker role");
+        assert!(cr_section.contains("apm instructions"), "'apm instructions' missing for worker role");
+
+        // Supervisor commands excluded
+        assert!(!cr_section.contains("apm start"), "'apm start' found in worker command reference but should be excluded");
+        assert!(!cr_section.contains("apm sync"), "'apm sync' found in worker command reference but should be excluded");
+        assert!(!cr_section.contains("apm prompt"), "'apm prompt' found in worker command reference but should be excluded");
     }
 
     #[test]
     fn generate_spec_writer_scopes_commands() {
         let tmp = tempfile::tempdir().unwrap();
-        let out = generate(tmp.path(), Some("spec-writer"), &sample_commands()).unwrap();
+        let out = generate(tmp.path(), Some("spec-writer"), None, &sample_commands()).unwrap();
 
-        // spec-writer allowlist includes "spec" and "set"
         let cr_pos = out.find("## Command Reference").unwrap();
         let cr_section = &out[cr_pos..];
+
+        // Six unified commands are present
+        assert!(cr_section.contains("apm show"), "'apm show' missing for spec-writer");
+        assert!(cr_section.contains("apm state"), "'apm state' missing for spec-writer");
         assert!(cr_section.contains("apm spec"), "'apm spec' missing for spec-writer");
         assert!(cr_section.contains("apm set"), "'apm set' missing for spec-writer");
+        assert!(cr_section.contains("apm new"), "'apm new' missing for spec-writer");
+        assert!(cr_section.contains("apm instructions"), "'apm instructions' missing for spec-writer");
 
-        // spec-writer allowlist excludes "start"
-        assert!(
-            !cr_section.contains("apm start"),
-            "'apm start' found in spec-writer command reference but should be excluded"
-        );
+        // Supervisor commands excluded
+        assert!(!cr_section.contains("apm start"), "'apm start' found in spec-writer command reference but should be excluded");
     }
 
     #[test]
-    fn generate_unknown_role_falls_back_to_full_commands() {
+    fn generate_unknown_role_gets_worker_allowlist() {
         let tmp = tempfile::tempdir().unwrap();
-        let out = generate(tmp.path(), Some("unknown-role-xyz"), &sample_commands()).unwrap();
+        let out = generate(tmp.path(), Some("unknown-role-xyz"), None, &sample_commands()).unwrap();
 
-        // All commands should be present since unknown role falls back to unscoped
         let cr_pos = out.find("## Command Reference").unwrap();
         let cr_section = &out[cr_pos..];
-        assert!(cr_section.contains("apm start"), "start missing for unknown role");
-        assert!(cr_section.contains("apm prompt"), "prompt missing for unknown role");
+
+        // Six unified commands are present for any role
+        assert!(cr_section.contains("apm show"), "'apm show' missing for unknown role");
+        assert!(cr_section.contains("apm state"), "'apm state' missing for unknown role");
+        assert!(cr_section.contains("apm spec"), "'apm spec' missing for unknown role");
+        assert!(cr_section.contains("apm set"), "'apm set' missing for unknown role");
+        assert!(cr_section.contains("apm new"), "'apm new' missing for unknown role");
+        assert!(cr_section.contains("apm instructions"), "'apm instructions' missing for unknown role");
+
+        // Supervisor commands excluded
+        assert!(!cr_section.contains("apm prompt"), "'apm prompt' found for unknown role but should be excluded");
     }
 
     #[test]
-    fn derive_transition_role_from_worker_profile() {
-        let t = crate::config::TransitionConfig {
-            to: "specd".to_string(),
-            trigger: "submit".to_string(),
-            label: String::new(),
-            hint: String::new(),
-            completion: crate::config::CompletionStrategy::None,
-            focus_section: None,
-            context_section: None,
-            warning: None,
-            worker_profile: Some("claude/spec-writer".to_string()),
-            on_failure: None,
-            outcome: None,
-        };
-        assert_eq!(derive_transition_role(&t), "spec-writer");
+    fn generate_with_id_no_placeholder_remains() {
+        let tmp = tempfile::tempdir().unwrap();
+        let out = generate(tmp.path(), Some("worker"), Some("abc12345"), &[]).unwrap();
+        assert!(!out.contains("<id>"), "no <id> placeholder should remain after substitution");
+        assert!(out.contains("abc12345"), "ticket id should appear in output");
     }
 
     #[test]
-    fn derive_transition_role_defaults_to_worker() {
-        let t = crate::config::TransitionConfig {
-            to: "implemented".to_string(),
-            trigger: String::new(),
-            label: String::new(),
-            hint: String::new(),
-            completion: crate::config::CompletionStrategy::None,
-            focus_section: None,
-            context_section: None,
-            warning: None,
-            worker_profile: None,
-            on_failure: None,
-            outcome: None,
-        };
-        assert_eq!(derive_transition_role(&t), "worker");
+    fn imperative_table_format_header() {
+        let config_toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id = "ready"
+label = "Ready"
+
+[[workflow.states.transitions]]
+to = "in_progress"
+trigger = "command:start"
+
+[[workflow.states]]
+id = "in_progress"
+label = "In Progress"
+worker_profile = "claude/coder"
+
+[[workflow.states.transitions]]
+to = "implemented"
+trigger = "done"
+"#;
+        let tmp = tempfile::tempdir().unwrap();
+        let apm_dir = tmp.path().join(".apm");
+        std::fs::create_dir_all(&apm_dir).unwrap();
+        std::fs::write(apm_dir.join("config.toml"), config_toml).unwrap();
+
+        let out = generate(tmp.path(), Some("coder"), None, &[]).unwrap();
+        // State machine section must use table format
+        let sm_pos = out.find("## State Machine").unwrap();
+        let sm_section = &out[sm_pos..];
+        assert!(
+            sm_section.contains("| From | To | Command |"),
+            "table header missing from state machine section; got:\n{sm_section}"
+        );
     }
 
     #[test]
@@ -537,27 +535,24 @@ dir = "tickets"
 [[workflow.states]]
 id = "ready"
 label = "Ready"
-actionable = ["agent"]
+worker_profile = "claude/coder"
 
 [[workflow.states.transitions]]
 to = "in_progress"
 trigger = "start"
-worker_profile = "claude/coder"
 
 [[workflow.states]]
 id = "in_progress"
 label = "In Progress"
-actionable = ["agent"]
+worker_profile = "claude/coder"
 
 [[workflow.states.transitions]]
 to = "implemented"
 trigger = "done"
-worker_profile = "claude/coder"
 
 [[workflow.states]]
 id = "implemented"
 label = "Implemented"
-actionable = ["supervisor"]
 
 [[workflow.states.transitions]]
 to = "closed"
@@ -566,27 +561,24 @@ trigger = "approve"
 [[workflow.states]]
 id = "groomed"
 label = "Groomed"
-actionable = ["agent"]
+worker_profile = "claude/spec-writer"
 
 [[workflow.states.transitions]]
 to = "in_design"
 trigger = "claim"
-worker_profile = "claude/spec-writer"
 
 [[workflow.states]]
 id = "in_design"
 label = "In Design"
-actionable = ["agent"]
+worker_profile = "claude/spec-writer"
 
 [[workflow.states.transitions]]
 to = "specd"
 trigger = "submit"
-worker_profile = "claude/spec-writer"
 
 [[workflow.states]]
 id = "specd"
 label = "Specd"
-actionable = ["supervisor"]
 
 [[workflow.states]]
 id = "closed"
@@ -608,7 +600,7 @@ terminal = true
         }
 
         // Coder role: should include ready, in_progress, implemented but not groomed/specd/in_design
-        let out = generate(tmp.path(), Some("coder"), &commands).unwrap();
+        let out = generate(tmp.path(), Some("coder"), None, &commands).unwrap();
         let sm = state_machine_section(&out);
         assert!(sm.contains("in_progress"), "in_progress missing for coder");
         assert!(sm.contains("ready"), "ready (source of coder transition) missing");
@@ -618,7 +610,7 @@ terminal = true
         assert!(!sm.contains("specd"), "specd should not appear for coder role");
 
         // spec-writer role: should include groomed, in_design, specd but not ready/in_progress
-        let out = generate(tmp.path(), Some("spec-writer"), &commands).unwrap();
+        let out = generate(tmp.path(), Some("spec-writer"), None, &commands).unwrap();
         let sm = state_machine_section(&out);
         assert!(sm.contains("groomed"), "groomed missing for spec-writer");
         assert!(sm.contains("in_design"), "in_design missing for spec-writer");
@@ -656,7 +648,8 @@ type = "qa"
         std::fs::create_dir_all(&apm_dir).unwrap();
         std::fs::write(apm_dir.join("config.toml"), config_toml).unwrap();
 
-        let out = generate(tmp.path(), None, &[]).unwrap();
+        // Use role = Some("worker") — no-role now returns role index, not ticket format.
+        let out = generate(tmp.path(), Some("worker"), None, &[]).unwrap();
         assert!(out.contains("Problem"), "Problem section missing");
         assert!(out.contains("Acceptance criteria"), "Acceptance criteria missing");
         assert!(out.contains("Open questions"), "Open questions missing");

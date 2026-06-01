@@ -1,6 +1,11 @@
 use anyhow::Result;
 use std::path::Path;
 
+/// Default `[workers].default` value written by `apm init` when the caller
+/// supplies no override.  Defined as a constant so dispatch code cannot use it
+/// as a fallback literal — only the scaffold may reference it here.
+const DEFAULT_WORKERS_PROFILE: &str = "claude/coder";
+
 pub struct SetupOutput {
     pub messages: Vec<String>,
 }
@@ -84,7 +89,7 @@ pub fn setup(root: &Path, name: Option<&str>, description: Option<&str>, usernam
             vec![effective_username]
         };
         let branch = detect_default_branch(root);
-        let wdefault = workers_default.unwrap_or("claude/coder");
+        let wdefault = workers_default.unwrap_or(DEFAULT_WORKERS_PROFILE);
         std::fs::write(&config_path, default_config(default_name, effective_description, &branch, &collaborators, wdefault))?;
         messages.push("Created .apm/config.toml".to_string());
     } else {
@@ -115,7 +120,7 @@ pub fn setup(root: &Path, name: Option<&str>, description: Option<&str>, usernam
                 })
                 .unwrap_or_default();
             let collabs: Vec<&str> = collab_owned.iter().map(|s| s.as_str()).collect();
-            let wdefault = workers_default.unwrap_or("claude/coder");
+            let wdefault = workers_default.unwrap_or(DEFAULT_WORKERS_PROFILE);
             write_default(&config_path, &default_config(n, d, b, &collabs, wdefault), ".apm/config.toml", &mut messages)?;
         }
     }

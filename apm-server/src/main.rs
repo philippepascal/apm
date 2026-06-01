@@ -1081,6 +1081,9 @@ name = "test"
 [tickets]
 dir = "tickets"
 
+[workers]
+default = "claude/coder"
+
 [agents]
 max_concurrent = 3
 
@@ -1090,9 +1093,8 @@ effort_weight = -2.0
 risk_weight = -1.0
 
 [[workflow.states]]
-id         = "ready"
-label      = "Ready"
-actionable = ["agent"]
+id    = "ready"
+label = "Ready"
 
 [[workflow.states]]
 id    = "in_progress"
@@ -2523,6 +2525,9 @@ label = "In Progress"
     const MERGE_FAILED_WORKFLOW_CONFIG: &str = r#"[project]
 name = "test"
 
+[workers]
+default = "claude/coder"
+
 [tickets]
 dir = "tickets"
 
@@ -2531,13 +2536,13 @@ id    = "ready"
 label = "Ready"
 
   [[workflow.states.transitions]]
-  to             = "in_progress"
-  trigger        = "command:start"
-  worker_profile = "claude/coder"
+  to      = "in_progress"
+  trigger = "command:start"
 
 [[workflow.states]]
-id    = "in_progress"
-label = "In Progress"
+id             = "in_progress"
+label          = "In Progress"
+worker_profile = "claude/coder"
 
   [[workflow.states.transitions]]
   to         = "implemented"
@@ -2550,16 +2555,11 @@ id    = "implemented"
 label = "Implemented"
 
 [[workflow.states]]
-id         = "merge_failed"
-label      = "Merge failed"
-actionable = ["supervisor"]
+id    = "merge_failed"
+label = "Merge failed"
 
   [[workflow.states.transitions]]
   to      = "implemented"
-  trigger = "manual"
-
-  [[workflow.states.transitions]]
-  to      = "in_progress"
   trigger = "manual"
 
 [[workflow.states]]
@@ -2700,8 +2700,13 @@ terminal = true
         let bytes = response.into_body().collect().await.unwrap().to_bytes();
         let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
         let opts = json["recovery_options"].as_array().unwrap();
-        assert!(!opts.is_empty(), "recovery_options should be non-empty for merge_failed ticket");
+        assert_eq!(opts.len(), 1, "expected exactly one recovery option; got: {opts:?}");
+        assert!(
+            !opts.iter().any(|o| o["kind"] == "return_to_worker"),
+            "return_to_worker must not be present; got: {opts:?}"
+        );
         let retry = opts.iter().find(|o| o["kind"] == "retry_merge").expect("expected retry_merge option");
+        assert_eq!(retry["to"], "implemented", "retry_merge must target implemented");
         let cmd = retry["command"].as_str().unwrap();
         assert!(cmd.contains("apm state"), "command should contain 'apm state': {cmd}");
         assert!(cmd.contains("implemented"), "command should contain 'implemented': {cmd}");

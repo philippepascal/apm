@@ -139,19 +139,17 @@ pub fn validate_depends_on(config: &Config, tickets: &[Ticket]) -> Vec<(String, 
 }
 
 /// Return the set of agent names configured — the agent from `[workers].default`
-/// plus the agent part of every `worker_profile` on spawn transitions.
+/// plus the agent part of every state-level `worker_profile`.
 pub fn configured_agent_names(config: &Config) -> HashSet<String> {
     let mut names: HashSet<String> = HashSet::new();
-    let primary = config.workers.default.as_deref()
-        .and_then(|s| s.split_once('/').map(|(a, _)| a.to_string()))
-        .unwrap_or_else(|| "claude".to_string());
-    names.insert(primary);
+    if let Some((agent, _)) = config.workers.default.split_once('/') {
+        names.insert(agent.to_string());
+    }
+    // Walk state-level worker_profile fields
     for state in &config.workflow.states {
-        for transition in &state.transitions {
-            if let Some(ref wp) = transition.worker_profile {
-                if let Some((agent, _)) = wp.split_once('/') {
-                    names.insert(agent.to_string());
-                }
+        if let Some(ref wp) = state.worker_profile {
+            if let Some((agent, _)) = wp.split_once('/') {
+                names.insert(agent.to_string());
             }
         }
     }
@@ -324,6 +322,12 @@ pub fn validate_config(config: &Config, root: &Path) -> Vec<String> {
 fn validate_config_no_agents(config: &Config, root: &Path) -> Vec<String> {
     let mut errors: Vec<String> = Vec::new();
 
+    if config.workers.default.is_empty() {
+        errors.push(
+            "config: workers.default is not set — add `default = \"claude/coder\"` under [workers] in .apm/config.toml".into()
+        );
+    }
+
     let state_ids: HashSet<&str> = config.workflow.states.iter()
         .map(|s| s.id.as_str())
         .collect();
@@ -441,6 +445,84 @@ fn validate_config_no_agents(config: &Config, root: &Path) -> Vec<String> {
                     strategy_name(&transition.completion),
                     transition.to
                 ));
+            }
+        }
+    }
+
+    // Rule 1 — Trigger uniqueness.
+    // Only states targeted by command:start require unique incoming edges.
+    // States reachable exclusively via manual transitions may have multiple
+    // incoming edges without issue.
+    {
+        let mut incoming: std::collections::HashMap<&str, Vec<(&str, &str)>> =
+            std::collections::HashMap::new();
+        for state in &config.workflow.states {
+            for transition in &state.transitions {
+                incoming
+                    .entry(transition.to.as_str())
+                    .or_default()
+                    .push((state.id.as_str(), transition.trigger.as_str()));
+            }
+        }
+        for (dest, sources) in &incoming {
+            let has_command_start = sources.iter().any(|(_, t)| *t == "command:start");
+            if has_command_start && sources.len() > 1 {
+                let src_list = sources
+                    .iter()
+                    .map(|(src, t)| format!("{src} (trigger: {t})"))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                errors.push(format!(
+                    "config: state.{dest} — {} incoming transitions but trigger \
+                     'command:start' requires exactly one; incoming from: {src_list}",
+                    sources.len()
+                ));
+            }
+        }
+    }
+
+    // Rule 2 — worker_profile shape.
+    for state in &config.workflow.states {
+        if let Some(wp) = &state.worker_profile {
+            let slash_count = wp.chars().filter(|&c| c == '/').count();
+            if slash_count != 1 {
+                errors.push(format!(
+                    "config: state.{}.worker_profile — '{wp}' must contain exactly one '/' separator",
+                    state.id
+                ));
+            } else if let Some((agent, role)) = wp.split_once('/') {
+                if agent.is_empty() || role.is_empty() {
+                    errors.push(format!(
+                        "config: state.{}.worker_profile — '{wp}' agent and role components must both be non-empty",
+                        state.id
+                    ));
+                } else if role == "worker" {
+                    errors.push(format!(
+                        "config: state.{}.worker_profile — role 'worker' is reserved as a process category; use a specific role name",
+                        state.id
+                    ));
+                }
+            }
+        }
+    }
+
+    // Rule 3 — command:start must target a dispatch-capable state (one with worker_profile).
+    {
+        let dispatch_states: HashSet<&str> = config.workflow.states.iter()
+            .filter(|s| s.worker_profile.is_some())
+            .map(|s| s.id.as_str())
+            .collect();
+        for state in &config.workflow.states {
+            for transition in &state.transitions {
+                if transition.trigger == "command:start"
+                    && !dispatch_states.contains(transition.to.as_str())
+                {
+                    errors.push(format!(
+                        "config: state.{}.transition({}) — trigger 'command:start' targets \
+                         state '{}' which has no worker_profile; the dispatcher has nothing to spawn",
+                        state.id, transition.to, transition.to
+                    ));
+                }
             }
         }
     }
@@ -680,7 +762,7 @@ fn validate_warnings_no_agents(config: &crate::config::Config, _root: &Path) -> 
             .collect();
 
     let agent_startable: Vec<&str> = config.workflow.states.iter()
-        .filter(|s| s.actionable.iter().any(|a| a == "agent" || a == "any"))
+        .filter(|s| s.transitions.iter().any(|t| t.trigger == "command:start"))
         .map(|s| s.id.as_str())
         .collect();
 
@@ -736,7 +818,7 @@ fn format_wrapper(root: &Path, agent: &str) -> String {
 /// Build an agent-resolution audit for every `command:start` spawn transition in the config.
 pub fn audit_agent_resolution(config: &Config, root: &Path) -> Vec<TransitionAudit> {
     let mut result = Vec::new();
-    let default_profile = config.workers.default.as_deref().unwrap_or("claude/coder");
+    let default_profile = config.workers.default.as_str();
 
     for state in &config.workflow.states {
         for transition in &state.transitions {
@@ -744,7 +826,10 @@ pub fn audit_agent_resolution(config: &Config, root: &Path) -> Vec<TransitionAud
                 continue;
             }
 
-            let wp_str = transition.worker_profile.as_deref().unwrap_or(default_profile);
+            let to_state_wp = config.workflow.states.iter()
+                .find(|s| s.id == transition.to)
+                .and_then(|s| s.worker_profile.as_deref());
+            let wp_str = to_state_wp.unwrap_or(default_profile);
             let (agent, role) = wp_str.split_once('/')
                 .map(|(a, r)| (a.to_string(), r.to_string()))
                 .unwrap_or_else(|| ("claude".to_string(), "worker".to_string()));
@@ -754,7 +839,7 @@ pub fn audit_agent_resolution(config: &Config, root: &Path) -> Vec<TransitionAud
             result.push(TransitionAudit {
                 from_state: state.id.clone(),
                 to_state: transition.to.clone(),
-                worker_profile: transition.worker_profile.clone(),
+                worker_profile: to_state_wp.map(|s| s.to_string()),
                 agent,
                 role,
                 wrapper: wrapper_str,
@@ -813,6 +898,9 @@ name = "test"
 
 [tickets]
 dir = "tickets"
+
+[workers]
+default = "claude/coder"
 
 [worktrees]
 dir = "worktrees"
@@ -1124,6 +1212,9 @@ name = "test"
 
 [tickets]
 dir = "tickets"
+
+[workers]
+default = "claude/coder"
 
 [[workflow.states]]
 id    = "new"
@@ -1658,6 +1749,7 @@ name = "test"
 dir = "tickets"
 
 [workers]
+default = "claude/coder"
 container = ""
 "#;
         let config = load_config(toml);
@@ -1677,12 +1769,12 @@ name = "test"
 dir = "tickets"
 
 [[workflow.states]]
-id         = "start"
-label      = "Start"
-actionable = ["agent"]
+id    = "start"
+label = "Start"
 
 [[workflow.states.transitions]]
-to = "middle"
+to      = "middle"
+trigger = "command:start"
 
 [[workflow.states]]
 id    = "middle"
@@ -2134,14 +2226,14 @@ id    = "ready"
 label = "Ready"
 
 [[workflow.states.transitions]]
-to             = "in_progress"
-trigger        = "command:start"
-worker_profile = "pi/worker"
+to      = "in_progress"
+trigger = "command:start"
 
 [[workflow.states]]
-id       = "in_progress"
-label    = "In Progress"
-terminal = true
+id             = "in_progress"
+label          = "In Progress"
+worker_profile = "pi/worker"
+terminal       = true
 "#;
         let config = audit_config(toml);
         validate_agent_name(&config, "pi").expect("pi should be a configured agent");
@@ -2219,6 +2311,9 @@ terminal = true
     #[test]
     fn audit_default_agent_resolution() {
         let toml = r#"
+[workers]
+default = "claude/coder"
+
 [[workflow.states]]
 id    = "ready"
 label = "Ready"
@@ -2252,14 +2347,14 @@ id    = "ready"
 label = "Ready"
 
 [[workflow.states.transitions]]
-to             = "in_progress"
-trigger        = "command:start"
-worker_profile = "mock-happy/spec-writer"
+to      = "in_progress"
+trigger = "command:start"
 
 [[workflow.states]]
-id       = "in_progress"
-label    = "In Progress"
-terminal = true
+id             = "in_progress"
+label          = "In Progress"
+worker_profile = "mock-happy/spec-writer"
+terminal       = true
 "#;
         let config = audit_config(toml);
         let result = super::audit_agent_resolution(&config, Path::new("/tmp"));
@@ -2301,6 +2396,9 @@ terminal = true
     #[test]
     fn audit_no_worker_profiles_no_panic() {
         let toml = r#"
+[workers]
+default = "claude/coder"
+
 [[workflow.states]]
 id    = "ready"
 label = "Ready"
@@ -2317,6 +2415,67 @@ terminal = true
         let config = audit_config(toml);
         let result = super::audit_agent_resolution(&config, Path::new("/tmp"));
         assert_eq!(result.len(), 1, "should not panic with no worker_profile");
+    }
+
+    #[test]
+    fn workers_default_absent_fails_validate() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id    = "new"
+label = "New"
+
+[[workflow.states.transitions]]
+to = "done"
+
+[[workflow.states]]
+id       = "done"
+label    = "Done"
+terminal = true
+"#;
+        let config = load_config(toml);
+        let errors = validate_config(&config, Path::new("/tmp"));
+        assert!(
+            errors.iter().any(|e| e.contains("workers.default")),
+            "expected workers.default error when [workers] section is absent; got: {errors:?}"
+        );
+    }
+
+    #[test]
+    fn workers_default_empty_fails_validate() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[workers]
+default = ""
+
+[[workflow.states]]
+id    = "new"
+label = "New"
+
+[[workflow.states.transitions]]
+to = "done"
+
+[[workflow.states]]
+id       = "done"
+label    = "Done"
+terminal = true
+"#;
+        let config = load_config(toml);
+        let errors = validate_config(&config, Path::new("/tmp"));
+        assert!(
+            errors.iter().any(|e| e.contains("workers.default")),
+            "expected workers.default error when default = \"\"; got: {errors:?}"
+        );
     }
 
     #[test]
@@ -2478,6 +2637,388 @@ to = "closed"
         assert!(
             !errors.iter().any(|e| e.contains("targets terminal state")),
             "unexpected terminal-state error; got: {errors:?}"
+        );
+    }
+
+    // --- Rule 1: trigger uniqueness ---
+
+    #[test]
+    fn trigger_uniqueness_two_manual_to_same_dest_ok() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id    = "a"
+label = "A"
+
+[[workflow.states.transitions]]
+to      = "c"
+trigger = "manual"
+
+[[workflow.states]]
+id    = "b"
+label = "B"
+
+[[workflow.states.transitions]]
+to      = "c"
+trigger = "manual"
+
+[[workflow.states]]
+id       = "c"
+label    = "C"
+terminal = true
+"#;
+        let config = load_config(toml);
+        let errors = validate_config_no_agents(&config, Path::new("/tmp"));
+        assert!(
+            !errors.iter().any(|e| e.contains("incoming transitions")),
+            "two manual edges to same dest should not trigger Rule 1; got: {errors:?}"
+        );
+    }
+
+    #[test]
+    fn trigger_uniqueness_command_start_plus_manual_same_dest_rejected() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id    = "src_start"
+label = "Src Start"
+
+[[workflow.states.transitions]]
+to      = "dest"
+trigger = "command:start"
+
+[[workflow.states]]
+id    = "src_manual"
+label = "Src Manual"
+
+[[workflow.states.transitions]]
+to      = "dest"
+trigger = "manual"
+
+[[workflow.states]]
+id             = "dest"
+label          = "Dest"
+worker_profile = "claude/coder"
+
+[[workflow.states.transitions]]
+to = "closed"
+"#;
+        let config = load_config(toml);
+        let errors = validate_config_no_agents(&config, Path::new("/tmp"));
+        let rule1_errors: Vec<&String> = errors.iter()
+            .filter(|e| e.contains("incoming transitions"))
+            .collect();
+        assert!(
+            !rule1_errors.is_empty(),
+            "expected trigger-uniqueness error; got: {errors:?}"
+        );
+        let msg = rule1_errors[0];
+        assert!(msg.contains("dest"), "expected dest in error: {msg}");
+        assert!(msg.contains("src_start"), "expected src_start in error: {msg}");
+        assert!(msg.contains("src_manual"), "expected src_manual in error: {msg}");
+    }
+
+    #[test]
+    fn trigger_uniqueness_two_command_start_same_dest_rejected() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id    = "src_a"
+label = "Src A"
+
+[[workflow.states.transitions]]
+to      = "dest"
+trigger = "command:start"
+
+[[workflow.states]]
+id    = "src_b"
+label = "Src B"
+
+[[workflow.states.transitions]]
+to      = "dest"
+trigger = "command:start"
+
+[[workflow.states]]
+id             = "dest"
+label          = "Dest"
+worker_profile = "claude/coder"
+
+[[workflow.states.transitions]]
+to = "closed"
+"#;
+        let config = load_config(toml);
+        let errors = validate_config_no_agents(&config, Path::new("/tmp"));
+        let rule1_errors: Vec<&String> = errors.iter()
+            .filter(|e| e.contains("incoming transitions"))
+            .collect();
+        assert!(
+            !rule1_errors.is_empty(),
+            "expected trigger-uniqueness error for two command:start; got: {errors:?}"
+        );
+        let msg = rule1_errors[0];
+        assert!(msg.contains("dest"), "expected dest in error: {msg}");
+        assert!(msg.contains("src_a"), "expected src_a in error: {msg}");
+        assert!(msg.contains("src_b"), "expected src_b in error: {msg}");
+    }
+
+    // --- Rule 2: worker_profile shape ---
+
+    #[test]
+    fn worker_profile_valid_passes() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id             = "active"
+label          = "Active"
+worker_profile = "claude/coder"
+
+[[workflow.states.transitions]]
+to = "closed"
+"#;
+        let config = load_config(toml);
+        let errors = validate_config_no_agents(&config, Path::new("/tmp"));
+        assert!(
+            !errors.iter().any(|e| e.contains("worker_profile")),
+            "valid worker_profile should not trigger Rule 2; got: {errors:?}"
+        );
+    }
+
+    #[test]
+    fn worker_profile_reserved_role_rejected() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id             = "active"
+label          = "Active"
+worker_profile = "claude/worker"
+
+[[workflow.states.transitions]]
+to = "closed"
+"#;
+        let config = load_config(toml);
+        let errors = validate_config_no_agents(&config, Path::new("/tmp"));
+        assert!(
+            errors.iter().any(|e| e.contains("worker_profile") && e.contains("worker")),
+            "reserved role 'worker' should be rejected; got: {errors:?}"
+        );
+    }
+
+    #[test]
+    fn worker_profile_no_slash_rejected() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id             = "active"
+label          = "Active"
+worker_profile = "claudecoder"
+
+[[workflow.states.transitions]]
+to = "closed"
+"#;
+        let config = load_config(toml);
+        let errors = validate_config_no_agents(&config, Path::new("/tmp"));
+        assert!(
+            errors.iter().any(|e| e.contains("worker_profile") && e.contains("exactly one")),
+            "missing slash should be rejected; got: {errors:?}"
+        );
+    }
+
+    #[test]
+    fn worker_profile_empty_agent_rejected() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id             = "active"
+label          = "Active"
+worker_profile = "/coder"
+
+[[workflow.states.transitions]]
+to = "closed"
+"#;
+        let config = load_config(toml);
+        let errors = validate_config_no_agents(&config, Path::new("/tmp"));
+        assert!(
+            errors.iter().any(|e| e.contains("worker_profile") && e.contains("non-empty")),
+            "empty agent component should be rejected; got: {errors:?}"
+        );
+    }
+
+    #[test]
+    fn worker_profile_empty_role_rejected() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id             = "active"
+label          = "Active"
+worker_profile = "claude/"
+
+[[workflow.states.transitions]]
+to = "closed"
+"#;
+        let config = load_config(toml);
+        let errors = validate_config_no_agents(&config, Path::new("/tmp"));
+        assert!(
+            errors.iter().any(|e| e.contains("worker_profile") && e.contains("non-empty")),
+            "empty role component should be rejected; got: {errors:?}"
+        );
+    }
+
+    // --- Rule 3: command:start targets dispatch-capable state ---
+
+    #[test]
+    fn command_start_missing_worker_profile_rejected() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id    = "src"
+label = "Src"
+
+[[workflow.states.transitions]]
+to      = "dest"
+trigger = "command:start"
+
+[[workflow.states]]
+id    = "dest"
+label = "Dest"
+
+[[workflow.states.transitions]]
+to = "closed"
+"#;
+        let config = load_config(toml);
+        let errors = validate_config_no_agents(&config, Path::new("/tmp"));
+        assert!(
+            errors.iter().any(|e| e.contains("dest") && e.contains("worker_profile")),
+            "command:start to state with no worker_profile should be rejected; got: {errors:?}"
+        );
+    }
+
+    #[test]
+    fn default_workflow_passes() {
+        // Inline TOML replicating the key structural parts of the default workflow
+        // after ticket 071886fc: groomed → in_design via command:start,
+        // ready → in_progress via command:start, with worker_profile on both targets.
+        // No state receives more than one command:start incoming edge.
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id    = "groomed"
+label = "Groomed"
+
+[[workflow.states.transitions]]
+to      = "in_design"
+trigger = "command:start"
+outcome = "needs_input"
+
+[[workflow.states.transitions]]
+to      = "closed"
+trigger = "manual"
+outcome = "cancelled"
+
+[[workflow.states]]
+id             = "in_design"
+label          = "In Design"
+worker_profile = "claude/spec-writer"
+
+[[workflow.states.transitions]]
+to      = "specd"
+trigger = "manual"
+outcome = "success"
+
+[[workflow.states]]
+id    = "specd"
+label = "Specd"
+
+[[workflow.states.transitions]]
+to      = "ready"
+trigger = "manual"
+outcome = "needs_input"
+
+[[workflow.states]]
+id    = "ready"
+label = "Ready"
+
+[[workflow.states.transitions]]
+to      = "in_progress"
+trigger = "command:start"
+outcome = "needs_input"
+
+[[workflow.states.transitions]]
+to      = "closed"
+trigger = "manual"
+outcome = "cancelled"
+
+[[workflow.states]]
+id             = "in_progress"
+label          = "In Progress"
+worker_profile = "claude/coder"
+
+[[workflow.states.transitions]]
+to      = "closed"
+trigger = "manual"
+outcome = "cancelled"
+"#;
+        let config = load_config(toml);
+        let errors = validate_config_no_agents(&config, Path::new("/tmp"));
+        let new_rule_errors: Vec<&String> = errors.iter()
+            .filter(|e| {
+                e.contains("incoming transitions")
+                    || e.contains("worker_profile")
+                    || (e.contains("command:start") && e.contains("worker_profile"))
+            })
+            .collect();
+        assert!(
+            new_rule_errors.is_empty(),
+            "default workflow structure should pass all new rules; got: {new_rule_errors:?}"
         );
     }
 }

@@ -1,9 +1,9 @@
 use anyhow::Result;
 use std::path::Path;
 
-pub fn run(cli_cmd: clap::Command, root: &Path, role: Option<&str>) -> Result<()> {
+pub fn run(cli_cmd: clap::Command, root: &Path, role: Option<&str>, ticket_id: Option<&str>) -> Result<()> {
     let commands = extract_commands(&cli_cmd);
-    let text = apm_core::instructions::generate(root, role, &commands)?;
+    let text = apm_core::instructions::generate(root, role, ticket_id, &commands)?;
     print!("{}", text);
     Ok(())
 }
@@ -71,14 +71,14 @@ mod tests {
     #[test]
     fn run_no_role_returns_ok() {
         let tmp = tempfile::tempdir().unwrap();
-        let result = run(make_test_cmd(), tmp.path(), None);
+        let result = run(make_test_cmd(), tmp.path(), None, None);
         assert!(result.is_ok());
     }
 
     #[test]
     fn run_with_role_returns_ok() {
         let tmp = tempfile::tempdir().unwrap();
-        let result = run(make_test_cmd(), tmp.path(), Some("worker"));
+        let result = run(make_test_cmd(), tmp.path(), Some("worker"), None);
         assert!(result.is_ok());
     }
 
@@ -103,7 +103,7 @@ mod tests {
     fn generate_no_ansi_via_run() {
         let tmp = tempfile::tempdir().unwrap();
         let commands = extract_commands(&make_test_cmd());
-        let out = apm_core::instructions::generate(tmp.path(), None, &commands).unwrap();
+        let out = apm_core::instructions::generate(tmp.path(), None, None, &commands).unwrap();
         assert!(!out.contains('\x1b'), "ANSI escape code found in output");
     }
 
@@ -111,35 +111,33 @@ mod tests {
     fn generate_contains_all_sections() {
         let tmp = tempfile::tempdir().unwrap();
         let commands = extract_commands(&make_test_cmd());
-        let out = apm_core::instructions::generate(tmp.path(), None, &commands).unwrap();
-        assert!(out.contains("## State Machine"));
-        assert!(out.contains("## Ticket Format"));
-        assert!(out.contains("## Session Identity"));
-        assert!(out.contains("## Command Reference"));
-        assert!(!out.contains("## Shell Discipline"), "Shell Discipline must not appear in apm instructions output");
+        // No-role now returns a role index, not the full sections.
+        let out = apm_core::instructions::generate(tmp.path(), None, None, &commands).unwrap();
+        assert!(out.contains("coder"), "coder missing from role index");
+        assert!(out.contains("spec-writer"), "spec-writer missing from role index");
+        assert!(!out.contains("## State Machine"), "State Machine should be absent with no role");
     }
 
     #[test]
-    fn worker_role_includes_start() {
+    fn worker_role_includes_show_and_set() {
         let tmp = tempfile::tempdir().unwrap();
         let commands = extract_commands(&make_test_cmd());
-        let out = apm_core::instructions::generate(tmp.path(), Some("worker"), &commands).unwrap();
+        let out = apm_core::instructions::generate(tmp.path(), Some("worker"), None, &commands).unwrap();
         let cr_pos = out.find("## Command Reference").unwrap();
-        assert!(
-            out[cr_pos..].contains("apm start"),
-            "apm start not found in worker command reference"
-        );
+        let cr_section = &out[cr_pos..];
+        assert!(cr_section.contains("apm show"), "apm show not found in worker command reference");
+        assert!(cr_section.contains("apm set"), "apm set not found in worker command reference");
     }
 
     #[test]
-    fn worker_role_excludes_set() {
+    fn worker_role_excludes_start() {
         let tmp = tempfile::tempdir().unwrap();
         let commands = extract_commands(&make_test_cmd());
-        let out = apm_core::instructions::generate(tmp.path(), Some("worker"), &commands).unwrap();
+        let out = apm_core::instructions::generate(tmp.path(), Some("worker"), None, &commands).unwrap();
         let cr_pos = out.find("## Command Reference").unwrap();
         assert!(
-            !out[cr_pos..].contains("apm set"),
-            "apm set found in worker command reference but should be excluded"
+            !out[cr_pos..].contains("apm start"),
+            "apm start found in worker command reference but should be excluded"
         );
     }
 }

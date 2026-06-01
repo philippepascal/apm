@@ -1,5 +1,5 @@
 use anyhow::{bail, Context, Result};
-use crate::{config::{Config, WorkersConfig}, git, ticket, ticket_fmt};
+use crate::{config::{Config, TransitionConfig, WorkersConfig}, git, ticket, ticket_fmt};
 use crate::wrapper::{WrapperContext, write_temp_file};
 use chrono::Utc;
 use std::path::{Path, PathBuf};
@@ -47,6 +47,31 @@ pub fn resolve_worker_profile(worker_profile_str: &str, workers: &WorkersConfig)
     })
 }
 
+/// Resolve the worker profile for a dispatch to `dest_state_id`.
+///
+/// Priority order:
+/// 1. Destination state's `worker_profile` field
+/// 2. `[workers].default`
+///
+/// Returns `(profile_string, source_label)`.
+fn resolve_dispatch_profile(
+    dest_state_id: &str,
+    config: &Config,
+) -> (String, String) {
+    // 1. Destination state's worker_profile
+    if let Some(wp) = config.workflow.states.iter()
+        .find(|s| s.id == dest_state_id)
+        .and_then(|s| s.worker_profile.as_deref())
+    {
+        return (
+            wp.to_string(),
+            format!("workflow.toml state {dest_state_id}.worker_profile"),
+        );
+    }
+    // 2. workers.default
+    (config.workers.default.clone(), "workers.default".to_string())
+}
+
 #[derive(serde::Deserialize, Default, Debug)]
 struct WorkerProfileManifest {
     model: Option<String>,
@@ -89,6 +114,167 @@ pub(crate) fn apply_frontmatter_agent(
     } else if let Some(a) = &frontmatter.agent {
         *agent = a.clone();
     }
+}
+
+pub struct AgentDiagnostic {
+    pub ticket_id: String,
+    pub ticket_state: String,
+    /// False when the ticket's current state has no `command:start` transition.
+    pub dispatchable: bool,
+    /// The state whose `command:start` transition was used for resolution.
+    /// Equals `ticket_state` when `dispatchable` is true.
+    pub resolved_from_state: String,
+    /// Human-readable label, e.g. `"ready → in_progress"`.
+    pub transition_label: String,
+    /// The literal `"agent/role"` string resolved by the cascade.
+    pub worker_profile_str: String,
+    /// Layer that supplied `worker_profile_str`.
+    pub profile_source: String,
+    pub agent: String,
+    pub agent_source: String,
+    pub role: String,
+    pub role_source: String,
+    pub model: Option<String>,
+    pub model_source: String,
+    pub container: Option<String>,
+    pub container_source: String,
+    /// Path to `.apm/agents/<agent>/<role>.toml` (relative), shown whether present or absent.
+    pub manifest_path: String,
+    pub manifest_present: bool,
+    /// Each entry is `(key, value, source_label)`.
+    pub env: Vec<(String, String, String)>,
+    pub keychain: std::collections::HashMap<String, String>,
+}
+
+pub fn resolve_for_diagnostic(root: &Path, id_arg: &str) -> Result<AgentDiagnostic> {
+    let config = Config::load(root)?;
+    let tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
+    let id = ticket::resolve_id_in_slice(&tickets, id_arg)?;
+    let t = tickets.iter().find(|t| t.frontmatter.id == id)
+        .ok_or_else(|| anyhow::anyhow!("ticket {:?} not found", id))?;
+
+    let ticket_state = t.frontmatter.state.clone();
+
+    // Find command:start for current state; if absent scan all states for fallback.
+    let (dispatchable, resolved_from_state, from_id, to_id, _transition_for_resolution) = {
+        let current = config.workflow.states.iter()
+            .find(|s| s.id == ticket_state)
+            .and_then(|s| s.transitions.iter().find(|tr| tr.trigger == "command:start"));
+
+        if let Some(tr) = current {
+            (true, ticket_state.clone(), ticket_state.clone(), tr.to.clone(), Some(tr.clone()))
+        } else {
+            let mut found: Option<(String, String, TransitionConfig)> = None;
+            for state in &config.workflow.states {
+                if let Some(tr) = state.transitions.iter().find(|tr| tr.trigger == "command:start") {
+                    found = Some((state.id.clone(), tr.to.clone(), tr.clone()));
+                    break;
+                }
+            }
+            if let Some((from, to, tr)) = found {
+                (false, from.clone(), from, to, Some(tr))
+            } else {
+                return Ok(AgentDiagnostic {
+                    ticket_id: id,
+                    ticket_state: ticket_state.clone(),
+                    dispatchable: false,
+                    resolved_from_state: ticket_state,
+                    transition_label: "none".to_string(),
+                    worker_profile_str: String::new(),
+                    profile_source: "none".to_string(),
+                    agent: String::new(),
+                    agent_source: String::new(),
+                    role: String::new(),
+                    role_source: String::new(),
+                    model: None,
+                    model_source: String::new(),
+                    container: None,
+                    container_source: String::new(),
+                    manifest_path: String::new(),
+                    manifest_present: false,
+                    env: vec![],
+                    keychain: config.workers.keychain.clone(),
+                });
+            }
+        }
+    };
+
+    let transition_label = format!("{from_id} → {to_id}");
+
+    let (worker_profile_str, profile_source) = resolve_dispatch_profile(
+        &to_id,
+        &config,
+    );
+
+    if worker_profile_str.is_empty() {
+        anyhow::bail!(
+            "workers.default is not set — add `default = \"claude/coder\"` under [workers] in .apm/config.toml"
+        );
+    }
+
+    let (agent_base, role) = parse_worker_profile(&worker_profile_str)?;
+    let mut agent = agent_base;
+    let mut agent_source = profile_source.clone();
+    let role_source = profile_source.clone();
+
+    // Inherit model and container from workers config.
+    let mut model = config.workers.model.clone();
+    let mut model_source = "workers config".to_string();
+    let container = config.workers.container.clone();
+    let container_source = "workers config".to_string();
+
+    // Env from workers config.
+    let mut env: Vec<(String, String, String)> = config.workers.env.iter()
+        .map(|(k, v)| (k.clone(), v.clone(), "workers config".to_string()))
+        .collect();
+
+    // Load profile manifest.
+    let manifest_path = format!(".apm/agents/{agent}/{role}.toml");
+    let manifest_present;
+    if let Some(manifest) = load_profile_manifest(root, &agent, &role)? {
+        manifest_present = true;
+        if let Some(m) = manifest.model {
+            model = Some(m);
+            model_source = manifest_path.clone();
+        }
+        for (k, v) in manifest.env {
+            env.retain(|(ek, _, _)| ek != &k);
+            env.push((k, v, manifest_path.clone()));
+        }
+    } else {
+        manifest_present = false;
+    }
+
+    // Apply frontmatter agent overrides (same logic as apply_frontmatter_agent).
+    if let Some(ov) = t.frontmatter.agent_overrides.get(&worker_profile_str) {
+        agent_source = format!("frontmatter agent_overrides[\"{worker_profile_str}\"]");
+        agent = ov.clone();
+    } else if let Some(a) = &t.frontmatter.agent {
+        agent_source = "frontmatter.agent".to_string();
+        agent = a.clone();
+    }
+
+    Ok(AgentDiagnostic {
+        ticket_id: id,
+        ticket_state,
+        dispatchable,
+        resolved_from_state,
+        transition_label,
+        worker_profile_str,
+        profile_source,
+        agent,
+        agent_source,
+        role,
+        role_source,
+        model,
+        model_source,
+        container,
+        container_source,
+        manifest_path,
+        manifest_present,
+        env,
+        keychain: config.workers.keychain.clone(),
+    })
 }
 
 pub struct StartOutput {
@@ -315,18 +501,17 @@ pub fn run(root: &Path, id_arg: &str, no_aggressive: bool, spawn: bool, skip_per
         });
     }
 
-    let worker_profile_str = triggering_transition
-        .and_then(|tr| tr.worker_profile.as_deref())
-        .or(config.workers.default.as_deref())
-        .unwrap_or("claude/coder")
-        .to_string();
+    let (worker_profile_str, _) = resolve_dispatch_profile(
+        &new_state,
+        &config,
+    );
     let mut wp = resolve_worker_profile(&worker_profile_str, &config.workers)?;
     apply_profile_manifest(root, &mut wp)?;
     apply_frontmatter_agent(&mut wp.agent, &t.frontmatter, &worker_profile_str);
 
     let now_str = chrono::Utc::now().format("%m%d-%H%M").to_string();
     let worker_name = format!("{}-{}-{:04x}", wp.agent, now_str, rand_u16());
-    let worker_system = build_system_prompt(root, config.agents.project.as_deref(), &wp.agent, &wp.role)?;
+    let worker_system = build_system_prompt(root, config.agents.project.as_deref(), &wp.agent, &wp.role, Some(&id))?;
     let raw_prompt = format!("{}\n\n{content}", agent_role_prefix(&wp.role, &id));
     let ticket_content = with_dependency_bundle(root, &ticket_depends_on, &config, raw_prompt);
     let role_prefix = Some(agent_role_prefix(&wp.role, &id));
@@ -443,11 +628,13 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
         .find(|s| s.id == old_state)
         .and_then(|s| s.transitions.iter().find(|tr| tr.trigger == "command:start"))
         .cloned();
-    let worker_profile_str = triggering_transition_owned.as_ref()
-        .and_then(|tr| tr.worker_profile.as_deref())
-        .or(config.workers.default.as_deref())
-        .unwrap_or("claude/coder")
-        .to_string();
+    let dest = triggering_transition_owned.as_ref()
+        .map(|tr| tr.to.as_str())
+        .unwrap_or("in_progress");
+    let (worker_profile_str, _) = resolve_dispatch_profile(
+        dest,
+        &config,
+    );
     let start_out = run(root, &id, no_aggressive, false, false, &caller_name)?;
     warnings.extend(start_out.warnings);
 
@@ -494,7 +681,7 @@ pub fn run_next(root: &Path, no_aggressive: bool, spawn: bool, skip_permissions:
 
     let now_str = chrono::Utc::now().format("%m%d-%H%M").to_string();
     let worker_name = format!("{}-{}-{:04x}", wp.agent, now_str, rand_u16());
-    let worker_system = build_system_prompt(root, config.agents.project.as_deref(), &wp.agent, &wp.role)?;
+    let worker_system = build_system_prompt(root, config.agents.project.as_deref(), &wp.agent, &wp.role, Some(&id))?;
 
     let raw = t.serialize()?;
     let dep_ids_next = t.frontmatter.depends_on.clone().unwrap_or_default();
@@ -622,11 +809,13 @@ pub fn spawn_next_worker(
         .find(|s| s.id == old_state)
         .and_then(|s| s.transitions.iter().find(|tr| tr.trigger == "command:start"))
         .cloned();
-    let worker_profile_str = triggering_transition_owned.as_ref()
-        .and_then(|tr| tr.worker_profile.as_deref())
-        .or(config.workers.default.as_deref())
-        .unwrap_or("claude/coder")
-        .to_string();
+    let dest = triggering_transition_owned.as_ref()
+        .map(|tr| tr.to.as_str())
+        .unwrap_or("in_progress");
+    let (worker_profile_str, _) = resolve_dispatch_profile(
+        dest,
+        &config,
+    );
     let start_out = run(root, &id, no_aggressive, false, false, &caller_name)?;
     warnings.extend(start_out.warnings);
 
@@ -667,7 +856,7 @@ pub fn spawn_next_worker(
 
     let now_str = chrono::Utc::now().format("%m%d-%H%M").to_string();
     let worker_name = format!("{}-{}-{:04x}", wp.agent, now_str, rand_u16());
-    let worker_system = build_system_prompt(root, config.agents.project.as_deref(), &wp.agent, &wp.role)?;
+    let worker_system = build_system_prompt(root, config.agents.project.as_deref(), &wp.agent, &wp.role, Some(&id))?;
 
     let raw = t.serialize()?;
     let dep_ids_snw = t.frontmatter.depends_on.clone().unwrap_or_default();
@@ -793,12 +982,13 @@ pub(crate) fn build_system_prompt(
     project_file: Option<&Path>,
     agent: &str,
     role: &str,
+    ticket_id: Option<&str>,
 ) -> Result<String> {
-    // Layer 1: APM system knowledge (always present, scoped to role)
-    let layer1 = crate::instructions::generate(root, Some(role), &[])?;
+    // Role layer: role-file cascade (highest-attention position)
+    let role_layer = build_system_prompt_body(root, agent, role)?;
 
-    // Layer 2: project context file (absent when not configured or path is empty)
-    let layer2: Option<String> = if let Some(path) = project_file {
+    // Project layer: project context file (absent when not configured or path is empty)
+    let project_layer: Option<String> = if let Some(path) = project_file {
         if path.as_os_str().is_empty() {
             None
         } else {
@@ -810,17 +1000,21 @@ pub(crate) fn build_system_prompt(
         None
     };
 
-    // Layer 3: role-file cascade
-    let layer3 = build_system_prompt_body(root, agent, role)?;
+    // Instructions layer: APM system knowledge (reference material, scoped to role)
+    let cmds: Vec<(String, String)> = crate::instructions::WORKER_COMMANDS
+        .iter()
+        .map(|(n, a)| (n.to_string(), a.to_string()))
+        .collect();
+    let instructions_layer = crate::instructions::generate(root, Some(role), ticket_id, &cmds)?;
 
-    // Compose layers joined by a single blank line
-    let mut result = layer1.trim_end().to_owned();
-    if let Some(ref l2) = layer2 {
+    // Compose layers: role → project → instructions
+    let mut result = role_layer.trim_end().to_owned();
+    if let Some(ref l2) = project_layer {
         result.push_str("\n\n");
         result.push_str(l2.trim_end());
     }
     result.push_str("\n\n");
-    result.push_str(layer3.trim_end());
+    result.push_str(instructions_layer.trim_end());
 
     Ok(result)
 }
@@ -985,15 +1179,15 @@ mod tests {
         let p = dir.path();
         std::fs::create_dir_all(p.join(".apm/agents/claude")).unwrap();
         std::fs::write(p.join(".apm/agents/claude/apm.coder.md"), "PER AGENT WORKER").unwrap();
-        let result = build_system_prompt(p, None, "claude", "coder").unwrap();
-        assert!(result.contains("PER AGENT WORKER"), "layer 3 content missing: {result}");
+        let result = build_system_prompt(p, None, "claude", "coder", None).unwrap();
+        assert!(result.contains("PER AGENT WORKER"), "role-file content missing: {result}");
     }
 
     #[test]
     fn build_system_prompt_falls_back_to_builtin_default() {
         let dir = tempfile::tempdir().unwrap();
         let p = dir.path();
-        let result = build_system_prompt(p, None, "claude", "coder").unwrap();
+        let result = build_system_prompt(p, None, "claude", "coder", None).unwrap();
         assert!(result.contains(super::DEFAULT_CODER_DEFAULT.trim()), "built-in default not found in output");
     }
 
@@ -1001,7 +1195,7 @@ mod tests {
     fn build_system_prompt_falls_back_to_builtin_spec_writer() {
         let dir = tempfile::tempdir().unwrap();
         let p = dir.path();
-        let result = build_system_prompt(p, None, "claude", "spec-writer").unwrap();
+        let result = build_system_prompt(p, None, "claude", "spec-writer", None).unwrap();
         assert!(result.contains(super::DEFAULT_SPEC_WRITER_DEFAULT.trim()), "built-in spec-writer default not found in output");
     }
 
@@ -1012,7 +1206,7 @@ mod tests {
         std::fs::create_dir_all(p.join(".apm/agents/claude")).unwrap();
         std::fs::write(p.join(".apm/agents/claude/apm.coder.md"), "CLAUDE CODER CONTENT").unwrap();
         // "my-bot" has no per-agent file; should fall back to claude/
-        let result = build_system_prompt(p, None, "my-bot", "coder").unwrap();
+        let result = build_system_prompt(p, None, "my-bot", "coder", None).unwrap();
         assert!(result.contains("CLAUDE CODER CONTENT"), "claude fallback content missing: {result}");
     }
 
@@ -1024,7 +1218,7 @@ mod tests {
         std::fs::create_dir_all(p.join(".apm/agents/claude")).unwrap();
         std::fs::write(p.join(".apm/agents/my-bot/apm.coder.md"), "AGENT SPECIFIC").unwrap();
         std::fs::write(p.join(".apm/agents/claude/apm.coder.md"), "CLAUDE CONTENT").unwrap();
-        let result = build_system_prompt(p, None, "my-bot", "coder").unwrap();
+        let result = build_system_prompt(p, None, "my-bot", "coder", None).unwrap();
         assert!(result.contains("AGENT SPECIFIC"), "agent-specific file should win: {result}");
         assert!(!result.contains("CLAUDE CONTENT"), "claude fallback should be skipped: {result}");
     }
@@ -1033,7 +1227,7 @@ mod tests {
     fn build_system_prompt_errors_for_unknown_agent() {
         let dir = tempfile::tempdir().unwrap();
         let p = dir.path();
-        let result = build_system_prompt(p, None, "custom-bot", "coder");
+        let result = build_system_prompt(p, None, "custom-bot", "coder", None);
         assert!(result.is_err());
         let msg = result.unwrap_err().to_string();
         assert!(msg.contains("custom-bot"), "error should name the agent: {msg}");
@@ -1044,7 +1238,7 @@ mod tests {
     fn build_system_prompt_coder_contains_shell_discipline() {
         let dir = tempfile::tempdir().unwrap();
         let p = dir.path();
-        let result = build_system_prompt(p, None, "claude", "coder").unwrap();
+        let result = build_system_prompt(p, None, "claude", "coder", None).unwrap();
         assert!(result.contains("## Shell Discipline"), "Shell Discipline section missing from coder prompt");
     }
 
@@ -1058,13 +1252,18 @@ mod tests {
         let result = build_system_prompt(
             p,
             Some(std::path::Path::new("prefix.md")),
-            "claude", "coder",
+            "claude", "coder", None,
         ).unwrap();
-        let layer1 = crate::instructions::generate(p, Some("coder"), &[]).unwrap();
+        let cmds: Vec<(String, String)> = crate::instructions::WORKER_COMMANDS
+            .iter()
+            .map(|(n, a)| (n.to_string(), a.to_string()))
+            .collect();
+        let instructions_layer = crate::instructions::generate(p, Some("coder"), None, &cmds).unwrap();
+        // New order: role file → project → instructions
         let expected = format!(
             "{}\n\nPREFIX CONTENT\n\n{}",
-            layer1.trim_end(),
-            super::DEFAULT_CODER_DEFAULT.trim_end()
+            super::DEFAULT_CODER_DEFAULT.trim_end(),
+            instructions_layer.trim_end()
         );
         assert_eq!(result, expected);
     }
@@ -1073,9 +1272,14 @@ mod tests {
     fn agents_instructions_none_is_no_op() {
         let dir = tempfile::tempdir().unwrap();
         let p = dir.path();
-        let result = build_system_prompt(p, None, "claude", "coder").unwrap();
-        let layer1 = crate::instructions::generate(p, Some("coder"), &[]).unwrap();
-        let expected = format!("{}\n\n{}", layer1.trim_end(), super::DEFAULT_CODER_DEFAULT.trim_end());
+        let result = build_system_prompt(p, None, "claude", "coder", None).unwrap();
+        let cmds: Vec<(String, String)> = crate::instructions::WORKER_COMMANDS
+            .iter()
+            .map(|(n, a)| (n.to_string(), a.to_string()))
+            .collect();
+        let instructions_layer = crate::instructions::generate(p, Some("coder"), None, &cmds).unwrap();
+        // New order: role file → instructions (no project)
+        let expected = format!("{}\n\n{}", super::DEFAULT_CODER_DEFAULT.trim_end(), instructions_layer.trim_end());
         assert_eq!(result, expected);
     }
 
@@ -1086,10 +1290,15 @@ mod tests {
         let result = build_system_prompt(
             p,
             Some(std::path::Path::new("")),
-            "claude", "coder",
+            "claude", "coder", None,
         ).unwrap();
-        let layer1 = crate::instructions::generate(p, Some("coder"), &[]).unwrap();
-        let expected = format!("{}\n\n{}", layer1.trim_end(), super::DEFAULT_CODER_DEFAULT.trim_end());
+        let cmds: Vec<(String, String)> = crate::instructions::WORKER_COMMANDS
+            .iter()
+            .map(|(n, a)| (n.to_string(), a.to_string()))
+            .collect();
+        let instructions_layer = crate::instructions::generate(p, Some("coder"), None, &cmds).unwrap();
+        // New order: role file → instructions (empty path = no project)
+        let expected = format!("{}\n\n{}", super::DEFAULT_CODER_DEFAULT.trim_end(), instructions_layer.trim_end());
         assert_eq!(result, expected);
     }
 
@@ -1100,7 +1309,7 @@ mod tests {
         let result = build_system_prompt(
             p,
             Some(std::path::Path::new("no-such-file.md")),
-            "claude", "coder",
+            "claude", "coder", None,
         );
         assert!(result.is_err());
         let msg = result.unwrap_err().to_string();
@@ -1116,13 +1325,18 @@ mod tests {
         let result = build_system_prompt(
             p,
             Some(std::path::Path::new("prefix.md")),
-            "claude", "coder",
+            "claude", "coder", None,
         ).unwrap();
-        let layer1 = crate::instructions::generate(p, Some("coder"), &[]).unwrap();
+        let cmds: Vec<(String, String)> = crate::instructions::WORKER_COMMANDS
+            .iter()
+            .map(|(n, a)| (n.to_string(), a.to_string()))
+            .collect();
+        let instructions_layer = crate::instructions::generate(p, Some("coder"), None, &cmds).unwrap();
+        // New order: role file → project → instructions
         let expected = format!(
             "{}\n\nPREFIX\n\n{}",
-            layer1.trim_end(),
-            super::DEFAULT_CODER_DEFAULT.trim_end()
+            super::DEFAULT_CODER_DEFAULT.trim_end(),
+            instructions_layer.trim_end()
         );
         assert_eq!(result, expected);
     }
@@ -1135,15 +1349,69 @@ mod tests {
         let result = build_system_prompt(
             p,
             Some(std::path::Path::new("project.md")),
-            "claude", "coder",
+            "claude", "coder", None,
         ).unwrap();
-        let layer1 = crate::instructions::generate(p, Some("coder"), &[]).unwrap();
+        let cmds: Vec<(String, String)> = crate::instructions::WORKER_COMMANDS
+            .iter()
+            .map(|(n, a)| (n.to_string(), a.to_string()))
+            .collect();
+        let instructions_layer = crate::instructions::generate(p, Some("coder"), None, &cmds).unwrap();
+        // New order: role file → project → instructions
         let expected = format!(
             "{}\n\nPROJECT CONTEXT\n\n{}",
-            layer1.trim_end(),
-            super::DEFAULT_CODER_DEFAULT.trim_end()
+            super::DEFAULT_CODER_DEFAULT.trim_end(),
+            instructions_layer.trim_end()
         );
         assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn build_system_prompt_contains_command_reference() {
+        let dir = tempfile::tempdir().unwrap();
+        let result = build_system_prompt(dir.path(), None, "claude", "coder", None).unwrap();
+        let cr_pos = result.find("## Command Reference")
+            .expect("## Command Reference section missing from worker prompt");
+        let cr = &result[cr_pos..];
+        assert!(cr.contains("apm show"), "apm show missing from Command Reference");
+        assert!(cr.contains("apm instructions"), "apm instructions missing from Command Reference");
+    }
+
+    #[test]
+    fn build_system_prompt_layer_order() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path();
+        std::fs::create_dir_all(p.join(".apm/agents/claude")).unwrap();
+        std::fs::write(p.join(".apm/agents/claude/apm.coder.md"), "ROLE CONTENT").unwrap();
+        std::fs::write(p.join("project.md"), "PROJECT CONTENT").unwrap();
+        let result = build_system_prompt(
+            p,
+            Some(std::path::Path::new("project.md")),
+            "claude", "coder", None,
+        ).unwrap();
+        let role_pos = result.find("ROLE CONTENT").unwrap();
+        let project_pos = result.find("PROJECT CONTENT").unwrap();
+        // Instructions layer contains "## State Machine" header
+        let instructions_pos = result.find("## State Machine").unwrap();
+        assert!(
+            role_pos < project_pos,
+            "role layer must precede project layer; role_pos={role_pos}, project_pos={project_pos}"
+        );
+        assert!(
+            project_pos < instructions_pos,
+            "project layer must precede instructions layer; project_pos={project_pos}, instructions_pos={instructions_pos}"
+        );
+    }
+
+    #[test]
+    fn build_system_prompt_ticket_id_substituted() {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path();
+        // Use a simple role file with no <id> so the assertion covers the instructions layer.
+        std::fs::create_dir_all(p.join(".apm/agents/claude")).unwrap();
+        std::fs::write(p.join(".apm/agents/claude/apm.coder.md"), "ROLE FILE CONTENT").unwrap();
+        let result = build_system_prompt(p, None, "claude", "coder", Some("abc12345")).unwrap();
+        assert!(result.contains("abc12345"), "ticket id should appear in output");
+        assert!(!result.contains("<id>"), "no <id> placeholder should remain after substitution");
     }
 
     // --- agent_role_prefix ---
@@ -1644,6 +1912,117 @@ mod tests {
         assert_eq!(wp.env.get("BAZ").map(|s| s.as_str()), Some("kept"), "global-only key should be kept");
     }
 
+    // --- resolve_for_diagnostic ---
+
+    fn make_diagnostic_repo(
+        root: &std::path::Path,
+        ticket_state: &str,
+        ticket_id: &str,
+        workers_default: Option<&str>,
+        dest_state_worker_profile: Option<&str>,
+        manifest_model: Option<&str>,
+        agent_overrides: Option<(&str, &str)>,
+    ) {
+        use std::fs;
+
+        fs::create_dir_all(root.join(".apm/agents/claude")).unwrap();
+        fs::create_dir_all(root.join("tickets")).unwrap();
+
+        let workers_section = workers_default
+            .map(|d| format!("[workers]\ndefault = \"{d}\"\n"))
+            .unwrap_or_default();
+        fs::write(root.join(".apm/config.toml"), format!(
+            "[project]\nname = \"test\"\ndefault_branch = \"main\"\n\n[tickets]\ndir = \"tickets\"\n\n{workers_section}"
+        )).unwrap();
+
+        let dest_wp_line = if let Some(wp) = dest_state_worker_profile {
+            format!("worker_profile = \"{wp}\"\n")
+        } else {
+            String::new()
+        };
+        fs::write(root.join(".apm/workflow.toml"), format!(
+            "[[workflow.states]]\nid = \"ready\"\nlabel = \"Ready\"\n\n  [[workflow.states.transitions]]\n  to = \"in_progress\"\n  trigger = \"command:start\"\n\n[[workflow.states]]\nid = \"in_progress\"\nlabel = \"In Progress\"\n{dest_wp_line}\n  [[workflow.states.transitions]]\n  to = \"done\"\n  trigger = \"manual\"\n  outcome = \"success\"\n\n[[workflow.states]]\nid = \"done\"\nlabel = \"Done\"\nterminal = true\n\n[[workflow.states]]\nid = \"new\"\nlabel = \"New\"\n\n  [[workflow.states.transitions]]\n  to = \"ready\"\n  trigger = \"manual\"\n  outcome = \"success\"\n"
+        )).unwrap();
+
+        if let Some(model) = manifest_model {
+            fs::write(root.join(".apm/agents/claude/coder.toml"), format!("model = \"{model}\"\n")).unwrap();
+        }
+
+        let overrides_section = if let Some((key, val)) = agent_overrides {
+            format!("\n[agent_overrides]\n\"{key}\" = \"{val}\"\n")
+        } else {
+            String::new()
+        };
+        let ticket_content = format!(
+            "+++\nid = \"{ticket_id}\"\ntitle = \"T\"\nstate = \"{ticket_state}\"\npriority = 0\neffort = 1\nrisk = 1\nauthor = \"test\"\nowner = \"test\"\nbranch = \"ticket/{ticket_id}-test\"\ncreated_at = \"2026-01-01T00:00:00Z\"\nupdated_at = \"2026-01-01T00:00:00Z\"\n{overrides_section}+++\n\n## Spec\n\n### Problem\n\nTest.\n\n### Acceptance criteria\n\n- [ ] AC\n\n### Out of scope\n\nNone.\n\n### Approach\n\nSomething.\n\n### Open questions\n\n### Amendment requests\n\n### Code review\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|"
+        );
+        fs::write(root.join(format!("tickets/{ticket_id}-test.md")), ticket_content).unwrap();
+
+        std::process::Command::new("git").arg("init").current_dir(root).output().unwrap();
+        std::process::Command::new("git").args(["config", "user.email", "t@t.com"]).current_dir(root).output().unwrap();
+        std::process::Command::new("git").args(["config", "user.name", "T"]).current_dir(root).output().unwrap();
+        std::process::Command::new("git").args(["add", ".apm"]).current_dir(root).output().unwrap();
+        std::process::Command::new("git").args(["commit", "-m", "init"]).current_dir(root).output().unwrap();
+        let branch = format!("ticket/{ticket_id}-test");
+        std::process::Command::new("git").args(["checkout", "-b", &branch]).current_dir(root).output().unwrap();
+        std::process::Command::new("git").args(["add", &format!("tickets/{ticket_id}-test.md")]).current_dir(root).output().unwrap();
+        std::process::Command::new("git").args(["commit", "-m", "add ticket"]).current_dir(root).output().unwrap();
+        std::process::Command::new("git").args(["checkout", "main"]).current_dir(root).output().unwrap();
+    }
+
+    #[test]
+    fn resolve_for_diagnostic_happy_path() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        make_diagnostic_repo(root, "ready", "aa000001", Some("claude/coder"), Some("claude/coder"), Some("sonnet"), None);
+        let diag = super::resolve_for_diagnostic(root, "aa000001").unwrap();
+        assert_eq!(diag.agent, "claude");
+        assert_eq!(diag.role, "coder");
+        assert_eq!(diag.model.as_deref(), Some("sonnet"));
+        assert!(diag.manifest_present);
+        assert!(diag.agent_source.contains("workflow.toml state"), "expected state-level workflow.toml source, got: {}", diag.agent_source);
+        assert!(diag.model_source.contains("coder.toml"), "expected manifest source, got: {}", diag.model_source);
+        assert!(diag.dispatchable);
+        assert_eq!(diag.resolved_from_state, "ready");
+    }
+
+    #[test]
+    fn resolve_for_diagnostic_override_test() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        make_diagnostic_repo(root, "ready", "aa000002", Some("claude/coder"), Some("claude/coder"), Some("sonnet"), Some(("claude/coder", "mock-happy")));
+        let diag = super::resolve_for_diagnostic(root, "aa000002").unwrap();
+        assert_eq!(diag.agent, "mock-happy");
+        assert!(diag.agent_source.contains("agent_overrides"), "provenance must mention agent_overrides: {}", diag.agent_source);
+        assert!(diag.agent_source.contains("claude/coder"), "provenance must include matched key: {}", diag.agent_source);
+    }
+
+    #[test]
+    fn resolve_for_diagnostic_manifest_absent() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        make_diagnostic_repo(root, "ready", "aa000003", Some("claude/coder"), None, None, None);
+        let diag = super::resolve_for_diagnostic(root, "aa000003").unwrap();
+        assert_eq!(diag.model, None);
+        assert!(!diag.manifest_present);
+        assert!(diag.agent_source.contains("workers.default") || diag.agent_source.contains("workflow.toml"),
+            "agent_source should trace to workers layer: {}", diag.agent_source);
+        assert!(diag.role_source.contains("workers.default") || diag.role_source.contains("workflow.toml"),
+            "role_source should trace to workers layer: {}", diag.role_source);
+    }
+
+    #[test]
+    fn resolve_for_diagnostic_non_dispatchable() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        // Ticket is in "new" state which has no command:start transition.
+        make_diagnostic_repo(root, "new", "aa000004", Some("claude/coder"), None, None, None);
+        let diag = super::resolve_for_diagnostic(root, "aa000004").unwrap();
+        assert!(!diag.dispatchable);
+        assert_ne!(diag.resolved_from_state, "new", "resolved_from_state should differ from ticket_state");
+        assert_eq!(diag.ticket_state, "new");
+    }
+
     // --- mock wrapper integration tests ---
 
     fn find_apm_bin() -> Option<String> {
@@ -1680,7 +2059,7 @@ name = "test-project"
 default_branch = "main"
 
 [workers]
-agent = "mock-happy"
+default = "mock-happy/coder"
 
 [tickets]
 dir = "tickets"
@@ -1690,8 +2069,6 @@ dir = "tickets"
 [[workflow.states]]
 id = "in_design"
 label = "In Design"
-actionable = ["agent"]
-instructions = ".apm/apm.spec-writer.md"
 
   [[workflow.states.transitions]]
   to = "specd"
@@ -1706,7 +2083,6 @@ instructions = ".apm/apm.spec-writer.md"
 [[workflow.states]]
 id = "specd"
 label = "Specd"
-actionable = ["supervisor"]
 satisfies_deps = true
 worker_end = true
 
@@ -1723,7 +2099,6 @@ worker_end = true
 [[workflow.states]]
 id = "in_progress"
 label = "In Progress"
-instructions = ".apm/apm.worker.md"
 
   [[workflow.states.transitions]]
   to = "implemented"
@@ -1738,7 +2113,6 @@ instructions = ".apm/apm.worker.md"
 [[workflow.states]]
 id = "implemented"
 label = "Implemented"
-actionable = ["supervisor"]
 satisfies_deps = true
 worker_end = true
 terminal = false
@@ -1932,7 +2306,7 @@ Some approach.
 name = "test"
 default_branch = "main"
 [workers]
-agent = "mock-happy"
+default = "mock-happy/coder"
 [tickets]
 dir = "tickets"
 "#).unwrap();
@@ -1940,7 +2314,6 @@ dir = "tickets"
 [[workflow.states]]
 id = "in_design"
 label = "In Design"
-actionable = ["agent"]
 
   [[workflow.states.transitions]]
   to = "closed"
@@ -2162,5 +2535,144 @@ updated_at = "2026-01-01T00:00:00Z"
             "log should contain system prompt text\n{log_content}");
         assert!(log_content.contains("\"type\":\"tool_use\""),
             "log should contain tool_use JSONL\n{log_content}");
+    }
+
+    // --- resolve_dispatch_profile unit tests ---
+
+    fn make_minimal_config(
+        dest_state_id: &str,
+        dest_state_worker_profile: Option<&str>,
+        workers_default: Option<&str>,
+    ) -> crate::config::Config {
+        let wp_line = dest_state_worker_profile
+            .map(|wp| format!("worker_profile = \"{wp}\"\n"))
+            .unwrap_or_default();
+        let workers_section = workers_default
+            .map(|d| format!("[workers]\ndefault = \"{d}\"\n"))
+            .unwrap_or_default();
+        let toml_str = format!(
+            "[project]\nname = \"test\"\n[tickets]\ndir = \"tickets\"\n{workers_section}\n\
+             [[workflow.states]]\nid = \"src\"\nlabel = \"Src\"\n\n\
+             [[workflow.states]]\nid = \"{dest_state_id}\"\nlabel = \"Dest\"\n{wp_line}"
+        );
+        toml::from_str(&toml_str).unwrap()
+    }
+
+    #[test]
+    fn dispatch_profile_state_wins_over_workers_default() {
+        let config = make_minimal_config("dest", Some("claude/coder"), Some("claude/other"));
+        let (profile, source) = super::resolve_dispatch_profile("dest", &config);
+        assert_eq!(profile, "claude/coder", "state-level must win over workers.default");
+        assert!(source.contains("state"), "source must mention 'state', got: {source}");
+    }
+
+    #[test]
+    fn dispatch_ignores_transition_worker_profile() {
+        // No state profile, workers.default is set → must return workers.default (no transition fallback)
+        let config = make_minimal_config("dest", None, Some("claude/custom"));
+        let (profile, source) = super::resolve_dispatch_profile("dest", &config);
+        assert_eq!(profile, "claude/custom", "must fall through to workers.default");
+        assert_eq!(source, "workers.default");
+    }
+
+    #[test]
+    fn dispatch_profile_workers_default_fallback() {
+        let config = make_minimal_config("dest", None, Some("claude/custom"));
+        let (profile, source) = super::resolve_dispatch_profile("dest", &config);
+        assert_eq!(profile, "claude/custom");
+        assert_eq!(source, "workers.default");
+    }
+
+    #[test]
+    fn dispatch_profile_empty_when_no_workers_default() {
+        let config = make_minimal_config("dest", None, None);
+        let (profile, source) = super::resolve_dispatch_profile("dest", &config);
+        assert_eq!(profile, "", "no state profile and no workers.default yields empty string");
+        assert_eq!(source, "workers.default");
+    }
+
+    // --- resolve_for_diagnostic with state-level profiles ---
+
+    fn make_diagnostic_repo_with_dest_profile(
+        root: &std::path::Path,
+        ticket_state: &str,
+        ticket_id: &str,
+        workers_default: Option<&str>,
+        dest_state_worker_profile: Option<&str>,
+    ) {
+        use std::fs;
+
+        fs::create_dir_all(root.join(".apm/agents/claude")).unwrap();
+        fs::create_dir_all(root.join("tickets")).unwrap();
+
+        let workers_section = workers_default
+            .map(|d| format!("[workers]\ndefault = \"{d}\"\n"))
+            .unwrap_or_default();
+        fs::write(root.join(".apm/config.toml"), format!(
+            "[project]\nname = \"test\"\ndefault_branch = \"main\"\n\n[tickets]\ndir = \"tickets\"\n\n{workers_section}"
+        )).unwrap();
+
+        let dest_wp_line = if let Some(dwp) = dest_state_worker_profile {
+            format!("worker_profile = \"{dwp}\"\n")
+        } else {
+            String::new()
+        };
+
+        fs::write(root.join(".apm/workflow.toml"), format!(
+            "[[workflow.states]]\nid = \"ready\"\nlabel = \"Ready\"\n\n  [[workflow.states.transitions]]\n  to = \"in_progress\"\n  trigger = \"command:start\"\n\n\
+             [[workflow.states]]\nid = \"in_progress\"\nlabel = \"In Progress\"\n{dest_wp_line}\n  [[workflow.states.transitions]]\n  to = \"done\"\n  trigger = \"manual\"\n  outcome = \"success\"\n\n\
+             [[workflow.states]]\nid = \"done\"\nlabel = \"Done\"\nterminal = true\n\n\
+             [[workflow.states]]\nid = \"new\"\nlabel = \"New\"\n\n  [[workflow.states.transitions]]\n  to = \"ready\"\n  trigger = \"manual\"\n  outcome = \"success\"\n"
+        )).unwrap();
+
+        let ticket_content = format!(
+            "+++\nid = \"{ticket_id}\"\ntitle = \"T\"\nstate = \"{ticket_state}\"\npriority = 0\neffort = 1\nrisk = 1\nauthor = \"test\"\nowner = \"test\"\nbranch = \"ticket/{ticket_id}-test\"\ncreated_at = \"2026-01-01T00:00:00Z\"\nupdated_at = \"2026-01-01T00:00:00Z\"\n+++\n\n## Spec\n\n### Problem\n\nTest.\n\n### Acceptance criteria\n\n- [ ] AC\n\n### Out of scope\n\nNone.\n\n### Approach\n\nSomething.\n\n### Open questions\n\n### Amendment requests\n\n### Code review\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|"
+        );
+        fs::write(root.join(format!("tickets/{ticket_id}-test.md")), ticket_content).unwrap();
+
+        std::process::Command::new("git").arg("init").current_dir(root).output().unwrap();
+        std::process::Command::new("git").args(["config", "user.email", "t@t.com"]).current_dir(root).output().unwrap();
+        std::process::Command::new("git").args(["config", "user.name", "T"]).current_dir(root).output().unwrap();
+        std::process::Command::new("git").args(["add", ".apm"]).current_dir(root).output().unwrap();
+        std::process::Command::new("git").args(["commit", "-m", "init"]).current_dir(root).output().unwrap();
+        let branch = format!("ticket/{ticket_id}-test");
+        std::process::Command::new("git").args(["checkout", "-b", &branch]).current_dir(root).output().unwrap();
+        std::process::Command::new("git").args(["add", &format!("tickets/{ticket_id}-test.md")]).current_dir(root).output().unwrap();
+        std::process::Command::new("git").args(["commit", "-m", "add ticket"]).current_dir(root).output().unwrap();
+        std::process::Command::new("git").args(["checkout", "main"]).current_dir(root).output().unwrap();
+    }
+
+    #[test]
+    fn resolve_for_diagnostic_state_worker_profile_wins() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        // in_progress has state-level "claude/coder"; profile_source must mention "state"
+        make_diagnostic_repo_with_dest_profile(
+            root, "ready", "bb000001",
+            None,
+            Some("claude/coder"),
+        );
+        let diag = super::resolve_for_diagnostic(root, "bb000001").unwrap();
+        assert_eq!(diag.worker_profile_str, "claude/coder",
+            "state-level profile must be used");
+        assert!(diag.profile_source.contains("state"),
+            "profile_source must contain 'state' when from state-level; got: {}", diag.profile_source);
+    }
+
+    #[test]
+    fn resolve_for_diagnostic_workers_default_fallback() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        // in_progress has no state-level profile; workers.default set → must use workers.default
+        make_diagnostic_repo_with_dest_profile(
+            root, "ready", "bb000002",
+            Some("claude/custom"),
+            None,
+        );
+        let diag = super::resolve_for_diagnostic(root, "bb000002").unwrap();
+        assert_eq!(diag.worker_profile_str, "claude/custom",
+            "must fall through to workers.default; got: {}", diag.worker_profile_str);
+        assert_eq!(diag.profile_source, "workers.default",
+            "profile_source must be workers.default; got: {}", diag.profile_source);
     }
 }
