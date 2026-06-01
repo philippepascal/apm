@@ -40,7 +40,11 @@ The fix is to encode the rule where it belongs â€” in the state machine itself â
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Adding new terminal states (`abandoned`, `wontfix`, `archived`). The implicit rule will work for them when added, but this ticket only introduces the rule for the existing `closed` state.
+- Changing who can invoke close. Any user with `apm` CLI access can still run `apm state <id> closed`; no permission system is added.
+- Worker process cleanup when force-closing an `in_progress` or `in_design` ticket. The worktree and any running agent process are not affected.
+- Changes to `apm-server` or `apm-ui` beyond what is required to keep existing tests passing. The UI may no longer list `closed` as a transition option; that is intentional and not a regression.
+- Changes to `available_transitions` or `compute_valid_transitions` in `state.rs`. The implicit close is a supervisor escape hatch, intentionally absent from those lists.
 
 ### Approach
 
