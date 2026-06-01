@@ -31,14 +31,14 @@ All three checks are pure additive validation in `validate_config_no_agents`. No
 
 ### Acceptance criteria
 
-- [ ] `apm validate` reports an error when two transitions both target the same state and one of them uses `trigger = "command:start"`, and the error message names both source states and the destination state.
-- [ ] `apm validate` reports an error when a manual transition and a `command:start` transition both target the same state, and the error message names both source states.
-- [ ] `apm validate` reports an error when a state declares `worker_profile = "claude/worker"` (reserved role).
-- [ ] `apm validate` reports an error when a state declares `worker_profile` with no `/` separator (e.g. `"claudecoder"`).
-- [ ] `apm validate` reports an error when a state declares `worker_profile` with an empty agent component (e.g. `"/coder"`).
-- [ ] `apm validate` reports an error when a state declares `worker_profile` with an empty role component (e.g. `"claude/"`).
-- [ ] `apm validate` reports an error when a `command:start` transition targets a state that has no `worker_profile` set.
-- [ ] `apm validate` reports no errors for the default `workflow.toml` (as it stands after ticket 071886fc).
+- [x] `apm validate` reports an error when two transitions both target the same state and one of them uses `trigger = "command:start"`, and the error message names both source states and the destination state.
+- [x] `apm validate` reports an error when a manual transition and a `command:start` transition both target the same state, and the error message names both source states.
+- [x] `apm validate` reports an error when a state declares `worker_profile = "claude/worker"` (reserved role).
+- [x] `apm validate` reports an error when a state declares `worker_profile` with no `/` separator (e.g. `"claudecoder"`).
+- [x] `apm validate` reports an error when a state declares `worker_profile` with an empty agent component (e.g. `"/coder"`).
+- [x] `apm validate` reports an error when a state declares `worker_profile` with an empty role component (e.g. `"claude/"`).
+- [x] `apm validate` reports an error when a `command:start` transition targets a state that has no `worker_profile` set.
+- [x] `apm validate` reports no errors for the default `workflow.toml` (as it stands after ticket 071886fc).
 
 ### Out of scope
 
