@@ -8621,3 +8621,97 @@ fn apm_list_shared_epic_stale_marker() {
         "output must not contain 'epics:' footer; got:\n{stdout}"
     );
 }
+
+// --- refresh-epic --merge push / no-push behavior ---
+
+fn setup_refresh_epic_for_push(epic_id: &str, slug: &str) -> (TempDir, TempDir) {
+    let (bare, local) = init_remote_repo();
+    let p = local.path();
+    let epic_branch = format!("epic/{epic_id}-{slug}");
+
+    // Create epic branch with an initial commit and push to origin.
+    git(p, &["checkout", "-b", &epic_branch]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "epic init", "--allow-empty"]);
+    git(p, &["push", "origin", &epic_branch]);
+    git(p, &["checkout", "main"]);
+
+    // Add a commit to main that is ahead of the epic branch, then push.
+    std::fs::write(p.join("new-on-main.txt"), "content").unwrap();
+    git(p, &["add", "new-on-main.txt"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "add file on main"]);
+    git(p, &["push", "origin", "main"]);
+
+    (bare, local)
+}
+
+#[test]
+fn refresh_epic_merge_push_flag_pushes_to_origin() {
+    let (bare, local) = setup_refresh_epic_for_push("ab12cd34", "push-test");
+    let p = local.path();
+
+    let out = run_apm(p, &["refresh-epic", "ab12cd34", "--merge", "--push"]);
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(
+        stdout.contains("pushed"),
+        "stdout should mention push; got:\n{stdout}"
+    );
+
+    // After push, origin should have the same tip as the local epic branch.
+    let local_tip = rev_parse(p, "epic/ab12cd34-push-test");
+    let origin_tip = rev_parse(bare.path(), "epic/ab12cd34-push-test");
+    assert_eq!(
+        local_tip, origin_tip,
+        "origin epic branch should equal local tip after --push"
+    );
+}
+
+#[test]
+fn refresh_epic_merge_no_push_flag_skips_push() {
+    let (bare, local) = setup_refresh_epic_for_push("cd56ef78", "nopush-test");
+    let p = local.path();
+
+    // Record origin tip before the merge.
+    let origin_before = rev_parse(bare.path(), "epic/cd56ef78-nopush-test");
+
+    let out = run_apm(p, &["refresh-epic", "cd56ef78", "--merge", "--no-push"]);
+    let stderr = String::from_utf8_lossy(&out.stderr);
+
+    // Origin should be unchanged.
+    let origin_after = rev_parse(bare.path(), "epic/cd56ef78-nopush-test");
+    assert_eq!(
+        origin_before, origin_after,
+        "origin epic branch must not advance when --no-push is passed"
+    );
+
+    // Warning must appear on stderr.
+    assert!(
+        stderr.contains("was not pushed"),
+        "stderr should contain stale-origin warning; got:\n{stderr}"
+    );
+}
+
+#[test]
+fn refresh_epic_merge_noninteractive_skips_push() {
+    let (bare, local) = setup_refresh_epic_for_push("ef901234", "nointeractive-test");
+    let p = local.path();
+
+    // Record origin tip before the merge.
+    let origin_before = rev_parse(bare.path(), "epic/ef901234-nointeractive-test");
+
+    // No --push / --no-push; stdout is not a terminal in the test harness.
+    let out = run_apm(p, &["refresh-epic", "ef901234", "--merge"]);
+    let stderr = String::from_utf8_lossy(&out.stderr);
+
+    // Origin should be unchanged.
+    let origin_after = rev_parse(bare.path(), "epic/ef901234-nointeractive-test");
+    assert_eq!(
+        origin_before, origin_after,
+        "origin epic branch must not advance when non-interactive and no --push flag"
+    );
+
+    // Warning must appear on stderr.
+    assert!(
+        stderr.contains("was not pushed"),
+        "stderr should contain stale-origin warning; got:\n{stderr}"
+    );
+}

@@ -785,6 +785,12 @@ ac.txt) are always removed automatically without needing --untracked."
         /// Merge locally when clean, fall back to PR when there are conflicts
         #[arg(long = "auto", conflicts_with_all = ["merge", "pr"])]
         auto_mode: bool,
+        /// Push the merged epic branch to origin without prompting
+        #[arg(long, conflicts_with = "no_push")]
+        push: bool,
+        /// Skip pushing after merge and print a warning, without prompting
+        #[arg(long = "no-push", conflicts_with = "push")]
+        no_push: bool,
     },
     /// Read or write individual spec sections of a ticket
     #[command(long_about = "Read or write individual sections of a ticket's spec.
@@ -1259,7 +1265,7 @@ fn main() -> Result<()> {
         Command::Epic {
             command: EpicCommand::Set { id, field, value },
         } => cmd::epic::run_set(&root, &id, &field, &value),
-        Command::RefreshEpic { id, merge, pr, auto_mode } => cmd::epic::run_refresh_epic(&root, &id, merge, pr, auto_mode),
+        Command::RefreshEpic { id, merge, pr, auto_mode, push, no_push } => cmd::epic::run_refresh_epic(&root, &id, merge, pr, auto_mode, push, no_push),
         Command::Register { username } => {
             let inferred = username.is_none();
             let config = apm_core::config::Config::load(&root)?;
