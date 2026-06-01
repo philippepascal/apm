@@ -30,7 +30,10 @@ The desired behaviour: the epic bar should reflect the same epic scope as the re
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Filtering the epic bar by owner, author, or state filters — only the epic filter is in scope
+- Changes to how `epicIdsInTickets` is computed (it continues to derive from all tickets, not just visible ones)
+- Any changes to the epic dropdown options or their ordering
+- Backend / API changes
 
 ### Approach
 
