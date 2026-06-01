@@ -98,7 +98,7 @@ pub struct GitHostConfig {
     pub token_env: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Default, Deserialize, JsonSchema)]
 pub struct WorkersConfig {
     /// Docker image used to run worker agents; omit for local execution.
     pub container: Option<String>,
@@ -114,18 +114,6 @@ pub struct WorkersConfig {
     /// Model identifier passed to the worker agent (e.g. `"claude-sonnet-4-5"`).
     /// Can be overridden per-machine in `.apm/local.toml` under `[workers].model`.
     pub model: Option<String>,
-}
-
-impl Default for WorkersConfig {
-    fn default() -> Self {
-        Self {
-            container: None,
-            keychain: std::collections::HashMap::new(),
-            env: std::collections::HashMap::new(),
-            default: String::new(),
-            model: None,
-        }
-    }
 }
 
 
@@ -1535,7 +1523,7 @@ label = "Implemented"
 "#;
         let config: Config = toml::from_str(toml).unwrap();
         let ids = config.implementation_state_ids();
-        assert!(ids.contains(&"in_progress".to_string()),
+        assert!(ids.contains("in_progress"),
             "in_progress must appear when state has worker_profile = claude/coder; got: {:?}", ids);
     }
 

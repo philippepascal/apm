@@ -5,7 +5,6 @@
 use std::path::Path;
 use std::process::{Command, Output};
 use tempfile::TempDir;
-use serde_json;
 
 const APM: &str = env!("CARGO_BIN_EXE_apm");
 
