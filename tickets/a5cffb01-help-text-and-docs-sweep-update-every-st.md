@@ -74,7 +74,7 @@ REFERENCES:
 
 ### Acceptance criteria
 
-- [ ] `apm instructions --help` output does not contain the phrase "shell discipline"
+- [x] `apm instructions --help` output does not contain the phrase "shell discipline"
 - [ ] `apm prompt --help` SYSTEM PROMPT section lists role instructions as Layer 1 and APM system knowledge as Layer 3
 - [ ] `apm prompt --help` `--explain` example shows the current numbered format (`1  …`, `2  …`, `3  …`) and contains no `skipped:` or `level N —` lines
 - [ ] `grep -rn "shell discipline" apm/src/ apm-core/src/ --exclude-dir=target --exclude-dir=archive --exclude-dir=tickets --exclude-dir=.apm--worktrees` returns no hits
