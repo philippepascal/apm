@@ -39,7 +39,48 @@ The operation triggered by the button click does not need to complete before the
 
 ### Approach
 
-How the implementation will work.
+Three files change, all in `apm-ui/src/`. No server changes.
+
+#### useLayoutStore.ts
+
+Add `transitionError: string | null` (initialised to `null`) and `setTransitionError: (msg: string | null) => void` (sets `{ transitionError: msg }`) to the store interface and `create` call.
+
+#### ReviewEditor.tsx — handleTransition
+
+Replace the current flow:
+
+```
+(if dirty) await handleSave() → await fetch(transition) → setReviewMode(false)
+```
+
+with:
+
+```
+(if dirty) await handleSave()  ← still blocking; save must succeed before close
+setReviewMode(false)            ← close immediately
+fetch(transition)               ← fire without await
+  .then: invalidate ['ticket', id] and ['tickets']
+  .catch / non-ok: setTransitionError(msg), then invalidate both query keys
+```
+
+Remove the `flushSync` wrapper — it is only needed when the close follows async work in the same microtask, which is no longer the case. Remove the `setError` call in the transition error path; that state is local to the (now closed) Editor component. Import `setTransitionError` from `useLayoutStore`.
+
+Also clear any stale error at the top of `handleTransition`: call `setTransitionError(null)` before doing anything.
+
+#### WorkScreen.tsx
+
+Read `transitionError` and `setTransitionError` from `useLayoutStore`. In both render branches (the `if (reviewMode)` early-return branch and the normal branch), render a dismissible banner when `transitionError` is set:
+
+```tsx
+{transitionError && (
+  <div className="fixed top-2 right-2 z-50 max-w-sm bg-red-50 border border-red-300 text-red-700 text-sm px-3 py-2 rounded shadow flex items-center gap-2">
+    <span className="flex-1">Transition failed: {transitionError}</span>
+    <button onClick={() => setTransitionError(null)} className="shrink-0 hover:text-red-900">✕</button>
+  </div>
+)}
+```
+
+Place it as the first child inside each top-level `<div>` so it appears above the panel layout but respects `fixed` positioning.
 
 ### Open questions
 
