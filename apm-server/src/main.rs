@@ -2525,6 +2525,9 @@ label = "In Progress"
     const MERGE_FAILED_WORKFLOW_CONFIG: &str = r#"[project]
 name = "test"
 
+[workers]
+default = "claude/coder"
+
 [tickets]
 dir = "tickets"
 
@@ -2557,10 +2560,6 @@ label = "Merge failed"
 
   [[workflow.states.transitions]]
   to      = "implemented"
-  trigger = "manual"
-
-  [[workflow.states.transitions]]
-  to      = "in_progress"
   trigger = "manual"
 
 [[workflow.states]]
@@ -2701,8 +2700,13 @@ terminal = true
         let bytes = response.into_body().collect().await.unwrap().to_bytes();
         let json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
         let opts = json["recovery_options"].as_array().unwrap();
-        assert!(!opts.is_empty(), "recovery_options should be non-empty for merge_failed ticket");
+        assert_eq!(opts.len(), 1, "expected exactly one recovery option; got: {opts:?}");
+        assert!(
+            !opts.iter().any(|o| o["kind"] == "return_to_worker"),
+            "return_to_worker must not be present; got: {opts:?}"
+        );
         let retry = opts.iter().find(|o| o["kind"] == "retry_merge").expect("expected retry_merge option");
+        assert_eq!(retry["to"], "implemented", "retry_merge must target implemented");
         let cmd = retry["command"].as_str().unwrap();
         assert!(cmd.contains("apm state"), "command should contain 'apm state': {cmd}");
         assert!(cmd.contains("implemented"), "command should contain 'implemented': {cmd}");
