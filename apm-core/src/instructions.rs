@@ -311,6 +311,20 @@ fn command_reference_body(role: Option<&str>, commands: &[(String, String)]) -> 
 
 const WORKER_COMMAND_ALLOWLIST: &[&str] = &["show", "state", "spec", "set", "new", "instructions"];
 
+/// Name + description tuples for the six worker-permitted `apm` commands.
+/// Names must stay in sync with WORKER_COMMAND_ALLOWLIST (ticket 9c66e199).
+/// Descriptions are purpose-built for agent consumption; they are NOT copied
+/// from clap `///` doc comments. If a subcommand's fundamental purpose changes,
+/// update both this const and the clap string in apm/src/main.rs in the same commit.
+pub(crate) const WORKER_COMMANDS: &[(&str, &str)] = &[
+    ("instructions", "Output APM system knowledge for agents: state machine, ticket format, shell discipline, session identity, and command reference"),
+    ("new",          "Create a new ticket"),
+    ("set",          "Set a field on a ticket"),
+    ("show",         "Show a ticket"),
+    ("spec",         "Read or write individual spec sections of a ticket"),
+    ("state",        "Transition a ticket's state"),
+];
+
 fn role_command_allowlist(_role: &str) -> Option<&'static [&'static str]> {
     Some(WORKER_COMMAND_ALLOWLIST)
 }

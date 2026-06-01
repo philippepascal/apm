@@ -1000,7 +1000,11 @@ pub(crate) fn build_system_prompt(
     };
 
     // Instructions layer: APM system knowledge (reference material, scoped to role)
-    let instructions_layer = crate::instructions::generate(root, Some(role), ticket_id, &[])?;
+    let cmds: Vec<(String, String)> = crate::instructions::WORKER_COMMANDS
+        .iter()
+        .map(|(n, a)| (n.to_string(), a.to_string()))
+        .collect();
+    let instructions_layer = crate::instructions::generate(root, Some(role), ticket_id, &cmds)?;
 
     // Compose layers: role → project → instructions
     let mut result = role_layer.trim_end().to_owned();
@@ -1249,7 +1253,11 @@ mod tests {
             Some(std::path::Path::new("prefix.md")),
             "claude", "coder", None,
         ).unwrap();
-        let instructions_layer = crate::instructions::generate(p, Some("coder"), None, &[]).unwrap();
+        let cmds: Vec<(String, String)> = crate::instructions::WORKER_COMMANDS
+            .iter()
+            .map(|(n, a)| (n.to_string(), a.to_string()))
+            .collect();
+        let instructions_layer = crate::instructions::generate(p, Some("coder"), None, &cmds).unwrap();
         // New order: role file → project → instructions
         let expected = format!(
             "{}\n\nPREFIX CONTENT\n\n{}",
@@ -1264,7 +1272,11 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let p = dir.path();
         let result = build_system_prompt(p, None, "claude", "coder", None).unwrap();
-        let instructions_layer = crate::instructions::generate(p, Some("coder"), None, &[]).unwrap();
+        let cmds: Vec<(String, String)> = crate::instructions::WORKER_COMMANDS
+            .iter()
+            .map(|(n, a)| (n.to_string(), a.to_string()))
+            .collect();
+        let instructions_layer = crate::instructions::generate(p, Some("coder"), None, &cmds).unwrap();
         // New order: role file → instructions (no project)
         let expected = format!("{}\n\n{}", super::DEFAULT_CODER_DEFAULT.trim_end(), instructions_layer.trim_end());
         assert_eq!(result, expected);
@@ -1279,7 +1291,11 @@ mod tests {
             Some(std::path::Path::new("")),
             "claude", "coder", None,
         ).unwrap();
-        let instructions_layer = crate::instructions::generate(p, Some("coder"), None, &[]).unwrap();
+        let cmds: Vec<(String, String)> = crate::instructions::WORKER_COMMANDS
+            .iter()
+            .map(|(n, a)| (n.to_string(), a.to_string()))
+            .collect();
+        let instructions_layer = crate::instructions::generate(p, Some("coder"), None, &cmds).unwrap();
         // New order: role file → instructions (empty path = no project)
         let expected = format!("{}\n\n{}", super::DEFAULT_CODER_DEFAULT.trim_end(), instructions_layer.trim_end());
         assert_eq!(result, expected);
@@ -1310,7 +1326,11 @@ mod tests {
             Some(std::path::Path::new("prefix.md")),
             "claude", "coder", None,
         ).unwrap();
-        let instructions_layer = crate::instructions::generate(p, Some("coder"), None, &[]).unwrap();
+        let cmds: Vec<(String, String)> = crate::instructions::WORKER_COMMANDS
+            .iter()
+            .map(|(n, a)| (n.to_string(), a.to_string()))
+            .collect();
+        let instructions_layer = crate::instructions::generate(p, Some("coder"), None, &cmds).unwrap();
         // New order: role file → project → instructions
         let expected = format!(
             "{}\n\nPREFIX\n\n{}",
@@ -1330,7 +1350,11 @@ mod tests {
             Some(std::path::Path::new("project.md")),
             "claude", "coder", None,
         ).unwrap();
-        let instructions_layer = crate::instructions::generate(p, Some("coder"), None, &[]).unwrap();
+        let cmds: Vec<(String, String)> = crate::instructions::WORKER_COMMANDS
+            .iter()
+            .map(|(n, a)| (n.to_string(), a.to_string()))
+            .collect();
+        let instructions_layer = crate::instructions::generate(p, Some("coder"), None, &cmds).unwrap();
         // New order: role file → project → instructions
         let expected = format!(
             "{}\n\nPROJECT CONTEXT\n\n{}",
@@ -1338,6 +1362,17 @@ mod tests {
             instructions_layer.trim_end()
         );
         assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn build_system_prompt_contains_command_reference() {
+        let dir = tempfile::tempdir().unwrap();
+        let result = build_system_prompt(dir.path(), None, "claude", "coder", None).unwrap();
+        let cr_pos = result.find("## Command Reference")
+            .expect("## Command Reference section missing from worker prompt");
+        let cr = &result[cr_pos..];
+        assert!(cr.contains("apm show"), "apm show missing from Command Reference");
+        assert!(cr.contains("apm instructions"), "apm instructions missing from Command Reference");
     }
 
     #[test]
