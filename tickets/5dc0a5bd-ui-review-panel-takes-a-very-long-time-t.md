@@ -22,13 +22,13 @@ The operation triggered by the button click does not need to complete before the
 
 ### Acceptance criteria
 
-- [ ] Clicking a transition button closes the review panel within ~200ms (after any pending save completes)
-- [ ] The transition request is still sent to the server; closing the panel does not cancel the in-flight request
-- [ ] The ticket list and ticket detail refresh automatically once the transition request completes
-- [ ] If the transition request fails (non-2xx response or network error), an error message is visible to the user after the panel has closed
-- [ ] The error message is dismissible by the user
-- [ ] If there are unsaved edits, the save is still awaited before the panel closes
-- [ ] Pressing K / "Keep at…" still closes the panel immediately without a network request (unchanged behaviour)
+- [x] Clicking a transition button closes the review panel within ~200ms (after any pending save completes)
+- [x] The transition request is still sent to the server; closing the panel does not cancel the in-flight request
+- [x] The ticket list and ticket detail refresh automatically once the transition request completes
+- [x] If the transition request fails (non-2xx response or network error), an error message is visible to the user after the panel has closed
+- [x] The error message is dismissible by the user
+- [x] If there are unsaved edits, the save is still awaited before the panel closes
+- [x] Pressing K / "Keep at…" still closes the panel immediately without a network request (unchanged behaviour)
 
 ### Out of scope
 
