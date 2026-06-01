@@ -32,7 +32,10 @@ The operation triggered by the button click does not need to complete before the
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Speeding up server-side git operations (commit, push, merge, PR creation)
+- Streaming or real-time progress reporting for in-flight transitions
+- Making the save operation non-blocking (save still awaits before close)
+- Changes to the server handler or `apm-core`
 
 ### Approach
 
