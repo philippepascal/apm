@@ -292,9 +292,7 @@ Configuration is split across files in `.apm/`:
 | `workflow.toml` | State machine: states, transitions, completion strategies |
 | `ticket.toml` | Ticket structure: sections, types, placeholders |
 | `local.toml` | Per-user settings (username, worker overrides) — untracked |
-| `agents.md` | Agent instructions: roles, workflow rules, shell discipline |
-| `apm.spec-writer.md` | Instructions fed to agents during the spec phase |
-| `apm.worker.md` | Instructions fed to agents during the implementation phase |
+| `agents/<agent>/apm.<role>.md` | Role-specific agent instructions (generated per role by `apm init`) |
 
 The workflow, ticket structure, completion strategies, and agent instructions are all fully customizable.
 

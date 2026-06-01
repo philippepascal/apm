@@ -723,7 +723,7 @@ impl Config {
             .map_err(|e| {
                 if e.to_string().contains("worker_profile") {
                     anyhow::anyhow!(
-                        "{}: `transition.worker_profile` is no longer supported — \
+                        "{}: `worker_profile` under a transition block is no longer supported — \
                          move `worker_profile` to the state block instead",
                         path.display()
                     )
@@ -740,7 +740,7 @@ impl Config {
                 .map_err(|e| {
                     if e.to_string().contains("worker_profile") {
                         anyhow::anyhow!(
-                            "{}: `transition.worker_profile` is no longer supported — \
+                            "{}: `worker_profile` under a transition block is no longer supported — \
                              move `worker_profile` to the state block instead",
                             workflow_path.display()
                         )
