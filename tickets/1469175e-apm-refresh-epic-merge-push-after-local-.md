@@ -40,7 +40,85 @@ This asymmetry was confirmed in practice on the syn project: `apm refresh-epic <
 
 ### Approach
 
-How the implementation will work.
+#### `apm/src/main.rs` — add flags to `RefreshEpic`
+
+Add two new fields to the `RefreshEpic` variant (after `auto_mode`):
+
+```rust
+/// Push the merged epic branch to origin without prompting
+#[arg(long, conflicts_with = "no_push")]
+push: bool,
+/// Skip pushing after merge and print a warning, without prompting
+#[arg(long = "no-push", conflicts_with = "push")]
+no_push: bool,
+```
+
+Update the dispatch match arm:
+
+```rust
+Command::RefreshEpic { id, merge, pr, auto_mode, push, no_push } =>
+    cmd::epic::run_refresh_epic(&root, &id, merge, pr, auto_mode, push, no_push),
+```
+
+#### `apm/src/util.rs` — add `prompt_yes_no_default_yes`
+
+Add alongside the existing `prompt_yes_no`. Returns `true` unless the user types `n`/`N`; empty input (Enter) returns `true`.
+
+```rust
+/// Print `prompt`, flush stdout, read one line; returns true unless the user types "n" (default yes).
+pub fn prompt_yes_no_default_yes(prompt: &str) -> io::Result<bool> {
+    print!("{prompt}");
+    io::stdout().flush()?;
+    let mut line = String::new();
+    io::stdin().lock().read_line(&mut line)?;
+    Ok(!line.trim().eq_ignore_ascii_case("n"))
+}
+```
+
+#### `apm/src/cmd/epic.rs` — update `run_refresh_epic`
+
+Change the signature to accept two new booleans:
+
+```rust
+pub fn run_refresh_epic(
+    root: &Path, id_arg: &str, merge: bool, pr: bool,
+    auto_mode: bool, push: bool, no_push: bool,
+) -> Result<()>
+```
+
+After the successful `merge_ref` branch (following the `None => bail!` arm at line 198–201), insert the push decision:
+
+```rust
+let should_push = if push {
+    true
+} else if no_push {
+    false
+} else if std::io::stdout().is_terminal() {
+    crate::util::prompt_yes_no_default_yes("Push refreshed epic to origin? [Y/n] ")?
+} else {
+    false
+};
+
+if should_push {
+    apm_core::git::push_branch_tracking(root, &epic_branch)?;
+    println!("pushed {epic_branch} to origin");
+} else {
+    eprintln!(
+        "warning: {epic_branch} was not pushed; \
+         downstream `apm start` will read stale origin content until pushed manually"
+    );
+}
+```
+
+The warning fires whenever the push is skipped, including when the user explicitly passes `--no-push`, so the consequence is always visible.
+
+#### Tests — `apm/tests/integration.rs`
+
+Add three test cases. Each sets up a temp git repo with a bare remote (so actual pushes work), creates an epic branch, and puts a commit on the default branch that the epic branch is behind.
+
+1. **`--push`**: call `run_refresh_epic` with `push=true`. Assert `git rev-parse origin/<epic-branch>` equals the post-merge local tip.
+2. **`--no-push`**: call with `no_push=true`. Assert `origin/<epic-branch>` still points at the pre-merge tip, and that stderr contains `"was not pushed"`.
+3. **Non-interactive default**: call with `push=false, no_push=false` (stdout is not a terminal in test context). Assert same as `--no-push`: origin unchanged, warning on stderr.
 
 ### Open questions
 
