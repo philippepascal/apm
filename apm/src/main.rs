@@ -74,6 +74,9 @@ enum EpicCommand {
     Close {
         /// Epic ID (4–8 char hex prefix)
         id: String,
+        /// Cascade-close all non-terminal tickets before closing the epic
+        #[arg(long)]
+        close_all: bool,
     },
     /// List all epics with derived state and ticket counts
     List,
@@ -1254,8 +1257,8 @@ fn main() -> Result<()> {
             command: EpicCommand::New { title },
         } => cmd::epic::run_new(&root, title),
         Command::Epic {
-            command: EpicCommand::Close { id },
-        } => cmd::epic::run_close(&root, &id),
+            command: EpicCommand::Close { id, close_all },
+        } => cmd::epic::run_close(&root, &id, close_all),
         Command::Epic {
             command: EpicCommand::List,
         } => cmd::epic::run_list(&root),

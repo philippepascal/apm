@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context as _, Result};
 use std::io::IsTerminal;
 use std::path::Path;
 use crate::ctx::CmdContext;
@@ -70,7 +70,7 @@ pub fn run_new(root: &Path, title: String) -> Result<()> {
     Ok(())
 }
 
-pub fn run_close(root: &Path, id_arg: &str) -> Result<()> {
+pub fn run_close(root: &Path, id_arg: &str, close_all: bool) -> Result<()> {
     let config = CmdContext::load_config_only(root)?;
 
     // 1. Resolve the epic branch from the id prefix.
@@ -96,6 +96,47 @@ pub fn run_close(root: &Path, id_arg: &str) -> Result<()> {
             "cannot close epic: the following tickets are not quiescent:\n{}",
             blockers.join("\n")
         );
+    }
+
+    // 3b. Non-terminal check: every ticket in the epic must be in a terminal state.
+    let non_terminal = apm_core::epic::non_terminal_epic_tickets(root, epic_id, &config)?;
+    if !non_terminal.is_empty() {
+        if !close_all {
+            let rows: String = non_terminal
+                .iter()
+                .map(|t| format!("  {:<8}  {:<13}  {}", t.id, t.state, t.title))
+                .collect::<Vec<_>>()
+                .join("\n");
+            anyhow::bail!(
+                "epic has {} non-terminal ticket(s):\n{}\nRe-run with --close-all to cascade close, or close them manually first.",
+                non_terminal.len(),
+                rows
+            );
+        }
+        // --close-all: fail-fast on blocked/question first.
+        let unsafe_tickets: Vec<_> = non_terminal
+            .iter()
+            .filter(|t| t.state == "blocked" || t.state == "question")
+            .collect();
+        if !unsafe_tickets.is_empty() {
+            let rows: String = unsafe_tickets
+                .iter()
+                .map(|t| format!("  {:<8}  {:<13}  {}", t.id, t.state, t.title))
+                .collect::<Vec<_>>()
+                .join("\n");
+            anyhow::bail!(
+                "cannot cascade close: the following tickets require manual resolution:\n{}\nResolve them manually, then retry.",
+                rows
+            );
+        }
+        // Safe to cascade close.
+        let agent = apm_core::config::resolve_caller_name();
+        for t in &non_terminal {
+            print!("closing ticket #{} ... ", t.id);
+            apm_core::ticket::close(root, &config, &t.id, None, &agent, false)
+                .with_context(|| format!("failed to close ticket #{}", t.id))?;
+            println!("done");
+        }
     }
 
     // 4. Derive a human-readable title from the branch name.

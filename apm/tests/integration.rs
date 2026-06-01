@@ -8739,3 +8739,119 @@ fn close_from_terminal_state_fails() {
         }
     }
 }
+
+// --- epic close: non-terminal guard ---
+
+/// Set up a test repo with an epic branch that has one commit ahead of main.
+fn setup_epic_with_commit() -> (tempfile::TempDir, String) {
+    let (dir, epic_id) = setup_with_epic();
+    std::fs::write(dir.path().join(".apm/local.toml"), "username = \"test\"\n").unwrap();
+    (dir, epic_id)
+}
+
+/// Create a ticket in the given epic and force it to `state`.
+fn epic_ticket_in_state(dir: &std::path::Path, epic_id: &str, title: &str, state: &str) -> (String, String) {
+    let out = run_apm(dir, &["new", "--no-edit", "--no-aggressive", "--epic", epic_id, title]);
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let line = stdout.lines().find(|l| l.starts_with("Created ticket")).unwrap();
+    let id = line.split_whitespace().nth(2).unwrap().trim_end_matches(':').to_string();
+    let branch = line.split("(branch: ").nth(1).unwrap().trim_end_matches(')').to_string();
+    // spec validation requires AC checklist items for states like specd.
+    run_apm(dir, &["spec", &id, "--section", "Acceptance criteria", "--set", "- [ ] Done", "--no-aggressive"]);
+    run_apm(dir, &["state", &id, state, "--force", "--no-aggressive"]);
+    (id, branch)
+}
+
+#[test]
+fn epic_close_no_flag_bails_on_non_terminal_ticket() {
+    let (dir, epic_id) = setup_epic_with_commit();
+    let p = dir.path();
+
+    // specd has no impl history → quiescence passes, but non-terminal guard fires.
+    epic_ticket_in_state(p, &epic_id, "Specd ticket", "specd");
+
+    let result = apm::cmd::epic::run_close(p, &epic_id, false);
+    let err = result.unwrap_err();
+    let msg = err.to_string();
+    assert!(
+        msg.contains("non-terminal"),
+        "expected 'non-terminal' in error; got: {msg}"
+    );
+    assert!(
+        msg.contains("Re-run with --close-all to cascade close, or close them manually first."),
+        "expected --close-all hint; got: {msg}"
+    );
+}
+
+#[test]
+fn epic_close_all_bails_on_blocked_ticket() {
+    let (dir, epic_id) = setup_epic_with_commit();
+    let p = dir.path();
+
+    epic_ticket_in_state(p, &epic_id, "Blocked ticket", "blocked");
+
+    let result = apm::cmd::epic::run_close(p, &epic_id, true);
+    let err = result.unwrap_err();
+    let msg = err.to_string();
+    assert!(
+        msg.contains("blocked"),
+        "expected 'blocked' in error; got: {msg}"
+    );
+    assert!(
+        msg.contains("require manual resolution"),
+        "expected 'require manual resolution' in error; got: {msg}"
+    );
+}
+
+#[test]
+fn epic_close_all_bails_on_mixed_blocked_and_safe() {
+    let (dir, epic_id) = setup_epic_with_commit();
+    let p = dir.path();
+
+    let (id_safe, branch_safe) = epic_ticket_in_state(p, &epic_id, "Safe ticket", "specd");
+    let (_id_blocked, _branch_blocked) = epic_ticket_in_state(p, &epic_id, "Blocked ticket", "blocked");
+
+    let result = apm::cmd::epic::run_close(p, &epic_id, true);
+    let err = result.unwrap_err();
+    let msg = err.to_string();
+    assert!(
+        msg.contains("require manual resolution"),
+        "expected bail on mixed blocked+safe; got: {msg}"
+    );
+
+    // The safe ticket must not have been closed (bail happened before any close).
+    let rel = ticket_rel_path(&branch_safe);
+    let content = branch_content(p, &branch_safe, &rel);
+    assert!(
+        !content.contains("state = \"closed\""),
+        "safe ticket must not be closed when mix contains blocked; got: {content}"
+    );
+    let _ = id_safe; // referenced above
+}
+
+#[test]
+fn epic_close_all_closes_safe_tickets() {
+    let (dir, epic_id) = setup_epic_with_commit();
+    let p = dir.path();
+
+    let (_id, branch) = epic_ticket_in_state(p, &epic_id, "Safe ticket", "specd");
+
+    // run_close will cascade-close the ticket then fail at the git push step (no remote).
+    // That is expected: we only care that the ticket was closed before the push.
+    let result = apm::cmd::epic::run_close(p, &epic_id, true);
+    // The error must be about the push, not about our non-terminal guard.
+    if let Err(ref e) = result {
+        let msg = e.to_string();
+        assert!(
+            !msg.contains("non-terminal") && !msg.contains("require manual resolution"),
+            "cascade close should have succeeded but got an unexpected error: {msg}"
+        );
+    }
+
+    let rel = ticket_rel_path(&branch);
+    let content = branch_content(p, &branch, &rel);
+    assert!(
+        content.contains("state = \"closed\""),
+        "ticket must be closed after --close-all cascade; got: {content}"
+    );
+}

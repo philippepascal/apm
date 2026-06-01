@@ -4,6 +4,34 @@ use std::path::Path;
 use crate::config::StateConfig;
 use crate::git_util;
 
+#[derive(Debug)]
+pub struct EpicTicketInfo {
+    pub id: String,
+    pub state: String,
+    pub title: String,
+}
+
+pub fn non_terminal_epic_tickets(
+    root: &Path,
+    epic_id: &str,
+    config: &crate::config::Config,
+) -> Result<Vec<EpicTicketInfo>> {
+    let all_tickets = crate::ticket::load_all_from_git(root, &config.tickets.dir)?;
+    let terminal = config.terminal_state_ids();
+    let mut result: Vec<EpicTicketInfo> = all_tickets
+        .into_iter()
+        .filter(|t| t.frontmatter.epic.as_deref() == Some(epic_id))
+        .filter(|t| !terminal.contains(&t.frontmatter.state))
+        .map(|t| EpicTicketInfo {
+            id: t.frontmatter.id,
+            state: t.frontmatter.state,
+            title: t.frontmatter.title,
+        })
+        .collect();
+    result.sort_by(|a, b| a.id.cmp(&b.id));
+    Ok(result)
+}
+
 pub struct MergeStatus {
     pub ahead: usize,
     pub clean: bool,
@@ -370,6 +398,65 @@ mod tests {
         let (changed, skipped) = set_epic_owner(p, "epic5678", "bob", &config).unwrap();
         assert_eq!(changed, 0);
         assert_eq!(skipped, 2);
+    }
+
+    #[test]
+    fn non_terminal_epic_tickets_all_closed_returns_empty() {
+        let tmp = setup_repo();
+        let p = tmp.path();
+        std::fs::create_dir_all(p.join(".apm")).unwrap();
+        std::fs::write(p.join(".apm/config.toml"), TOML_WITH_STATES).unwrap();
+
+        let config = crate::config::Config::load(p).unwrap();
+
+        let content_a = make_ticket_content("aa110001", "closed", "epicaaaa");
+        crate::git::commit_to_branch(p, "ticket/aa110001-ta", "tickets/aa110001-ta.md", &content_a, "add ta").unwrap();
+        let content_b = make_ticket_content("aa110002", "closed", "epicaaaa");
+        crate::git::commit_to_branch(p, "ticket/aa110002-tb", "tickets/aa110002-tb.md", &content_b, "add tb").unwrap();
+
+        let result = non_terminal_epic_tickets(p, "epicaaaa", &config).unwrap();
+        assert!(result.is_empty(), "expected empty when all tickets are closed, got: {result:?}");
+    }
+
+    #[test]
+    fn non_terminal_epic_tickets_mixed_returns_non_terminal() {
+        let tmp = setup_repo();
+        let p = tmp.path();
+        std::fs::create_dir_all(p.join(".apm")).unwrap();
+        std::fs::write(p.join(".apm/config.toml"), TOML_WITH_STATES).unwrap();
+
+        let config = crate::config::Config::load(p).unwrap();
+
+        let content_closed = make_ticket_content("bb220001", "closed", "epicbbbb");
+        crate::git::commit_to_branch(p, "ticket/bb220001-tc", "tickets/bb220001-tc.md", &content_closed, "add tc").unwrap();
+        let content_ready = make_ticket_content("bb220002", "ready", "epicbbbb");
+        crate::git::commit_to_branch(p, "ticket/bb220002-td", "tickets/bb220002-td.md", &content_ready, "add td").unwrap();
+
+        let result = non_terminal_epic_tickets(p, "epicbbbb", &config).unwrap();
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].id, "bb220002");
+        assert_eq!(result[0].state, "ready");
+    }
+
+    #[test]
+    fn non_terminal_epic_tickets_ignores_other_epics() {
+        let tmp = setup_repo();
+        let p = tmp.path();
+        std::fs::create_dir_all(p.join(".apm")).unwrap();
+        std::fs::write(p.join(".apm/config.toml"), TOML_WITH_STATES).unwrap();
+
+        let config = crate::config::Config::load(p).unwrap();
+
+        // Non-terminal ticket in the target epic.
+        let content_a = make_ticket_content("cc330001", "ready", "epiccccc");
+        crate::git::commit_to_branch(p, "ticket/cc330001-te", "tickets/cc330001-te.md", &content_a, "add te").unwrap();
+        // Non-terminal ticket in a different epic — must be ignored.
+        let content_b = make_ticket_content("cc330002", "ready", "epicdddd");
+        crate::git::commit_to_branch(p, "ticket/cc330002-tf", "tickets/cc330002-tf.md", &content_b, "add tf").unwrap();
+
+        let result = non_terminal_epic_tickets(p, "epiccccc", &config).unwrap();
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].id, "cc330001");
     }
 
     const TOML_WITH_WORKER_END: &str = concat!(
