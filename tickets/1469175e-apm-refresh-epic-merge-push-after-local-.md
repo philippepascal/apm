@@ -22,7 +22,7 @@ This asymmetry was confirmed in practice on the syn project: `apm refresh-epic <
 
 ### Acceptance criteria
 
-- [ ] `apm refresh-epic <id> --merge --push` pushes the epic branch to origin after a successful local merge; `git rev-parse origin/<epic-branch>` equals the post-merge local tip.
+- [x] `apm refresh-epic <id> --merge --push` pushes the epic branch to origin after a successful local merge; `git rev-parse origin/<epic-branch>` equals the post-merge local tip.
 - [ ] `apm refresh-epic <id> --merge --no-push` completes the local merge without pushing; `origin/<epic-branch>` is unchanged; a warning is printed to stderr stating that downstream `apm start` will read stale content until the branch is pushed manually.
 - [ ] `apm refresh-epic <id> --merge` with stdout connected to a terminal prompts `Push refreshed epic to origin? [Y/n]`; pressing Enter or typing `y`/`Y` pushes; typing `n`/`N` skips with the stale-origin warning.
 - [ ] `apm refresh-epic <id> --merge` with stdout not connected to a terminal skips the push without prompting and prints the stale-origin warning to stderr.
