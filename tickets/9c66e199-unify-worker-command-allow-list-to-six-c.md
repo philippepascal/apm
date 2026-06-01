@@ -26,7 +26,7 @@ The fix is to replace the per-role match arms with a single `WORKER_COMMAND_ALLO
 
 ### Acceptance criteria
 
-- [ ] `apm instructions --role coder` Command Reference lists exactly the six commands: show, state, spec, set, new, instructions
+- [x] `apm instructions --role coder` Command Reference lists exactly the six commands: show, state, spec, set, new, instructions
 - [ ] `apm instructions --role spec-writer` Command Reference lists the same six commands as coder
 - [ ] `apm instructions --role any-unknown-role` Command Reference lists the same six commands
 - [ ] `apm instructions` (no role) Command Reference remains unfiltered
