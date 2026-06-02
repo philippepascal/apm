@@ -1,7 +1,7 @@
 +++
 id = "dc2b08db"
 title = "apm move should not change the current worktree checkout"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/dc2b08db-apm-move-should-not-change-the-current-w"
 created_at = "2026-06-02T03:20:39.058642Z"
-updated_at = "2026-06-02T03:20:39.058642Z"
+updated_at = "2026-06-02T06:07:09.088705Z"
 +++
 
 ## Spec
@@ -81,3 +81,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-06-02T03:20Z | — | new | philippepascal |
+| 2026-06-02T06:07Z | new | groomed | philippepascal |
