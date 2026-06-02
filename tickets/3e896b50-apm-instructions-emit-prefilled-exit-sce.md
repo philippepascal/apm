@@ -1,7 +1,7 @@
 +++
 id = "3e896b50"
 title = "apm instructions: emit prefilled exit-scenario cheat sheet per worker state"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/3e896b50-apm-instructions-emit-prefilled-exit-sce"
 created_at = "2026-06-02T18:34:29.328988Z"
-updated_at = "2026-06-02T18:34:29.328988Z"
+updated_at = "2026-06-02T18:39:47.070383Z"
 +++
 
 ## Spec
@@ -133,3 +133,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-06-02T18:34Z | — | new | philippepascal |
+| 2026-06-02T18:39Z | new | groomed | philippepascal |
