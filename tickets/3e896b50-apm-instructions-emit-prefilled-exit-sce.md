@@ -103,7 +103,7 @@ REFERENCES:
 
 ### Acceptance criteria
 
-- [ ] `apm instructions <id>` emits `## Exit scenarios` after the State Machine table when the ticket's current state has `worker_profile` set
+- [x] `apm instructions <id>` emits `## Exit scenarios` after the State Machine table when the ticket's current state has `worker_profile` set
 - [ ] Each scenario heading is the transition's `worker_hint` text, formatted as a `###` heading
 - [ ] When `worker_pre` is set on a transition, it appears as the first command line in the scenario with `<id>` substituted with the ticket id
 - [ ] The `apm state <id> <to>` line appears in every scenario with `<id>` substituted
