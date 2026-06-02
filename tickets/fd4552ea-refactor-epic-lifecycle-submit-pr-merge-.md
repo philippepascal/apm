@@ -106,7 +106,25 @@ REFERENCES:
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm epic submit <id>` on an epic with no existing PR pushes the branch to origin and opens a PR; output includes the PR URL.
+- [ ] `apm epic submit <id>` on an epic with an existing open PR updates the PR without creating a new one; output includes the existing PR URL.
+- [ ] `apm epic submit --merge <id>` on an epic that merges cleanly into the default branch merges it locally and pushes; no PR is created.
+- [ ] `apm epic submit --merge <id>` on an epic that would conflict exits non-zero with a message naming the conflict and suggesting `--pr`.
+- [ ] `apm epic submit --auto <id>` merges cleanly when no conflict would occur; falls back to opening a PR when a conflict is detected.
+- [ ] `apm epic close <id>` on an epic whose branch is fully merged into `origin/<default>` (regular or squash merge) deletes the local branch, removes the worktree if present, and exits zero.
+- [ ] `apm epic close <id>` on an epic with commits not yet in `origin/<default>` exits non-zero, prints the number of unmerged commits, and suggests `apm epic close --force`.
+- [ ] `apm epic close --force <id>` deletes the local branch and removes the worktree unconditionally regardless of merge status.
+- [ ] `apm sync` output includes an "Epics ready to submit" section listing epics whose derived state is `done` and whose branch is not yet merged into `origin/<default>`.
+- [ ] `apm sync` output includes an "Epics ready to close" section listing epics whose branch is merged into `origin/<default>` (squash-aware detection).
+- [ ] `apm sync` prints the epic hint sections without prompting; no action is taken automatically.
+- [ ] `apm clean --epics` exits non-zero with a message directing the user to `apm epic close <id>`.
+- [ ] A public function `apm_core::git::is_branch_content_merged(root, default_branch, branch)` exists, prefers `origin/<default>` when the remote ref is present, and falls back to the local ref when it is not.
+- [ ] `is_branch_content_merged` returns `true` for a branch merged into default via a regular (fast-forward or no-ff) merge.
+- [ ] `is_branch_content_merged` returns `true` for a branch squash-merged into default.
+- [ ] `is_branch_content_merged` returns `false` for a branch with commits not present in default.
+- [ ] Integration test covers the end-to-end flow: `apm epic submit --merge` merges the branch; `apm epic close` subsequently deletes the branch and worktree.
+- [ ] Integration test verifies that `sync::detect` populates `epic_close_hints` after a squash merge of an epic branch, and `epic_submit_hints` when the epic is done but not yet merged.
+- [ ] `apm epic --help` shows `submit` and `close` as distinct subcommands with non-overlapping descriptions.
 
 ### Out of scope
 
