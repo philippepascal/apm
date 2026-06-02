@@ -39,7 +39,63 @@ The fix is to run the rebase inside a temporary worktree, exactly as `try_worktr
 
 ### Approach
 
-How the implementation will work.
+#### Change to `move_to_epic` (step 9)
+
+**File:** `apm-core/src/ticket/ticket_util.rs`
+
+Replace the current three-argument rebase that runs in the main worktree:
+
+```rust
+crate::git_util::run(root, &["rebase", "--onto", &new_base_sha, &old_upstream_sha, &ticket_branch])
+```
+
+with a temporary-worktree rebase that keeps the main worktree's HEAD intact:
+
+1. Resolve the local SHA for `ticket_branch`:
+   ```rust
+   let branch_sha = crate::git_util::run(root, &["rev-parse", &format!("refs/heads/{ticket_branch}")])?;
+   ```
+
+2. Build a temp path using the same naming convention as `try_worktree_commit` (pid + counter + sanitised branch name) under `std::env::temp_dir()`.
+
+3. Create a detached temporary worktree at that SHA, then check out the branch inside it (same two-step pattern used in `try_worktree_commit` and `commit_files_to_branch`):
+   ```rust
+   crate::git_util::run(root, &["worktree", "add", "--detach", &wt_path_str, &branch_sha])?;
+   let _ = crate::git_util::run(&wt_path, &["checkout", "-B", &ticket_branch]);
+   ```
+
+4. Run the two-argument rebase from inside the temp worktree (no branch argument → git rebases the currently checked-out branch, updating `refs/heads/<ticket_branch>` in place):
+   ```rust
+   let rebase_result = crate::git_util::run(&wt_path, &["rebase", "--onto", &new_base_sha, &old_upstream_sha]);
+   ```
+
+5. On failure, abort in the temp worktree, clean it up, then surface the existing error messages unchanged.
+
+6. On success, clean up the temp worktree:
+   ```rust
+   let _ = crate::git_util::run(root, &["worktree", "remove", "--force", &wt_path_str]);
+   let _ = std::fs::remove_dir_all(&wt_path);
+   ```
+
+Steps 1–8 and 10+ of `move_to_epic` are unchanged. The step-6 guard ("Reject if branch is checked out in a worktree") is preserved — it prevents `checkout -B` in step 3 above from failing with "already checked out."
+
+After the rebase `refs/heads/<ticket_branch>` points to the rebased tip. `commit_to_branch` (step 10) uses `try_worktree_commit` to commit the frontmatter update, which already handles the branch safely without touching the main worktree.
+
+#### Integration test
+
+**File:** `apm/tests/integration.rs`
+
+Add a test `move_does_not_change_main_worktree_head`:
+
+1. Call `init_repo()` to get a temp repo on `main`.
+2. Create an epic branch directly via git (following the pattern in `setup_with_epic()`).
+3. Create a ticket with `apm new`.
+4. Assert HEAD is `main`.
+5. Call `run_apm(dir.path(), &["move", &ticket_id, &epic_id])`.
+6. Assert `git branch --show-current` is still `"main"`.
+7. Assert the ticket file on the ticket branch contains `epic = "<epic_id>"`.
+
+No fixture files are needed. The test uses only the existing `init_repo`, `create_ticket`, and `git` helpers already in the file.
 
 ### Open questions
 
