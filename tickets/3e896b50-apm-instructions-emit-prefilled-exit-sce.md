@@ -162,20 +162,9 @@ New private helper `exit_scenarios_body(config: Option<&Config>, current_state: 
 
 Update the caller in `apm/src/cmd/instructions.rs`: when `ticket_id` is provided, load the ticket and read its current state field; pass it as `current_state`. Update all existing tests in `instructions.rs` to add `None` as the fifth argument (no existing test supplies a ticket id, so no assertion changes).
 
-#### Step 3 — workflow.toml: annotate transitions and add in_progress → ammend
+#### Step 3 — workflow.toml: annotate transitions
 
-`in_progress → ammend` does not currently exist in either workflow.toml. Add it after `in_progress → blocked` in both files:
-
-```toml
-[[workflow.states.transitions]]
-to          = "ammend"
-trigger     = "manual"
-outcome     = "needs_input"
-worker_hint = "If the spec is wrong and needs supervisor revision"
-worker_pre  = "apm spec <id> --section 'Amendment requests' --add-task '<what needs to change>'"
-```
-
-Also add `worker_hint` (and `worker_pre` where applicable) to the four existing transitions:
+Add `worker_hint` (and `worker_pre` where applicable) to the four existing transitions in both `apm-core/src/default/workflow.toml` and `.apm/workflow.toml`:
 
 - `in_progress → implemented`: `worker_hint = "If you completed the implementation and tests pass"`
 - `in_progress → blocked`: `worker_hint = "If you lack information to proceed (write your question first)"`, `worker_pre = "apm spec <id> --section 'Open questions' --append '<your question text>'"`
@@ -196,7 +185,7 @@ Mirror both edits to `.apm/agents/claude/apm.coder.md` and `.apm/agents/claude/a
 
 **Unit test** (inline in `apm-core/src/instructions.rs`): build a TOML config with two states — `in_progress` (`worker_profile = "claude/coder"`) with two transitions (`→ implemented` with `worker_hint`, `→ blocked` without), and `specd` (no `worker_profile`) with one transition (`→ closed` with `worker_hint`). Call `generate()` with `current_state = Some("in_progress")`. Assert: (a) output contains `## Exit scenarios`; (b) exactly one `###` scenario appears (the hinted `in_progress` transition); (c) the un-hinted transition is absent; (d) the `specd` transition is absent. Test a second config where `worker_pre` is set — assert it appears before the `apm state` line. Test with `current_state = None` — assert no Exit scenarios section.
 
-**Stable-text test**: call `generate()` with the real `apm-core/src/default/workflow.toml` config and `current_state = "in_progress"`. Assert the three expected scenario headings appear in order: implemented first, blocked second, ammend third.
+**Stable-text test**: call `generate()` with the real `apm-core/src/default/workflow.toml` config and `current_state = "in_progress"`. Assert the two expected scenario headings appear in order: implemented first, blocked second.
 
 ### Open questions
 
