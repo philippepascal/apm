@@ -209,6 +209,7 @@ Mirror both edits to `.apm/agents/claude/apm.coder.md` and `.apm/agents/claude/a
 
 ### Amendment requests
 
+- [ ] Remove the addition of a new in_progress to ammend transition from this ticket's scope. The original context I supplied (the Problem section's output-format mock and the worker_hint/worker_pre defaults list) mentioned this scenario, but in_progress to ammend does not currently exist in either workflow.toml, and adding it is a workflow behavior change beyond the cheat-sheet/role-slimming scope of this ticket. Concrete changes: (1) Drop step 3's instruction to add a new in_progress to ammend transition block to both workflow.toml files. (2) Drop the in_progress to ammend example from the worker_hint/worker_pre defaults list in the Problem section. (3) Update the Output Format mock to show only the two in_progress scenarios that actually exist after this ticket (implemented and blocked); remove the third 'If the spec is wrong' scenario. (4) Update the stable-text test in step 5 from 'three expected scenario headings' to 'two expected scenario headings' for in_progress; assert implemented first, blocked second. (5) Keep all four other transition annotations as specified (in_progress to implemented, in_progress to blocked, in_design to specd, in_design to question). If at some future point we want a direct in_progress to ammend path, file a separate ticket for that workflow change.
 
 ### Code review
 
