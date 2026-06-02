@@ -3,13 +3,13 @@ id = "3e896b50"
 title = "apm instructions: emit prefilled exit-scenario cheat sheet per worker state"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 4
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/3e896b50-apm-instructions-emit-prefilled-exit-sce"
 created_at = "2026-06-02T18:34:29.328988Z"
-updated_at = "2026-06-02T18:40:05.993369Z"
+updated_at = "2026-06-02T18:48:50.905561Z"
 +++
 
 ## Spec
