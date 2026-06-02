@@ -256,6 +256,8 @@ mod tests {
             warning: None,
             on_failure: None,
             outcome: None,
+            worker_hint: None,
+            worker_pre: None,
         }
     }
 

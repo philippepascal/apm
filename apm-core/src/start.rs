@@ -1005,7 +1005,7 @@ pub(crate) fn build_system_prompt(
         .iter()
         .map(|(n, a)| (n.to_string(), a.to_string()))
         .collect();
-    let instructions_layer = crate::instructions::generate(root, Some(role), ticket_id, &cmds)?;
+    let instructions_layer = crate::instructions::generate(root, Some(role), ticket_id, &cmds, None)?;
 
     // Compose layers: role → project → instructions
     let mut result = role_layer.trim_end().to_owned();
@@ -1258,7 +1258,7 @@ mod tests {
             .iter()
             .map(|(n, a)| (n.to_string(), a.to_string()))
             .collect();
-        let instructions_layer = crate::instructions::generate(p, Some("coder"), None, &cmds).unwrap();
+        let instructions_layer = crate::instructions::generate(p, Some("coder"), None, &cmds, None).unwrap();
         // New order: role file → project → instructions
         let expected = format!(
             "{}\n\nPREFIX CONTENT\n\n{}",
@@ -1277,7 +1277,7 @@ mod tests {
             .iter()
             .map(|(n, a)| (n.to_string(), a.to_string()))
             .collect();
-        let instructions_layer = crate::instructions::generate(p, Some("coder"), None, &cmds).unwrap();
+        let instructions_layer = crate::instructions::generate(p, Some("coder"), None, &cmds, None).unwrap();
         // New order: role file → instructions (no project)
         let expected = format!("{}\n\n{}", super::DEFAULT_CODER_DEFAULT.trim_end(), instructions_layer.trim_end());
         assert_eq!(result, expected);
@@ -1296,7 +1296,7 @@ mod tests {
             .iter()
             .map(|(n, a)| (n.to_string(), a.to_string()))
             .collect();
-        let instructions_layer = crate::instructions::generate(p, Some("coder"), None, &cmds).unwrap();
+        let instructions_layer = crate::instructions::generate(p, Some("coder"), None, &cmds, None).unwrap();
         // New order: role file → instructions (empty path = no project)
         let expected = format!("{}\n\n{}", super::DEFAULT_CODER_DEFAULT.trim_end(), instructions_layer.trim_end());
         assert_eq!(result, expected);
@@ -1331,7 +1331,7 @@ mod tests {
             .iter()
             .map(|(n, a)| (n.to_string(), a.to_string()))
             .collect();
-        let instructions_layer = crate::instructions::generate(p, Some("coder"), None, &cmds).unwrap();
+        let instructions_layer = crate::instructions::generate(p, Some("coder"), None, &cmds, None).unwrap();
         // New order: role file → project → instructions
         let expected = format!(
             "{}\n\nPREFIX\n\n{}",
@@ -1355,7 +1355,7 @@ mod tests {
             .iter()
             .map(|(n, a)| (n.to_string(), a.to_string()))
             .collect();
-        let instructions_layer = crate::instructions::generate(p, Some("coder"), None, &cmds).unwrap();
+        let instructions_layer = crate::instructions::generate(p, Some("coder"), None, &cmds, None).unwrap();
         // New order: role file → project → instructions
         let expected = format!(
             "{}\n\nPROJECT CONTEXT\n\n{}",
