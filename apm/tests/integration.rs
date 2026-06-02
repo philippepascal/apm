@@ -6455,6 +6455,69 @@ fn move_rebase_conflict_fails_cleanly() {
     );
 }
 
+#[test]
+fn move_does_not_change_main_worktree_head() {
+    let dir = init_repo();
+    let p = dir.path();
+
+    // Verify HEAD is on main before anything.
+    let branch_before = std::process::Command::new("git")
+        .args(["branch", "--show-current"])
+        .current_dir(p)
+        .output()
+        .unwrap();
+    let branch_before = String::from_utf8(branch_before.stdout).unwrap().trim().to_string();
+    assert_eq!(branch_before, "main");
+
+    // Create an epic branch.
+    let (epic_id, epic_branch) = make_epic_branch(p, "head test epic", "ff000001");
+
+    // Create a ticket via `apm new`.
+    let (ticket_id, ticket_branch) = create_ticket(p, "head test ticket");
+
+    // Confirm HEAD is still main after ticket creation.
+    let branch_mid = std::process::Command::new("git")
+        .args(["branch", "--show-current"])
+        .current_dir(p)
+        .output()
+        .unwrap();
+    let branch_mid = String::from_utf8(branch_mid.stdout).unwrap().trim().to_string();
+    assert_eq!(branch_mid, "main", "HEAD moved during ticket creation");
+
+    // Run `apm move` with HEAD on main.
+    run_apm(p, &["move", &ticket_id, &epic_id]);
+
+    // Assert HEAD is still main.
+    let branch_after = std::process::Command::new("git")
+        .args(["branch", "--show-current"])
+        .current_dir(p)
+        .output()
+        .unwrap();
+    let branch_after = String::from_utf8(branch_after.stdout).unwrap().trim().to_string();
+    assert_eq!(branch_after, "main", "apm move changed HEAD away from main");
+
+    // Assert the ticket's epic field was updated on the ticket branch.
+    let rel_path = format!("tickets/{}.md", ticket_branch.strip_prefix("ticket/").unwrap());
+    let content = branch_content(p, &ticket_branch, &rel_path);
+    let updated = apm_core::ticket::Ticket::parse(std::path::Path::new(&rel_path), &content).unwrap();
+    assert_eq!(
+        updated.frontmatter.epic.as_deref(),
+        Some(epic_id.as_str()),
+        "epic field not updated on ticket branch"
+    );
+    assert_eq!(
+        updated.frontmatter.target_branch.as_deref(),
+        Some(epic_branch.as_str()),
+        "target_branch not updated on ticket branch"
+    );
+
+    // Assert history row is present.
+    assert!(
+        updated.body.contains("move:"),
+        "history row not appended after move"
+    );
+}
+
 // --- merge_failed ---
 
 fn setup_with_merge_workflow() -> TempDir {
