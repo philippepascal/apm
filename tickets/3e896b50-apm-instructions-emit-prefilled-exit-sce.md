@@ -123,7 +123,14 @@ REFERENCES:
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- No new fields on `StateConfig` — only `TransitionConfig` gains `worker_hint` and `worker_pre`
+- The static State Machine table is unchanged; the cheat sheet is purely additive
+- `worker_pre` remains a single string — multi-step pre-command arrays are not supported
+- Shell syntax of `worker_pre` values is not validated by `apm validate`
+- `WORKER_COMMAND_ALLOWLIST` in `instructions.rs` is unchanged
+- apm-server and apm-ui do not surface exit scenarios
+- No Bash completion or shell integration for the prefilled commands
+- `apm init` migration templates for other projects are not updated by this ticket
 
 ### Approach
 
