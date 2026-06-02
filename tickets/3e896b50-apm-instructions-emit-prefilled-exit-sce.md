@@ -106,7 +106,7 @@ REFERENCES:
 - [x] `apm instructions <id>` emits `## Exit scenarios` after the State Machine table when the ticket's current state has `worker_profile` set
 - [x] Each scenario heading is the transition's `worker_hint` text, formatted as a `###` heading
 - [x] When `worker_pre` is set on a transition, it appears as the first command line in the scenario with `<id>` substituted with the ticket id
-- [ ] The `apm state <id> <to>` line appears in every scenario with `<id>` substituted
+- [x] The `apm state <id> <to>` line appears in every scenario with `<id>` substituted
 - [ ] Transitions without `worker_hint` are excluded from the Exit scenarios section
 - [ ] `apm instructions` with no ticket id does not emit an Exit scenarios section
 - [ ] A ticket whose current state has no `worker_profile` produces no Exit scenarios section
