@@ -3,13 +3,13 @@ id = "fd4552ea"
 title = "Refactor epic lifecycle: submit (PR/merge) vs close (cleanup); sync surfaces hints"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 5
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/fd4552ea-refactor-epic-lifecycle-submit-pr-merge-"
 created_at = "2026-06-02T06:05:04.230173Z"
-updated_at = "2026-06-02T06:11:46.888297Z"
+updated_at = "2026-06-02T06:17:39.907370Z"
 +++
 
 ## Spec
