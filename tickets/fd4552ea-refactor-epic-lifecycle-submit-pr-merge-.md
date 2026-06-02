@@ -138,7 +138,163 @@ REFERENCES:
 
 ### Approach
 
-How the implementation will work.
+#### Files changed
+
+| File | Change |
+|------|--------|
+| `apm-core/src/git_util.rs` | Add `pub fn is_branch_content_merged` |
+| `apm-core/src/sync.rs` | Add epic-detection pass; extend `Candidates` with epic hint vecs |
+| `apm/src/cmd/epic.rs` | Add `run_submit`; replace `run_close` body; delete `run_epic_clean` |
+| `apm/src/main.rs` | Add `Submit` to `EpicCommand`; rework `Close` flags; hide `--epics` on `Clean` |
+| `apm/src/cmd/clean.rs` | Error on `--epics` |
+| `apm/src/cmd/sync.rs` | Print epic hint sections after ticket handling |
+
+#### Step 1 — `is_branch_content_merged` (apm-core/src/git_util.rs)
+
+`is_branch_merged_into` at line 755 already implements the squash-merge algorithm. The new public function is a thin wrapper that adds origin-preference, matching the pattern in `merged_into_main`:
+
+```rust
+pub fn is_branch_content_merged(root: &Path, default_branch: &str, branch: &str) -> Result<bool> {
+    let remote_ref = format!("refs/remotes/origin/{default_branch}");
+    let main_ref = if run(root, &["rev-parse", "--verify", &remote_ref]).is_ok() {
+        format!("origin/{default_branch}")
+    } else {
+        default_branch.to_string()
+    };
+    is_branch_merged_into(root, branch, &main_ref)
+}
+```
+
+`git_util` is re-exported as `git` in `lib.rs`, so callers use `git::is_branch_content_merged` within `apm-core` and `apm_core::git::is_branch_content_merged` from the CLI.
+
+Add inline unit tests (temp git repo, no fixture files):
+- regular (no-ff) merge → `true`
+- squash merge (commit-tree + reset) → `true`
+- branch with unpushed commits → `false`
+- origin ref absent → falls back to local ref; result still correct
+
+#### Step 2 — `run_submit` (apm/src/cmd/epic.rs)
+
+New function `run_submit(root, id_arg, merge, pr, auto_mode)` extracted from the current `run_close` push/PR/merge block (steps 5–7 in current code). Key changes from the existing logic:
+
+- No quiescence check (no ticket-state gating)
+- No "already merged" shortcut (that belongs to `close`)
+- `do_merge = merge || (auto_mode && merge_tree_status(root, default_branch, &epic_branch)?.clean)`
+- If `do_merge`: call `git_util::merge_ref` in the main worktree. On conflict: bail `"merge conflict — use --pr to open a PR instead"`
+- If not `do_merge`: `push_branch_tracking` → `gh_pr_create_or_update`
+
+The `--auto` path determines cleanness before choosing merge vs PR. When auto falls back to PR due to conflict, print a note explaining why.
+
+#### Step 3 — `run_close` replacement (apm/src/cmd/epic.rs)
+
+Replace the current body entirely. New signature: `run_close(root, id_arg, force)` — removes `close_all`, `merge`, `pr`, `auto_mode`.
+
+Steps:
+1. Resolve epic branch (same prefix-match)
+2. Determine main ref (origin preferred): same two-line pattern as Step 1
+3. Call `git::is_branch_content_merged(root, default_branch, &epic_branch)?`
+4. If not merged and not `--force`:
+   - Count ahead commits: `git rev-list --count <main_ref>..<epic_branch>`
+   - Bail: `"epic has N commit(s) not yet in <default_branch>. Use --force to delete unconditionally."`
+5. Remove worktree if present: `find_worktree_for_branch` → `remove_worktree(root, &path, true)`
+6. Delete local branch: `git branch -D <epic_branch>` (force-delete; the old `-d` would fail here on an unmerged branch with `--force`)
+7. Delete remote branch: `git push origin --delete <epic_branch>` (suppress "remote ref does not exist")
+8. Print: `"deleted epic/<id>"` on success
+
+Delete `run_epic_clean` — no longer called anywhere after Step 5.
+
+#### Step 4 — Epic detection in `apm-core/src/sync.rs`
+
+Extend `Candidates`:
+
+```rust
+pub struct Candidates {
+    pub close: Vec<CloseCandidate>,
+    pub hints: Vec<String>,
+    pub epic_submit_hints: Vec<(String, String)>,  // (id, title)
+    pub epic_close_hints:  Vec<(String, String)>,
+}
+```
+
+At the end of `detect`, after the existing ticket passes, add an epic pass:
+
+```
+let epic_branches = crate::epic::epic_branches(root).unwrap_or_default();
+if !epic_branches.is_empty() {
+    let all_tickets = crate::ticket::load_all_from_git(root, &config.tickets.dir)
+        .unwrap_or_default();
+    for branch in &epic_branches {
+        let id = crate::epic::epic_id_from_branch(branch);
+        let title = crate::epic::branch_to_title(branch);
+        let epic_tickets: Vec<_> = all_tickets.iter()
+            .filter(|t| t.frontmatter.epic.as_deref() == Some(id))
+            .collect();
+        let state_cfgs: Vec<&StateConfig> = epic_tickets.iter()
+            .filter_map(|t| config.workflow.states.iter()
+                .find(|s| s.id == t.frontmatter.state))
+            .collect();
+        let derived = crate::epic::derive_epic_state(&state_cfgs);
+        let is_merged = git::is_branch_content_merged(root, default_branch, branch)
+            .unwrap_or(false);
+        if is_merged {
+            epic_close_hints.push((id.to_string(), title));
+        } else if derived == "done" {
+            epic_submit_hints.push((id.to_string(), title));
+        }
+    }
+}
+```
+
+`epic_branches` returns local `epic/*` branches only. The origin-preference is already inside `is_branch_content_merged`.
+
+#### Step 5 — Print epic hints in `apm/src/cmd/sync.rs`
+
+After the existing ticket hint/close block (around line 160), add:
+
+```rust
+if !candidates.epic_submit_hints.is_empty() {
+    println!("\nEpics ready to submit (apm epic submit <id>):");
+    for (id, title) in &candidates.epic_submit_hints {
+        println!("  {id:<8}  {title}");
+    }
+}
+if !candidates.epic_close_hints.is_empty() {
+    println!("\nEpics ready to close (apm epic close <id>):");
+    for (id, title) in &candidates.epic_close_hints {
+        println!("  {id:<8}  {title}");
+    }
+}
+```
+
+No prompt. These are informational only.
+
+#### Step 6 — CLI wiring in `apm/src/main.rs`
+
+Add `Submit` to `EpicCommand`:
+
+```rust
+Submit {
+    id: String,
+    #[arg(long, conflicts_with_all = ["merge", "auto_mode"])]
+    pr: bool,
+    #[arg(long, conflicts_with_all = ["pr", "auto_mode"])]
+    merge: bool,
+    #[arg(long = "auto", conflicts_with_all = ["merge", "pr"])]
+    auto_mode: bool,
+},
+```
+
+Update `Close` variant: remove `close_all`, `merge`, `pr`, `auto_mode`; add `#[arg(long)] force: bool`.
+
+For `--epics` removal on `Clean`: keep the field as `#[arg(long, hide = true)]` so clap still accepts it (avoids a confusing "unexpected argument" error), then in `cmd::clean::run`, if `epics` is true, bail with: `"apm clean --epics has been removed; use 'apm epic close <id>' instead"`.
+
+Add dispatch arms for `Submit` → `cmd::epic::run_submit` and updated `Close` → `cmd::epic::run_close`.
+
+#### Step 7 — Help text
+
+- `EpicCommand::Close` long_about: "Delete the local epic branch and remove its worktree. Safe by default: refuses when the branch has commits not yet in the default branch. Use --force to delete unconditionally."
+- `EpicCommand::Submit` long_about: "Push the epic branch to origin and open or update a GitHub PR (default), or merge it locally into the default branch (--merge). Use --auto to merge when clean and fall back to PR on conflict."
+- Update any README section that describes `apm epic close` as the PR-opening command.
 
 ### Open questions
 
