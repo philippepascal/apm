@@ -123,7 +123,7 @@ your environment, ignore it entirely.
 
 - Follow the test conventions described in `apm.project.md`
 - Run the project's test suite — all tests must pass
-- Then: `apm state <id> implemented` — pushes branch and opens PR automatically
+- At end of work, follow **Exit scenarios** in `apm instructions` for the exact commands.
 
 ---
 
@@ -137,11 +137,7 @@ Then resume.
 
 ## Blocked state
 
-If you hit a missing decision or ambiguity mid-implementation:
-
-1. Write the question in `### Open questions` in the ticket spec
-2. Commit the update to the worktree branch
-3. `apm state <id> blocked`
+At end of work, follow **Exit scenarios** in `apm instructions` for the exact commands.
 
 ---
 

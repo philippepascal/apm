@@ -360,6 +360,10 @@ pub struct TransitionConfig {
     /// When omitted, `resolve_outcome` applies implicit defaults; see that function.
     #[serde(default)]
     pub outcome: Option<String>,
+    #[serde(default)]
+    pub worker_hint: Option<String>,
+    #[serde(default)]
+    pub worker_pre: Option<String>,
 }
 
 /// Weights used to compute the priority score for ticket selection in `apm next`.

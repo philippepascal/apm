@@ -104,7 +104,7 @@ Before transitioning, set:
 - `apm set <id> risk <1-10>`
 - `apm set <id> priority <1-10>`  — only if not already set by the supervisor
 
-Then: `apm state <id> specd`
+At end of work, follow **Exit scenarios** in `apm instructions` for the exact commands.
 
 ---
 
@@ -236,7 +236,7 @@ If you cannot proceed during design, transition to `question`. Do not transition
 
 If you cannot write a complete spec without an answer from the supervisor,
 write the question in `### Open questions` (create the section if absent), then
-transition to `question`. Do not guess and proceed.
+follow **Exit scenarios** in `apm instructions` for the exact commands. Do not guess and proceed.
 
 Once an answer arrives, reflect the decision in `### Approach` before
 transitioning back to `specd`.

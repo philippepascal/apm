@@ -62,14 +62,17 @@ label          = "In Design"
 worker_profile = "claude/spec-writer"
 
   [[workflow.states.transitions]]
-  to      = "specd"
-  trigger = "manual"
-  outcome = "success"
+  to          = "specd"
+  trigger     = "manual"
+  outcome     = "success"
+  worker_hint = "If you finished writing or revising the spec"
 
   [[workflow.states.transitions]]
-  to      = "question"
-  trigger = "manual"
-  outcome = "needs_input"
+  to          = "question"
+  trigger     = "manual"
+  outcome     = "needs_input"
+  worker_hint = "If you cannot proceed during design without more info"
+  worker_pre  = "apm spec <id> --section 'Open questions' --append '<your question text>'"
 
 [[workflow.states]]
 id             = "ready"
@@ -93,17 +96,20 @@ satisfies_deps = "spec"
 worker_profile = "claude/coder"
 
   [[workflow.states.transitions]]
-  to         = "implemented"
-  trigger    = "manual"
-  completion = "pr_or_epic_merge"
-  on_failure = "merge_failed"
-  outcome    = "success"
+  to          = "implemented"
+  trigger     = "manual"
+  completion  = "pr_or_epic_merge"
+  on_failure  = "merge_failed"
+  outcome     = "success"
+  worker_hint = "If you completed the implementation and tests pass"
 
   [[workflow.states.transitions]]
-  to      = "blocked"
-  trigger = "manual"
-  label   = "Agent is blocked — wrote questions in ### Open questions"
-  outcome = "needs_input"
+  to          = "blocked"
+  trigger     = "manual"
+  label       = "Agent is blocked — wrote questions in ### Open questions"
+  outcome     = "needs_input"
+  worker_hint = "If you lack information to proceed (write your question first)"
+  worker_pre  = "apm spec <id> --section 'Open questions' --append '<your question text>'"
 
   [[workflow.states.transitions]]
   to      = "ready"
