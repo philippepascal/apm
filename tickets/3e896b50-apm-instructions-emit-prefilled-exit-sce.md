@@ -109,7 +109,17 @@ REFERENCES:
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm instructions <id>` emits `## Exit scenarios` after the State Machine table when the ticket's current state has `worker_profile` set
+- [ ] Each scenario heading is the transition's `worker_hint` text, formatted as a `###` heading
+- [ ] When `worker_pre` is set on a transition, it appears as the first command line in the scenario with `<id>` substituted with the ticket id
+- [ ] The `apm state <id> <to>` line appears in every scenario with `<id>` substituted
+- [ ] Transitions without `worker_hint` are excluded from the Exit scenarios section
+- [ ] `apm instructions` with no ticket id does not emit an Exit scenarios section
+- [ ] A ticket whose current state has no `worker_profile` produces no Exit scenarios section
+- [ ] Both `apm-core/src/default/workflow.toml` and `.apm/workflow.toml` have `worker_hint` (and `worker_pre` where applicable) on: `in_progress → implemented`, `in_progress → blocked`, `in_progress → ammend`, `in_design → specd`, and `in_design → question`
+- [ ] The coder and spec-writer role files (both default under `apm-core/src/default/agents/claude/` and project copies under `.apm/agents/claude/`) no longer contain exit-command prose; a short reference to Exit scenarios in `apm instructions` replaces it
+- [ ] Unit tests cover: only hinted transitions from worker-profile states appear; supervisor-state transitions are excluded even when `worker_hint` is set; `worker_pre` is emitted before `apm state` when set, and absent when not
+- [ ] Stable-text test: the default workflow's cheat sheet for a ticket in `in_progress` contains the three expected scenario headings in order
 
 ### Out of scope
 
