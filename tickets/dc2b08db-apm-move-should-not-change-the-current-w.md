@@ -3,13 +3,13 @@ id = "dc2b08db"
 title = "apm move should not change the current worktree checkout"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 2
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/dc2b08db-apm-move-should-not-change-the-current-w"
 created_at = "2026-06-02T03:20:39.058642Z"
-updated_at = "2026-06-02T06:07:54.104886Z"
+updated_at = "2026-06-02T06:11:21.507336Z"
 +++
 
 ## Spec
