@@ -1,7 +1,7 @@
 +++
 id = "dc2b08db"
 title = "apm move should not change the current worktree checkout"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 2
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/dc2b08db-apm-move-should-not-change-the-current-w"
 created_at = "2026-06-02T03:20:39.058642Z"
-updated_at = "2026-06-02T17:41:43.738092Z"
+updated_at = "2026-06-02T17:46:52.305176Z"
 +++
 
 ## Spec
@@ -116,3 +116,4 @@ No fixture files are needed. The test uses only the existing `init_repo`, `creat
 | 2026-06-02T06:11Z | in_design | specd | claude |
 | 2026-06-02T17:41Z | specd | ready | philippepascal |
 | 2026-06-02T17:41Z | ready | in_progress | philippepascal |
+| 2026-06-02T17:46Z | in_progress | implemented | claude |
