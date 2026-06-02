@@ -1,7 +1,7 @@
 +++
 id = "3e896b50"
 title = "apm instructions: emit prefilled exit-scenario cheat sheet per worker state"
-state = "specd"
+state = "ammend"
 priority = 0
 effort = 4
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/3e896b50-apm-instructions-emit-prefilled-exit-sce"
 created_at = "2026-06-02T18:34:29.328988Z"
-updated_at = "2026-06-02T18:49:00.141492Z"
+updated_at = "2026-06-02T19:15:06.156615Z"
 +++
 
 ## Spec
@@ -221,3 +221,4 @@ Mirror both edits to `.apm/agents/claude/apm.coder.md` and `.apm/agents/claude/a
 | 2026-06-02T18:39Z | new | groomed | philippepascal |
 | 2026-06-02T18:40Z | groomed | in_design | philippepascal |
 | 2026-06-02T18:49Z | in_design | specd | claude |
+| 2026-06-02T19:15Z | specd | ammend | philippepascal |
