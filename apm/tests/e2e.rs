@@ -117,10 +117,15 @@ terminal = true
         // pr) would fail. The state transition itself is still fully exercised.
         let wf_path = p.join(".apm/workflow.toml");
         let wf = std::fs::read_to_string(&wf_path).unwrap();
-        let wf = wf.replace(
-            "  completion = \"pr_or_epic_merge\"",
-            "  completion = \"none\"",
-        );
+        let wf = wf
+            .replace(
+                "  completion  = \"pr_or_epic_merge\"",
+                "  completion  = \"none\"",
+            )
+            .replace(
+                "  completion = \"pr_or_epic_merge\"",
+                "  completion = \"none\"",
+            );
         std::fs::write(&wf_path, wf).unwrap();
 
         Env { dir }
