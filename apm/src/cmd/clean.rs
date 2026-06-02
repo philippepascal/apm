@@ -14,6 +14,10 @@ pub fn run(
     untracked: bool,
     epics: bool,
 ) -> Result<()> {
+    if epics {
+        anyhow::bail!("apm clean --epics has been removed; use 'apm epic close <id>' instead");
+    }
+
     let config = CmdContext::load_config_only(root)?;
     let (mut candidates, dirty, candidate_warnings) = clean::candidates(root, &config, force, untracked, dry_run)?;
     for w in &candidate_warnings {
@@ -74,7 +78,7 @@ pub fn run(
         }
     }
 
-    if candidates.is_empty() && dirty.is_empty() && !epics {
+    if candidates.is_empty() && dirty.is_empty() {
         println!("Nothing to clean.");
         return Ok(());
     }
@@ -149,10 +153,6 @@ pub fn run(
                 eprintln!("{w}");
             }
         }
-    }
-
-    if epics {
-        crate::cmd::epic::run_epic_clean(root, &config, dry_run, _yes)?;
     }
 
     Ok(())

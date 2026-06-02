@@ -159,6 +159,19 @@ pub fn run(root: &Path, offline: bool, quiet: bool, no_aggressive: bool, auto_cl
         }
     }
 
+    if !quiet && !candidates.epic_submit_hints.is_empty() {
+        println!("\nEpics ready to submit (apm epic submit <id>):");
+        for (id, title) in &candidates.epic_submit_hints {
+            println!("  {id:<8}  {title}");
+        }
+    }
+    if !quiet && !candidates.epic_close_hints.is_empty() {
+        println!("\nEpics ready to close (apm epic close <id>):");
+        for (id, title) in &candidates.epic_close_hints {
+            println!("  {id:<8}  {title}");
+        }
+    }
+
     Ok(())
 }
 

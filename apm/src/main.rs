@@ -70,44 +70,50 @@ enum EpicCommand {
         /// Title for the epic
         title: String,
     },
-    /// Merge the epic branch into default or open a PR for it
-    #[command(long_about = "Merge the epic branch into the default branch or open a PR for it.
+    /// Push the epic branch and open or update a PR, or merge it locally
+    #[command(long_about = "Push the epic branch to origin and open or update a GitHub PR (default), \
+or merge it locally into the default branch (--merge). \
+Use --auto to merge when clean and fall back to PR on conflict.
 
-Steps performed:
+  --pr (default): push and open or update a PR
+  --merge: merge the epic branch into the default branch locally and push
+  --auto: merge locally when clean; fall back to --pr when a conflict is detected
 
-  1. Quiescence check — every ticket in the epic must be in a terminal state.
-     Tickets whose branches are already merged into the epic or default branch
-     are offered for auto-close on a TTY (\"Close N merged ticket(s)? [y/N]\").
-     Use --close-all to close all safe non-terminal tickets without prompting.
-
-  2. Already-merged shortcut — if the epic branch has no commits ahead of the
-     default branch it is already merged. The epic branch is deleted locally and
-     remotely; no PR is created or updated.
-
-  3. --pr (default) — pushes the epic branch to origin and creates or updates a
-     GitHub PR targeting the default branch.
-
-  4. --merge — performs a local fast-forward or merge commit of the epic branch
-     into the default branch; no PR is created. The main worktree must be on the
-     default branch.
-
-     --auto — merges locally when the merge would be clean; falls back to --pr
-     when the merge would produce conflicts.")]
-    Close {
+Submit is idempotent: running it on an already-submitted epic updates the existing PR.
+Submit does NOT delete the branch or worktree; use `apm epic close` after the merge.")]
+    Submit {
         /// Epic ID (4–8 char hex prefix)
         id: String,
-        /// Cascade-close all non-terminal tickets before closing the epic
-        #[arg(long)]
-        close_all: bool,
-        /// Merge the epic branch into default locally; skip PR creation
-        #[arg(long, conflicts_with_all = ["pr", "auto_mode"])]
-        merge: bool,
         /// Push the epic branch and open or update a PR (default behaviour)
         #[arg(long, conflicts_with_all = ["merge", "auto_mode"])]
         pr: bool,
+        /// Merge the epic branch into default locally; skip PR creation
+        #[arg(long, conflicts_with_all = ["pr", "auto_mode"])]
+        merge: bool,
         /// Merge locally when clean; fall back to opening a PR on conflicts
         #[arg(long = "auto", conflicts_with_all = ["merge", "pr"])]
         auto_mode: bool,
+    },
+    /// Delete the local epic branch and remove its worktree
+    #[command(long_about = "Delete the local epic branch and remove its worktree. \
+Safe by default: refuses when the branch has unmerged commits or when any ticket \
+in the epic has an active worker. Use --force to delete unconditionally.
+
+Safety checks (skipped with --force):
+  1. Live-worker check — if any ticket in the epic has an active worker (worktree
+     present and PID alive), the close is refused. Names the affected ticket(s)
+     and PID(s).
+  2. Unmerged-commits check — if the epic branch has commits not yet in
+     origin/<default> (regular or squash), the close is refused with the
+     ahead count.
+
+Close is irreversible: the branch is gone. Use `apm epic submit` first.")]
+    Close {
+        /// Epic ID (4–8 char hex prefix)
+        id: String,
+        /// Bypass live-worker and unmerged-commits checks; delete unconditionally
+        #[arg(long)]
+        force: bool,
     },
     /// List all epics with derived state and ticket counts
     List,
@@ -786,8 +792,8 @@ ac.txt) are always removed automatically without needing --untracked."
         /// Remove untracked non-temp files from worktrees before removal
         #[arg(long)]
         untracked: bool,
-        /// Also clean local and remote branches for "done" epics
-        #[arg(long)]
+        /// Removed: use 'apm epic close <id>' instead
+        #[arg(long, hide = true)]
         epics: bool,
     },
     /// List and manage running worker processes
@@ -1288,8 +1294,11 @@ fn main() -> Result<()> {
             command: EpicCommand::New { title },
         } => cmd::epic::run_new(&root, title),
         Command::Epic {
-            command: EpicCommand::Close { id, close_all, merge, pr, auto_mode },
-        } => cmd::epic::run_close(&root, &id, close_all, merge, pr, auto_mode),
+            command: EpicCommand::Submit { id, pr, merge, auto_mode },
+        } => cmd::epic::run_submit(&root, &id, merge, pr, auto_mode),
+        Command::Epic {
+            command: EpicCommand::Close { id, force },
+        } => cmd::epic::run_close(&root, &id, force),
         Command::Epic {
             command: EpicCommand::List,
         } => cmd::epic::run_list(&root),

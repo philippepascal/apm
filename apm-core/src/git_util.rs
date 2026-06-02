@@ -787,6 +787,21 @@ pub fn is_branch_merged_into(root: &Path, branch: &str, target_ref: &str) -> Res
     Ok(cherry_out.trim().starts_with('-'))
 }
 
+/// Return `true` when `branch`'s content has been merged into `default_branch` —
+/// either by a regular merge (fast-forward or --no-ff) or by a squash merge.
+///
+/// Prefers `origin/<default_branch>` when that remote ref is present; falls back
+/// to the local ref when the remote is absent (matches `merged_into_main`'s pattern).
+pub fn is_branch_content_merged(root: &Path, default_branch: &str, branch: &str) -> Result<bool> {
+    let remote_ref = format!("refs/remotes/origin/{default_branch}");
+    let main_ref = if run(root, &["rev-parse", "--verify", &remote_ref]).is_ok() {
+        format!("origin/{default_branch}")
+    } else {
+        default_branch.to_string()
+    };
+    is_branch_merged_into(root, branch, &main_ref)
+}
+
 /// Classification of a local branch relative to its origin counterpart.
 ///
 /// Direction note: `merge-base --is-ancestor A B` returns 0 iff A is reachable from B.
@@ -2522,6 +2537,82 @@ mod tests {
             "expected Equal"
         );
         assert!(content.contains("ready"), "expected ready content; got: {content:?}");
+    }
+
+    // ---- is_branch_content_merged tests ----
+
+    #[test]
+    fn is_branch_content_merged_regular_merge_returns_true() {
+        let dir = git_init();
+        let p = dir.path();
+        make_commit(p, "README", "base");
+        // Create a branch with a commit.
+        git_cmd(p, &["checkout", "-b", "epic/aa000001-feature"]);
+        make_commit(p, "feature.md", "feature");
+        git_cmd(p, &["checkout", "main"]);
+        // No-ff merge into main.
+        git_cmd(p, &["merge", "--no-ff", "epic/aa000001-feature", "-m", "merge epic"]);
+        assert!(is_branch_content_merged(p, "main", "epic/aa000001-feature").unwrap());
+    }
+
+    #[test]
+    fn is_branch_content_merged_squash_merge_returns_true() {
+        let dir = git_init();
+        let p = dir.path();
+        make_commit(p, "README", "base");
+        // Create a branch with a commit.
+        git_cmd(p, &["checkout", "-b", "epic/bb000002-feature"]);
+        make_commit(p, "feature.md", "feature");
+        git_cmd(p, &["checkout", "main"]);
+        // Squash merge: commit-tree approach.
+        git_cmd(p, &["merge", "--squash", "epic/bb000002-feature"]);
+        git_cmd(p, &["commit", "-m", "squash merge epic"]);
+        assert!(is_branch_content_merged(p, "main", "epic/bb000002-feature").unwrap());
+    }
+
+    #[test]
+    fn is_branch_content_merged_unmerged_returns_false() {
+        let dir = git_init();
+        let p = dir.path();
+        make_commit(p, "README", "base");
+        git_cmd(p, &["checkout", "-b", "epic/cc000003-feature"]);
+        make_commit(p, "feature.md", "feature");
+        git_cmd(p, &["checkout", "main"]);
+        // Do NOT merge.
+        assert!(!is_branch_content_merged(p, "main", "epic/cc000003-feature").unwrap());
+    }
+
+    #[test]
+    fn is_branch_content_merged_no_remote_falls_back_to_local() {
+        // No origin remote: function should fall back to local main ref.
+        let dir = git_init();
+        let p = dir.path();
+        make_commit(p, "README", "base");
+        git_cmd(p, &["checkout", "-b", "epic/dd000004-feature"]);
+        make_commit(p, "feature.md", "feature");
+        git_cmd(p, &["checkout", "main"]);
+        git_cmd(p, &["merge", "--no-ff", "epic/dd000004-feature", "-m", "merge epic"]);
+        // No origin/main exists — function must still return true via local main.
+        assert!(is_branch_content_merged(p, "main", "epic/dd000004-feature").unwrap());
+    }
+
+    #[test]
+    fn is_branch_content_merged_prefers_origin_when_present() {
+        let (bare, local) = git_init_with_remote();
+        let p = local.path();
+        make_commit(p, "README", "base");
+        git_cmd(p, &["push", "origin", "main"]);
+        // Create epic branch and push it.
+        git_cmd(p, &["checkout", "-b", "epic/ee000005-feature"]);
+        make_commit(p, "feature.md", "feature");
+        git_cmd(p, &["push", "origin", "epic/ee000005-feature"]);
+        git_cmd(p, &["checkout", "main"]);
+        // Merge into main and push main to origin.
+        git_cmd(p, &["merge", "--no-ff", "epic/ee000005-feature", "-m", "merge epic"]);
+        git_cmd(p, &["push", "origin", "main"]);
+        // origin/main exists and has the merge — should return true.
+        assert!(is_branch_content_merged(p, "main", "epic/ee000005-feature").unwrap());
+        drop(bare); // keep alive
     }
 
     #[test]
