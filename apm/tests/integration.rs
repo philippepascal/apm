@@ -96,10 +96,15 @@ fn setup_merge() -> TempDir {
         wf.contains("completion = \"pr_or_epic_merge\""),
         "expected pr_or_epic_merge in workflow.toml — default template may have changed"
     );
-    let patched = wf.replace(
-        "completion = \"pr_or_epic_merge\"",
-        "completion = \"merge\"",
-    );
+    let patched = wf
+        .replace(
+            "completion  = \"pr_or_epic_merge\"",
+            "completion  = \"merge\"",
+        )
+        .replace(
+            "completion = \"pr_or_epic_merge\"",
+            "completion = \"merge\"",
+        );
     std::fs::write(&wf_path, patched).unwrap();
 
     git(dir.path(), &["add", ".apm/workflow.toml"]);
@@ -4909,7 +4914,15 @@ fn setup_merge_strategy_remote() -> (TempDir, TempDir) {
     // on_failure = "merge_failed" is kept — completion = "merge" also requires it.
     let wf_path = p.join(".apm/workflow.toml");
     let wf = std::fs::read_to_string(&wf_path).unwrap();
-    let patched = wf.replace(r#"completion = "pr_or_epic_merge""#, r#"completion = "merge""#);
+    let patched = wf
+        .replace(
+            r#"completion  = "pr_or_epic_merge""#,
+            r#"completion  = "merge""#,
+        )
+        .replace(
+            r#"completion = "pr_or_epic_merge""#,
+            r#"completion = "merge""#,
+        );
     std::fs::write(&wf_path, &patched).unwrap();
     git(p, &["-c", "commit.gpgsign=false", "add", ".apm/workflow.toml"]);
     git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "override: use merge completion strategy"]);
