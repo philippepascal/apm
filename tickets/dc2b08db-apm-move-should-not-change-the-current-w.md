@@ -24,7 +24,11 @@ The fix is to run the rebase inside a temporary worktree, exactly as `try_worktr
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] Running `apm move <id> <epic-id>` from the main worktree with HEAD on `main` leaves HEAD on `main` when the command returns
+- [ ] The ticket file on the ticket branch contains the updated `epic` field after the move, matching today's behaviour
+- [ ] A history row (`move: main → epic/…`) is appended to the ticket branch after the move, with no regression in audit trail
+- [ ] Uncommitted changes present in the main worktree before `apm move` are still present and uncommitted after the command returns
+- [ ] An integration test in `apm/tests/integration.rs` creates a ticket, creates an epic, runs `apm move` with HEAD on `main`, and asserts HEAD is still `main` after the call
 
 ### Out of scope
 
