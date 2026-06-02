@@ -48,11 +48,6 @@ OUTPUT FORMAT (in apm-core/src/instructions.rs::generate, appended after the Sta
    apm spec abc12345 --section 'Open questions' --append '<your question text>'
    apm state abc12345 blocked
 
-   ### If the spec is wrong and needs supervisor revision
-
-   apm spec abc12345 --section 'Amendment requests' --add-task '<what needs to change>'
-   apm state abc12345 ammend
-
 Each scenario has the worker_hint as the heading; if worker_pre is set its substituted form is the first command; the apm state X line follows. Ticket id substitution reuses the existing dollar-id mechanism from 9ea43165.
 
 When no ticket id is supplied (apm instructions --role coder with no id), the cheat sheet is omitted — only the static state machine table appears. This matches the current behaviour where dollar-id placeholders are left unsubstituted.
@@ -67,7 +62,6 @@ Default workflow.toml (apm-core/src/default/workflow.toml) gains worker_hint and
 
 - in_progress → implemented: worker_hint = 'If you completed the implementation and tests pass'; no worker_pre
 - in_progress → blocked: worker_hint = 'If you lack information to proceed (write your question first)'; worker_pre = apm spec less-than id greater-than --section 'Open questions' --append '<your question text>'
-- in_progress → ammend: worker_hint = 'If the spec is wrong and needs supervisor revision'; worker_pre = apm spec less-than id greater-than --section 'Amendment requests' --add-task '<what needs to change>'
 - in_design → specd: worker_hint = 'If you finished writing or revising the spec'; no worker_pre (the spec-writer wrote sections via apm spec already)
 - in_design → question: worker_hint = 'If you cannot proceed during design without more info'; worker_pre = apm spec less-than id greater-than --section 'Open questions' --append '<your question text>'
 
@@ -85,7 +79,7 @@ ACCEPTANCE CRITERIA hints (for the spec-writer to refine):
 - The default workflow.toml has worker_hint and worker_pre populated on the transitions named above
 - Role files (default and project copies) no longer contain the 'When done', 'When blocked', 'Handling ammend tickets' sections that the cheat sheet now subsumes; a short reference to apm instructions Exit scenarios replaces them
 - Unit tests for the cheat-sheet generator: workflow with two states (one worker-owned with two transitions, one supervisor-owned with one transition); call generator with the worker-owned state's ticket; assert only the two worker-owned transitions appear; assert worker_pre is emitted when set and absent when not; assert worker_hint appears as heading
-- Snapshot or stable-text assertion test that the default workflow's cheat sheet for in_progress matches the expected three scenarios in order
+- Snapshot or stable-text assertion test that the default workflow's cheat sheet for in_progress matches the expected two scenarios in order
 
 OUT OF SCOPE:
 - Schema changes to states (no new fields on StateConfig)
