@@ -1,7 +1,7 @@
 +++
 id = "fd4552ea"
 title = "Refactor epic lifecycle: submit (PR/merge) vs close (cleanup); sync surfaces hints"
-state = "specd"
+state = "ammend"
 priority = 0
 effort = 5
 risk = 3
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/fd4552ea-refactor-epic-lifecycle-submit-pr-merge-"
 created_at = "2026-06-02T06:05:04.230173Z"
-updated_at = "2026-06-02T06:17:48.831566Z"
+updated_at = "2026-06-02T17:30:13.235820Z"
 +++
 
 ## Spec
@@ -313,3 +313,4 @@ Add dispatch arms for `Submit` â†’ `cmd::epic::run_submit` and updated `Close` â
 | 2026-06-02T06:07Z | new | groomed | philippepascal |
 | 2026-06-02T06:11Z | groomed | in_design | philippepascal |
 | 2026-06-02T06:17Z | in_design | specd | claude |
+| 2026-06-02T17:30Z | specd | ammend | philippepascal |
