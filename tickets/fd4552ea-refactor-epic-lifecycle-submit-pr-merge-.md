@@ -1,7 +1,7 @@
 +++
 id = "fd4552ea"
 title = "Refactor epic lifecycle: submit (PR/merge) vs close (cleanup); sync surfaces hints"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/fd4552ea-refactor-epic-lifecycle-submit-pr-merge-"
 created_at = "2026-06-02T06:05:04.230173Z"
-updated_at = "2026-06-02T06:05:04.230173Z"
+updated_at = "2026-06-02T06:07:12.298708Z"
 +++
 
 ## Spec
@@ -130,3 +130,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-06-02T06:05Z | — | new | philippepascal |
+| 2026-06-02T06:07Z | new | groomed | philippepascal |
