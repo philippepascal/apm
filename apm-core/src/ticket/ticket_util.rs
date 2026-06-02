@@ -681,20 +681,32 @@ pub fn move_to_epic(
     let new_base_sha = crate::git_util::resolve_branch_sha(root, &new_base_ref)
         .with_context(|| format!("cannot resolve new base '{new_base_ref}'"))?;
 
-    // 9. Rebase: replay (old_upstream..ticket_branch] onto new_base.
+    // 9. Rebase inside a temporary worktree so the main worktree's HEAD is never touched.
+    static MOVE_COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let seq = MOVE_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let wt_path = std::env::temp_dir().join(format!(
+        "apm-move-{}-{}-{}",
+        std::process::id(),
+        seq,
+        ticket_branch.replace('/', "-"),
+    ));
+    let wt_path_str = wt_path.to_string_lossy().to_string();
+
+    let branch_sha = crate::git_util::run(root, &["rev-parse", &format!("refs/heads/{ticket_branch}")])?;
+    let branch_sha = branch_sha.trim().to_string();
+
+    crate::git_util::run(root, &["worktree", "add", "--detach", &wt_path_str, &branch_sha])?;
+    let _ = crate::git_util::run(&wt_path, &["checkout", "-B", &ticket_branch]);
+
     let rebase_result = crate::git_util::run(
-        root,
-        &[
-            "rebase",
-            "--onto",
-            &new_base_sha,
-            &old_upstream_sha,
-            &ticket_branch,
-        ],
+        &wt_path,
+        &["rebase", "--onto", &new_base_sha, &old_upstream_sha],
     );
 
     if let Err(e) = rebase_result {
-        let _ = crate::git_util::run(root, &["rebase", "--abort"]);
+        let _ = crate::git_util::run(&wt_path, &["rebase", "--abort"]);
+        let _ = crate::git_util::run(root, &["worktree", "remove", "--force", &wt_path_str]);
+        let _ = std::fs::remove_dir_all(&wt_path);
         let err_str = e.to_string();
         if err_str.contains("checked out") || err_str.contains("worktree") {
             bail!(
@@ -707,6 +719,9 @@ pub fn move_to_epic(
              resolve manually or create a new ticket with `apm new --epic`\n{e:#}"
         );
     }
+
+    let _ = crate::git_util::run(root, &["worktree", "remove", "--force", &wt_path_str]);
+    let _ = std::fs::remove_dir_all(&wt_path);
 
     // 10. Read the ticket file from the rebased branch tip, update frontmatter, commit.
     let rel_path = format!(
