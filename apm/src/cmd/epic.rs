@@ -1,4 +1,4 @@
-use anyhow::{Context as _, Result};
+use anyhow::Result;
 use std::io::IsTerminal;
 use std::path::Path;
 use crate::ctx::CmdContext;
@@ -70,7 +70,7 @@ pub fn run_new(root: &Path, title: String) -> Result<()> {
     Ok(())
 }
 
-pub fn run_close(root: &Path, id_arg: &str, close_all: bool, merge: bool, _pr: bool, auto_mode: bool) -> Result<()> {
+pub fn run_submit(root: &Path, id_arg: &str, merge: bool, _pr: bool, auto_mode: bool) -> Result<()> {
     let config = CmdContext::load_config_only(root)?;
 
     // 1. Resolve the epic branch from the id prefix.
@@ -85,93 +85,11 @@ pub fn run_close(root: &Path, id_arg: &str, close_all: bool, merge: bool, _pr: b
         ),
     };
 
-    // 2. Parse the 8-char epic ID from the branch name: epic/<id>-<slug>
     let epic_id = epic_id_from_branch(&epic_branch);
-
-    // 3. Unified quiescence check using classify_epic_quiescence.
-    let worktrees = apm_core::worktree::list_ticket_worktrees(root)?;
-    let result = apm_core::epic::classify_epic_quiescence(
-        root, epic_id, &config, &worktrees, &epic_branch,
-    )?;
-
-    // Unsafe tickets always block — no flag overrides this.
-    if !result.unsafe_tickets.is_empty() {
-        let rows = result.unsafe_tickets.iter()
-            .map(|t| format!("  {:<8}  {:<13}  {}", t.id, t.state, t.title))
-            .collect::<Vec<_>>()
-            .join("\n");
-        anyhow::bail!(
-            "cannot close epic: the following tickets require manual resolution:\n{}\nResolve them manually, then retry.",
-            rows
-        );
-    }
-
-    // Merged but not yet closed: offer auto-close.
-    // --close-all closes without prompt; on TTY ask interactively; on non-TTY treat as blocker.
-    let mut remaining: Vec<&apm_core::epic::EpicTicketInfo> =
-        result.genuine_blockers.iter().collect();
-    if !result.auto_closeable.is_empty() {
-        let should_close = close_all || (std::io::stdout().is_terminal() && {
-            let n = result.auto_closeable.len();
-            println!("\nTickets merged but not yet closed ({n}):");
-            for t in &result.auto_closeable {
-                println!("  {}  {}", t.id, t.title);
-            }
-            crate::util::prompt_yes_no(&format!("\nClose {n} merged ticket(s)? [y/N] "))?
-        });
-        if should_close {
-            let actor = format!("{}(apm-epic-close)", apm_core::config::resolve_caller_name());
-            for t in &result.auto_closeable {
-                match apm_core::ticket::close(root, &config, &t.id, None, &actor, false) {
-                    Ok(msgs) => msgs.iter().for_each(|m| println!("{m}")),
-                    Err(e) => eprintln!("warning: could not close {}: {e:#}", t.id),
-                }
-            }
-        } else {
-            // User declined or non-TTY — treat declined tickets as blockers.
-            remaining.extend(result.auto_closeable.iter());
-        }
-    }
-
-    // Genuine blockers (unmerged tickets, live-worker tickets, any declined auto-closeables).
-    if !remaining.is_empty() {
-        if !close_all {
-            let rows = remaining.iter()
-                .map(|t| format!("  {:<8}  {:<13}  {}", t.id, t.state, t.title))
-                .collect::<Vec<_>>()
-                .join("\n");
-            anyhow::bail!(
-                "epic has {} non-terminal ticket(s):\n{}\nRe-run with --close-all to cascade close, or close them manually first.",
-                remaining.len(),
-                rows
-            );
-        }
-        let actor = format!("{}(apm-epic-close)", apm_core::config::resolve_caller_name());
-        for t in &remaining {
-            print!("closing ticket #{} ... ", t.id);
-            apm_core::ticket::close(root, &config, &t.id, None, &actor, false)
-                .with_context(|| format!("failed to close ticket #{}", t.id))?;
-            println!("done");
-        }
-    }
-
-    // 4. Derive a human-readable title from the branch name.
     let pr_title = branch_to_title(&epic_branch);
-
-    // 5. Check whether the epic branch is already fully merged into default.
     let default_branch = &config.project.default_branch;
-    let ahead = std::process::Command::new("git")
-        .current_dir(root)
-        .args(["log", "--oneline", &format!("{default_branch}..{epic_branch}")])
-        .output()?;
-    if String::from_utf8_lossy(&ahead.stdout).trim().is_empty() {
-        // Branch has no commits ahead of default — already merged.
-        println!("epic/{epic_id} is already merged into {default_branch}; skipping PR");
-        delete_epic_branch(root, &epic_branch)?;
-        return Ok(());
-    }
 
-    // 6. Merge locally or push+PR based on flags.
+    // 2. Determine whether to merge locally or push+PR.
     let do_merge = merge || (auto_mode && {
         let s = apm_core::epic::merge_tree_status(root, default_branch, &epic_branch)?;
         s.clean
@@ -198,10 +116,29 @@ pub fn run_close(root: &Path, id_arg: &str, close_all: bool, merge: bool, _pr: b
                 for m in &messages { println!("{m}"); }
                 println!("{msg}");
             }
-            None => anyhow::bail!(
-                "merge conflict — resolve manually after checking out {default_branch}, \
-                 or use --pr to open a PR instead"
-            ),
+            None => {
+                if auto_mode {
+                    // Auto fell back to PR due to conflict.
+                    println!("merge would conflict; falling back to --pr");
+                    apm_core::git::push_branch_tracking(root, &epic_branch)?;
+                    let mut pr_messages = vec![];
+                    apm_core::github::gh_pr_create_or_update(
+                        root,
+                        &epic_branch,
+                        default_branch,
+                        epic_id,
+                        &pr_title,
+                        &format!("Epic: {epic_branch}"),
+                        &mut pr_messages,
+                    )?;
+                    for m in &pr_messages { println!("{m}"); }
+                } else {
+                    anyhow::bail!(
+                        "merge conflict — resolve manually after checking out {default_branch}, \
+                         or use --pr to open a PR instead"
+                    );
+                }
+            }
         }
     } else {
         apm_core::git::push_branch_tracking(root, &epic_branch)?;
@@ -217,6 +154,121 @@ pub fn run_close(root: &Path, id_arg: &str, close_all: bool, merge: bool, _pr: b
         )?;
         for m in &messages { println!("{m}"); }
     }
+    Ok(())
+}
+
+pub fn run_close(root: &Path, id_arg: &str, force: bool) -> Result<()> {
+    let config = CmdContext::load_config_only(root)?;
+
+    // 1. Resolve the epic branch from the id prefix.
+    let matches = apm_core::epic::find_epic_branches(root, id_arg);
+    let epic_branch = match matches.len() {
+        0 => anyhow::bail!("no epic branch found matching '{id_arg}'"),
+        1 => matches.into_iter().next().unwrap(),
+        _ => anyhow::bail!(
+            "ambiguous id '{id_arg}': matches {}\n  {}",
+            matches.len(),
+            matches.join("\n  ")
+        ),
+    };
+
+    let epic_id = epic_id_from_branch(&epic_branch);
+    let default_branch = &config.project.default_branch;
+
+    // 2. Live-worker safety check (skipped when --force).
+    if !force {
+        let all_tickets = apm_core::ticket::load_all_from_git(root, &config.tickets.dir)?;
+        let mut live_workers: Vec<(String, u32)> = Vec::new();
+        for t in all_tickets.iter().filter(|t| t.frontmatter.epic.as_deref() == Some(epic_id)) {
+            let ticket_branch = t.frontmatter.branch.clone()
+                .or_else(|| apm_core::ticket_fmt::branch_name_from_path(&t.path));
+            if let Some(branch) = ticket_branch {
+                if let Some(wt_path) = apm_core::worktree::find_worktree_for_branch(root, &branch) {
+                    let pid_file = wt_path.join(".apm-worker.pid");
+                    if pid_file.exists() {
+                        if let Ok((pid, _)) = apm_core::worker::read_pid_file(&pid_file) {
+                            if apm_core::worker::is_alive(pid) {
+                                live_workers.push((t.frontmatter.id.clone(), pid));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if !live_workers.is_empty() {
+            let rows = live_workers.iter()
+                .map(|(id, pid)| format!("  {id:<8}  PID {pid}"))
+                .collect::<Vec<_>>()
+                .join("\n");
+            anyhow::bail!(
+                "epic has active worker(s):\n{rows}\nUse --force to close unconditionally."
+            );
+        }
+    }
+
+    // 3. Determine main ref (origin preferred).
+    let remote_ref = format!("refs/remotes/origin/{default_branch}");
+    let main_ref = if std::process::Command::new("git")
+        .current_dir(root)
+        .args(["rev-parse", "--verify", &remote_ref])
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false)
+    {
+        format!("origin/{default_branch}")
+    } else {
+        default_branch.clone()
+    };
+
+    // 4. Check whether the epic branch is merged.
+    let is_merged = apm_core::git::is_branch_content_merged(root, default_branch, &epic_branch)?;
+
+    // 5. If not merged and not --force, bail with ahead count.
+    if !is_merged && !force {
+        let count_out = std::process::Command::new("git")
+            .current_dir(root)
+            .args(["rev-list", "--count", &format!("{main_ref}..{epic_branch}")])
+            .output()?;
+        let count = String::from_utf8_lossy(&count_out.stdout).trim().parse::<u64>().unwrap_or(0);
+        anyhow::bail!(
+            "epic has {count} commit(s) not yet in {default_branch}. \
+             Use --force to delete unconditionally."
+        );
+    }
+
+    // 6. Remove worktree if present.
+    if let Some(wt_path) = apm_core::worktree::find_worktree_for_branch(root, &epic_branch) {
+        apm_core::worktree::remove_worktree(root, &wt_path, true)?;
+    }
+
+    // 7. Delete local branch (force-delete).
+    let del = std::process::Command::new("git")
+        .current_dir(root)
+        .args(["branch", "-D", &epic_branch])
+        .output()?;
+    if !del.status.success() {
+        eprintln!(
+            "warning: could not delete local branch {epic_branch}: {}",
+            String::from_utf8_lossy(&del.stderr).trim()
+        );
+    }
+
+    // 8. Delete remote branch (suppress "remote ref does not exist").
+    let del_remote = std::process::Command::new("git")
+        .current_dir(root)
+        .args(["push", "origin", "--delete", &epic_branch])
+        .output()?;
+    if !del_remote.status.success() {
+        let stderr = String::from_utf8_lossy(&del_remote.stderr);
+        if !stderr.contains("remote ref does not exist") && !stderr.contains("error: unable to delete") {
+            eprintln!(
+                "warning: could not delete remote branch {epic_branch}: {}",
+                stderr.trim()
+            );
+        }
+    }
+
+    println!("deleted epic/{epic_id}");
     Ok(())
 }
 
@@ -441,161 +493,4 @@ pub fn run_set(root: &std::path::Path, id_arg: &str, field: &str, value: &str) -
 }
 
 
-fn delete_epic_branch(root: &Path, branch: &str) -> Result<()> {
-    if let Some(wt_path) = apm_core::worktree::find_worktree_for_branch(root, branch) {
-        apm_core::worktree::remove_worktree(root, &wt_path, false)?;
-    }
-    let del = std::process::Command::new("git")
-        .current_dir(root)
-        .args(["branch", "-d", branch])
-        .output()?;
-    if del.status.success() {
-        println!("deleted local branch {branch}");
-    } else {
-        eprintln!("warning: could not delete local branch {branch}: {}", String::from_utf8_lossy(&del.stderr).trim());
-    }
-    let del_remote = std::process::Command::new("git")
-        .current_dir(root)
-        .args(["push", "origin", "--delete", branch])
-        .output()?;
-    if !del_remote.status.success() {
-        let stderr = String::from_utf8_lossy(&del_remote.stderr);
-        if !stderr.contains("remote ref does not exist") && !stderr.contains("error: unable to delete") {
-            eprintln!("warning: could not delete remote branch {branch}: {}", stderr.trim());
-        }
-    }
-    Ok(())
-}
 
-pub(crate) fn run_epic_clean(
-    root: &Path,
-    config: &apm_core::config::Config,
-    dry_run: bool,
-    yes: bool,
-) -> Result<()> {
-    // Get local epic branches.
-    let local_output = std::process::Command::new("git")
-        .current_dir(root)
-        .args(["branch", "--list", "epic/*"])
-        .output()?;
-
-    let local_branches: Vec<String> = String::from_utf8_lossy(&local_output.stdout)
-        .lines()
-        .map(|l| l.trim().trim_start_matches(['*', '+']).trim().to_string())
-        .filter(|l| !l.is_empty())
-        .collect();
-
-    // Load all tickets.
-    let tickets = apm_core::ticket::load_all_from_git(root, &config.tickets.dir)?;
-
-    // Find epic branches whose derived state is "done", or "empty" and already
-    // merged into the default branch (tickets closed, branches deleted post-merge).
-    let default_branch = &config.project.default_branch;
-    let mut candidates: Vec<String> = Vec::new();
-    for branch in &local_branches {
-        let id = apm_core::epic::epic_id_from_branch(branch);
-
-        let epic_tickets: Vec<_> = tickets
-            .iter()
-            .filter(|t| t.frontmatter.epic.as_deref() == Some(id))
-            .collect();
-
-        let state_configs: Vec<&apm_core::config::StateConfig> = epic_tickets
-            .iter()
-            .filter_map(|t| config.workflow.states.iter().find(|s| s.id == t.frontmatter.state))
-            .collect();
-
-        let derived = apm_core::epic::derive_epic_state(&state_configs);
-        let is_merged = || -> bool {
-            let out = std::process::Command::new("git")
-                .current_dir(root)
-                .args(["log", "--oneline", &format!("{default_branch}..{branch}")])
-                .output()
-                .ok();
-            out.map(|o| String::from_utf8_lossy(&o.stdout).trim().is_empty()).unwrap_or(false)
-        };
-
-        if derived == "done" || (derived == "empty" && is_merged()) {
-            candidates.push(branch.clone());
-        }
-    }
-
-    if candidates.is_empty() {
-        println!("Nothing to clean.");
-        return Ok(());
-    }
-
-    // Print candidate list.
-    println!("Epics to delete ({}):", candidates.len());
-    for branch in &candidates {
-        let id = apm_core::epic::epic_id_from_branch(branch);
-        let title = apm_core::epic::branch_to_title(branch);
-        println!("  {id}  {title}");
-    }
-
-    if dry_run {
-        println!("Dry run — no changes made.");
-        return Ok(());
-    }
-
-    // Confirmation gate.
-    if !yes {
-        if std::io::stdout().is_terminal() {
-            if !crate::util::prompt_yes_no(&format!("Delete {} epic(s)? [y/N] ", candidates.len()))? {
-                println!("Aborted.");
-                return Ok(());
-            }
-        } else {
-            println!("Skipping — non-interactive terminal. Use --yes to confirm.");
-            return Ok(());
-        }
-    }
-
-    // Delete each candidate.
-    for branch in &candidates {
-        // Remove active worktree before attempting branch deletion.
-        if let Some(wt_path) = apm_core::worktree::find_worktree_for_branch(root, branch) {
-            if let Err(e) = apm_core::worktree::remove_worktree(root, &wt_path, false) {
-                eprintln!(
-                    "skipping {branch}: could not remove worktree at {}: {e}",
-                    wt_path.display()
-                );
-                continue;
-            }
-        }
-
-        // Delete local branch.
-        let del_local = std::process::Command::new("git")
-            .current_dir(root)
-            .args(["branch", "-d", branch])
-            .output()?;
-        if !del_local.status.success() {
-            eprintln!(
-                "error: failed to delete local branch {branch}: {}",
-                String::from_utf8_lossy(&del_local.stderr).trim()
-            );
-            continue;
-        }
-
-        // Delete remote branch; suppress "remote ref does not exist".
-        let del_remote = std::process::Command::new("git")
-            .current_dir(root)
-            .args(["push", "origin", "--delete", branch])
-            .output()?;
-        if !del_remote.status.success() {
-            let stderr = String::from_utf8_lossy(&del_remote.stderr);
-            if !stderr.contains("remote ref does not exist")
-                && !stderr.contains("error: unable to delete")
-            {
-                eprintln!(
-                    "warning: failed to delete remote {branch}: {}",
-                    stderr.trim()
-                );
-            }
-        }
-
-        println!("deleted {branch}");
-    }
-
-    Ok(())
-}

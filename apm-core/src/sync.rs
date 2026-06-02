@@ -11,6 +11,8 @@ pub struct CloseCandidate {
 pub struct Candidates {
     pub close: Vec<CloseCandidate>,
     pub hints: Vec<String>,
+    pub epic_submit_hints: Vec<(String, String)>,
+    pub epic_close_hints: Vec<(String, String)>,
 }
 
 pub struct ApplyOutput {
@@ -47,6 +49,8 @@ pub fn detect(root: &Path, config: &Config) -> Result<Candidates> {
 
     let mut close = Vec::new();
     let mut hints = Vec::new();
+    let mut epic_submit_hints: Vec<(String, String)> = Vec::new();
+    let mut epic_close_hints: Vec<(String, String)> = Vec::new();
 
     // Case 1: non-terminal tickets on merged branches.
     for branch in &branches {
@@ -164,7 +168,34 @@ pub fn detect(root: &Path, config: &Config) -> Result<Candidates> {
         }
     }
 
-    Ok(Candidates { close, hints })
+    // Epic detection pass: scan local epic branches for submit/close hints.
+    let epic_branches = crate::epic::epic_branches(root).unwrap_or_default();
+    if !epic_branches.is_empty() {
+        let all_tickets = crate::ticket::load_all_from_git(root, &config.tickets.dir)
+            .unwrap_or_default();
+        for branch in &epic_branches {
+            let id = crate::epic::epic_id_from_branch(branch);
+            let title = crate::epic::branch_to_title(branch);
+            let epic_tickets: Vec<_> = all_tickets
+                .iter()
+                .filter(|t| t.frontmatter.epic.as_deref() == Some(id))
+                .collect();
+            let state_cfgs: Vec<&crate::config::StateConfig> = epic_tickets
+                .iter()
+                .filter_map(|t| config.workflow.states.iter().find(|s| s.id == t.frontmatter.state))
+                .collect();
+            let derived = crate::epic::derive_epic_state(&state_cfgs);
+            let is_merged = git::is_branch_content_merged(root, default_branch, branch)
+                .unwrap_or(false);
+            if is_merged {
+                epic_close_hints.push((id.to_string(), title));
+            } else if derived == "done" {
+                epic_submit_hints.push((id.to_string(), title));
+            }
+        }
+    }
+
+    Ok(Candidates { close, hints, epic_submit_hints, epic_close_hints })
 }
 
 pub fn apply(root: &Path, config: &Config, candidates: &Candidates, author: &str, aggressive: bool) -> Result<ApplyOutput> {

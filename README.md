@@ -183,12 +183,29 @@ apm epic list
 # Show epic details
 apm epic show <epic-id>
 
-# Set max concurrent workers for an epic
-apm epic set <epic-id> max_workers 2
+# Set the owner of all non-closed tickets in an epic
+apm epic set <epic-id> owner alice
 
-# When all tickets are done, open a PR from epic branch to main
+# When all tickets are done, push and open a PR (or merge directly)
+apm epic submit <epic-id>          # push + open PR (default)
+apm epic submit --merge <epic-id>  # merge locally into main and push
+apm epic submit --auto <epic-id>   # merge if clean, fall back to PR on conflict
+
+# After the PR is merged, clean up the local branch and worktree
 apm epic close <epic-id>
+
+# apm sync shows hints when epics are ready to submit or close
+apm sync
 ```
+
+`apm epic submit` and `apm epic close` are two separate phases:
+
+- **submit** — pushes the epic branch and opens or updates a GitHub PR (or merges locally with `--merge`). Does not delete the branch.
+- **close** — deletes the local epic branch and removes the worktree. Safe by default: refuses when the branch has unmerged commits or when any ticket has an active worker. Use `--force` to delete unconditionally.
+
+`apm sync` passively detects epics that are ready to act on and prints hint sections:
+- **Epics ready to submit** — derived state is `done` (all tickets closed) but branch is not yet merged into origin/main.
+- **Epics ready to close** — branch is already merged into origin/main (squash-merge aware).
 
 When a ticket reaches `implemented`, the completion strategy determines what happens next:
 

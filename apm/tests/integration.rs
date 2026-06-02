@@ -7107,17 +7107,19 @@ fn help_commands_shows_epic_subcommands_in_order() {
     let out = apm_help_commands(dir.path());
     let stdout = String::from_utf8(out.stdout).unwrap();
 
-    for sub in &["epic new", "epic close", "epic list", "epic show", "epic set"] {
+    for sub in &["epic new", "epic submit", "epic close", "epic list", "epic show", "epic set"] {
         assert!(stdout.contains(sub), "missing subcommand '{}' in:\n{}", sub, stdout);
     }
 
-    // Subcommands must appear in declaration order (new, close, list, show, set).
-    let new_pos   = stdout.find("epic new").unwrap();
-    let close_pos = stdout.find("epic close").unwrap();
-    let list_pos  = stdout.find("epic list").unwrap();
-    let show_pos  = stdout.find("epic show").unwrap();
-    let set_pos   = stdout.find("epic set").unwrap();
-    assert!(new_pos < close_pos, "epic new must precede epic close");
+    // Subcommands must appear in declaration order (new, submit, close, list, show, set).
+    let new_pos    = stdout.find("epic new").unwrap();
+    let submit_pos = stdout.find("epic submit").unwrap();
+    let close_pos  = stdout.find("epic close").unwrap();
+    let list_pos   = stdout.find("epic list").unwrap();
+    let show_pos   = stdout.find("epic show").unwrap();
+    let set_pos    = stdout.find("epic set").unwrap();
+    assert!(new_pos < submit_pos, "epic new must precede epic submit");
+    assert!(submit_pos < close_pos, "epic submit must precede epic close");
     assert!(close_pos < list_pos, "epic close must precede epic list");
     assert!(list_pos < show_pos, "epic list must precede epic show");
     assert!(show_pos < set_pos, "epic show must precede epic set");
@@ -8740,9 +8742,9 @@ fn close_from_terminal_state_fails() {
     }
 }
 
-// --- epic close: quiescence guard with classify_epic_quiescence ---
+// --- epic submit / close ---
 
-/// Set up a test repo with a local.toml so run_close can resolve caller name.
+/// Set up a test repo with a local.toml. Returns (dir, epic_id).
 fn setup_epic_with_commit() -> (tempfile::TempDir, String) {
     let (dir, epic_id) = setup_with_epic();
     std::fs::write(dir.path().join(".apm/local.toml"), "username = \"test\"\n").unwrap();
@@ -8762,137 +8764,288 @@ fn epic_ticket_in_state(dir: &std::path::Path, epic_id: &str, title: &str, state
 }
 
 #[test]
-fn epic_close_no_flag_bails_on_non_terminal_ticket() {
+fn epic_close_bails_on_unmerged_branch() {
+    // setup_with_epic creates an epic branch with 1 commit ahead of main.
     let (dir, epic_id) = setup_epic_with_commit();
     let p = dir.path();
 
-    // specd has no impl history → quiescence passes, but classify finds a genuine blocker.
-    epic_ticket_in_state(p, &epic_id, "Specd ticket", "specd");
-
-    let result = apm::cmd::epic::run_close(p, &epic_id, false, false, false, false);
+    let result = apm::cmd::epic::run_close(p, &epic_id, false);
     let err = result.unwrap_err();
     let msg = err.to_string();
     assert!(
-        msg.contains("non-terminal"),
-        "expected 'non-terminal' in error; got: {msg}"
+        msg.contains("commit(s) not yet in"),
+        "expected unmerged-commits error; got: {msg}"
     );
     assert!(
-        msg.contains("Re-run with --close-all to cascade close, or close them manually first."),
-        "expected --close-all hint; got: {msg}"
+        msg.contains("--force"),
+        "expected --force suggestion; got: {msg}"
+    );
+    // Branch must still exist.
+    let epic_branch = format!("epic/{epic_id}-my-epic");
+    let branches = std::process::Command::new("git")
+        .args(["branch", "--list", &epic_branch])
+        .current_dir(p)
+        .output().unwrap();
+    assert!(
+        !String::from_utf8_lossy(&branches.stdout).trim().is_empty(),
+        "epic branch should still exist after failed close"
     );
 }
 
 #[test]
-fn epic_close_all_bails_on_blocked_ticket() {
+fn epic_close_force_deletes_unmerged_branch() {
     let (dir, epic_id) = setup_epic_with_commit();
     let p = dir.path();
+    let epic_branch = format!("epic/{epic_id}-my-epic");
 
-    epic_ticket_in_state(p, &epic_id, "Blocked ticket", "blocked");
+    // --force bypasses the unmerged check.
+    apm::cmd::epic::run_close(p, &epic_id, true).unwrap();
 
-    let result = apm::cmd::epic::run_close(p, &epic_id, true, false, false, false);
-    let err = result.unwrap_err();
-    let msg = err.to_string();
+    let branches = std::process::Command::new("git")
+        .args(["branch", "--list", &epic_branch])
+        .current_dir(p)
+        .output().unwrap();
     assert!(
-        msg.contains("blocked"),
-        "expected 'blocked' in error; got: {msg}"
-    );
-    assert!(
-        msg.contains("require manual resolution"),
-        "expected 'require manual resolution' in error; got: {msg}"
+        String::from_utf8_lossy(&branches.stdout).trim().is_empty(),
+        "epic branch should be deleted after --force close"
     );
 }
 
 #[test]
-fn epic_close_all_bails_on_mixed_blocked_and_safe() {
+fn epic_close_succeeds_on_regular_merged_branch() {
     let (dir, epic_id) = setup_epic_with_commit();
     let p = dir.path();
+    let epic_branch = format!("epic/{epic_id}-my-epic");
 
-    let (id_safe, branch_safe) = epic_ticket_in_state(p, &epic_id, "Safe ticket", "specd");
-    let (_id_blocked, _branch_blocked) = epic_ticket_in_state(p, &epic_id, "Blocked ticket", "blocked");
+    // No-ff merge the epic into main.
+    git(p, &["-c", "commit.gpgsign=false", "merge", "--no-ff", &epic_branch, "-m", "merge epic"]);
 
-    let result = apm::cmd::epic::run_close(p, &epic_id, true, false, false, false);
-    let err = result.unwrap_err();
-    let msg = err.to_string();
+    apm::cmd::epic::run_close(p, &epic_id, false).unwrap();
+
+    let branches = std::process::Command::new("git")
+        .args(["branch", "--list", &epic_branch])
+        .current_dir(p)
+        .output().unwrap();
     assert!(
-        msg.contains("require manual resolution"),
-        "expected bail on mixed blocked+safe; got: {msg}"
+        String::from_utf8_lossy(&branches.stdout).trim().is_empty(),
+        "epic branch should be deleted after close on merged branch"
     );
-
-    // Safe ticket must not have been closed — bail fired before any cascade.
-    let rel = ticket_rel_path(&branch_safe);
-    let content = branch_content(p, &branch_safe, &rel);
-    assert!(
-        !content.contains("state = \"closed\""),
-        "safe ticket must not be closed when mix contains blocked; got: {content}"
-    );
-    let _ = id_safe;
 }
 
 #[test]
-fn epic_close_all_closes_safe_tickets() {
+fn epic_close_succeeds_on_squash_merged_branch() {
     let (dir, epic_id) = setup_epic_with_commit();
     let p = dir.path();
+    let epic_branch = format!("epic/{epic_id}-my-epic");
 
-    let (_id, branch) = epic_ticket_in_state(p, &epic_id, "Safe ticket", "specd");
+    // Squash merge the epic into main.
+    git(p, &["merge", "--squash", &epic_branch]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "squash merge epic"]);
 
-    // run_close will cascade-close the ticket then fail at the git push step (no remote).
-    // That's expected: we only care that the ticket was closed before the push.
-    let result = apm::cmd::epic::run_close(p, &epic_id, true, false, false, false);
+    apm::cmd::epic::run_close(p, &epic_id, false).unwrap();
+
+    let branches = std::process::Command::new("git")
+        .args(["branch", "--list", &epic_branch])
+        .current_dir(p)
+        .output().unwrap();
+    assert!(
+        String::from_utf8_lossy(&branches.stdout).trim().is_empty(),
+        "epic branch should be deleted after close on squash-merged branch"
+    );
+}
+
+#[test]
+fn epic_close_bails_on_live_worker() {
+    let (dir, epic_id) = setup_epic_with_commit();
+    let p = dir.path();
+    let epic_branch = format!("epic/{epic_id}-my-epic");
+
+    // Merge epic into main so the merged-check passes.
+    git(p, &["-c", "commit.gpgsign=false", "merge", "--no-ff", &epic_branch, "-m", "merge epic"]);
+
+    // Create a ticket in the epic.
+    let (_ticket_id, ticket_branch) = epic_ticket_in_state(p, &epic_id, "Working ticket", "in_progress");
+
+    // Add an actual git worktree for the ticket branch so find_worktree_for_branch finds it.
+    let wt_dir = tempfile::tempdir().unwrap();
+    let wt_path = wt_dir.path().to_path_buf();
+    std::process::Command::new("git")
+        .args(["worktree", "add", &wt_path.to_string_lossy(), &ticket_branch])
+        .current_dir(p)
+        .output().unwrap();
+
+    // Write a .apm-worker.pid with the current process's PID (so is_alive returns true).
+    let pid = std::process::id();
+    std::fs::write(
+        wt_path.join(".apm-worker.pid"),
+        format!(r#"{{"pid":{pid},"ticket_id":"test","started_at":"2026-01-01T00:00:00Z"}}"#),
+    ).unwrap();
+
+    let result = apm::cmd::epic::run_close(p, &epic_id, false);
+    let err = result.unwrap_err();
+    let msg = err.to_string();
+    assert!(
+        msg.contains("active worker"),
+        "expected 'active worker' error; got: {msg}"
+    );
+    assert!(
+        msg.contains("--force"),
+        "expected --force suggestion; got: {msg}"
+    );
+
+    // Clean up worktree.
+    std::process::Command::new("git")
+        .args(["worktree", "remove", "--force", &wt_path.to_string_lossy()])
+        .current_dir(p)
+        .output().unwrap();
+}
+
+#[test]
+fn epic_close_force_bypasses_live_worker() {
+    let (dir, epic_id) = setup_epic_with_commit();
+    let p = dir.path();
+    let epic_branch = format!("epic/{epic_id}-my-epic");
+
+    // Merge epic into main.
+    git(p, &["-c", "commit.gpgsign=false", "merge", "--no-ff", &epic_branch, "-m", "merge epic"]);
+
+    // Create a ticket in the epic.
+    let (_ticket_id, ticket_branch) = epic_ticket_in_state(p, &epic_id, "Working ticket", "in_progress");
+
+    // Add an actual git worktree for the ticket branch.
+    let wt_dir = tempfile::tempdir().unwrap();
+    let wt_path = wt_dir.path().to_path_buf();
+    std::process::Command::new("git")
+        .args(["worktree", "add", &wt_path.to_string_lossy(), &ticket_branch])
+        .current_dir(p)
+        .output().unwrap();
+
+    // Write a .apm-worker.pid with the current process's PID.
+    let pid = std::process::id();
+    std::fs::write(
+        wt_path.join(".apm-worker.pid"),
+        format!(r#"{{"pid":{pid},"ticket_id":"test","started_at":"2026-01-01T00:00:00Z"}}"#),
+    ).unwrap();
+
+    // --force bypasses the live-worker check.
+    // This may fail at the remote-delete step (no origin), that's expected.
+    let result = apm::cmd::epic::run_close(p, &epic_id, true);
     if let Err(ref e) = result {
         let msg = e.to_string();
         assert!(
-            !msg.contains("non-terminal") && !msg.contains("require manual resolution"),
-            "cascade close should have succeeded but got an unexpected quiescence error: {msg}"
+            !msg.contains("active worker"),
+            "--force should bypass live-worker check; got: {msg}"
         );
     }
 
-    let rel = ticket_rel_path(&branch);
-    let content = branch_content(p, &branch, &rel);
+    // Epic branch must be gone.
+    let branches = std::process::Command::new("git")
+        .args(["branch", "--list", &epic_branch])
+        .current_dir(p)
+        .output().unwrap();
     assert!(
-        content.contains("state = \"closed\""),
-        "ticket must be closed after --close-all cascade; got: {content}"
+        String::from_utf8_lossy(&branches.stdout).trim().is_empty(),
+        "epic branch should be deleted after --force close despite live worker"
+    );
+
+    // Clean up worktree (already removed by run_close, but suppress errors).
+    let _ = std::process::Command::new("git")
+        .args(["worktree", "remove", "--force", &wt_path.to_string_lossy()])
+        .current_dir(p)
+        .output();
+}
+
+#[test]
+fn epic_submit_merge_then_close() {
+    // Tests the full submit-then-close lifecycle for a --merge submit.
+    let (dir, epic_id) = setup_epic_with_commit();
+    let p = dir.path();
+    let epic_branch = format!("epic/{epic_id}-my-epic");
+
+    // Main worktree must be on main for --merge.
+    // submit --merge merges epic into main.
+    // It may fail at the push step (no remote); that's fine — the merge itself succeeds.
+    let result = apm::cmd::epic::run_submit(p, &epic_id, true, false, false);
+    if let Err(ref e) = result {
+        let msg = e.to_string();
+        // Push failure is expected when there is no remote; any other error is a bug.
+        assert!(
+            msg.contains("push") || msg.contains("remote") || msg.contains("origin"),
+            "unexpected error from submit --merge: {msg}"
+        );
+    }
+
+    // Regardless of push, the local merge commit must be present in main.
+    let log = std::process::Command::new("git")
+        .args(["log", "--oneline", &format!("{epic_branch}..main"), "--"])
+        .current_dir(p)
+        .output().unwrap();
+    let log_str = String::from_utf8_lossy(&log.stdout);
+    // The merge commit lands on main; main now has the epic's content.
+    // Verify is_branch_content_merged returns true for the local main ref.
+    let config = apm_core::config::Config::load(p).unwrap();
+    let is_merged = apm_core::git::is_branch_content_merged(p, &config.project.default_branch, &epic_branch).unwrap();
+    assert!(is_merged, "epic branch should be merged into main after submit --merge; log: {log_str}");
+
+    // Now close should succeed.
+    apm::cmd::epic::run_close(p, &epic_id, false).unwrap();
+    let branches = std::process::Command::new("git")
+        .args(["branch", "--list", &epic_branch])
+        .current_dir(p)
+        .output().unwrap();
+    assert!(
+        String::from_utf8_lossy(&branches.stdout).trim().is_empty(),
+        "epic branch should be deleted after close following submit --merge"
     );
 }
 
 #[test]
-fn epic_close_auto_close_non_tty() {
+fn sync_detect_epic_submit_hint() {
+    // Epic whose derived state is "done" (all tickets closed) but not merged
+    // → appears in epic_submit_hints.
     let (dir, epic_id) = setup_epic_with_commit();
     let p = dir.path();
 
-    // Create a ticket in specd (no impl history) — quiescence passes.
-    let (id, branch) = epic_ticket_in_state(p, &epic_id, "Merged ticket", "specd");
+    // Add a ticket in "closed" (terminal) state.
+    epic_ticket_in_state(p, &epic_id, "Done ticket", "closed");
 
-    // Merge the ticket branch into the epic branch so it becomes auto_closeable.
-    let epic_branch = format!("epic/{epic_id}-my-epic");
-    git(p, &["checkout", &epic_branch]);
-    git(p, &["-c", "commit.gpgsign=false", "merge", "--no-ff", &branch, "-m", &format!("merge {id}")]);
-    git(p, &["checkout", "main"]);
+    let config = apm_core::config::Config::load(p).unwrap();
+    let candidates = apm_core::sync::detect(p, &config).unwrap();
 
-    // Invoke via subprocess so stdin/stdout are pipes (is_terminal() returns false).
-    // classify_epic_quiescence puts the ticket in auto_closeable, but should_close = false
-    // (no TTY, no --close-all). Ticket falls into remaining, producing the blocker error.
-    let bin = env!("CARGO_BIN_EXE_apm");
-    let out = std::process::Command::new(bin)
-        .args(["epic", "close", &epic_id])
-        .current_dir(p)
-        .env("GIT_AUTHOR_NAME", "test")
-        .env("GIT_AUTHOR_EMAIL", "test@test.com")
-        .env("GIT_COMMITTER_NAME", "test")
-        .env("GIT_COMMITTER_EMAIL", "test@test.com")
-        .stdin(std::process::Stdio::null())
-        .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::piped())
-        .output()
-        .unwrap();
-
-    assert!(!out.status.success(), "expected non-zero exit; got success");
-    let stderr = String::from_utf8_lossy(&out.stderr);
     assert!(
-        stderr.contains("non-terminal"),
-        "expected merged ticket to appear as blocker on non-TTY; got stderr: {stderr}"
+        candidates.epic_submit_hints.iter().any(|(id, _)| id == &epic_id),
+        "expected epic {epic_id} in epic_submit_hints; got: {:?}",
+        candidates.epic_submit_hints
     );
     assert!(
-        stderr.contains(&id),
-        "expected ticket id {id} in blocker message; got stderr: {stderr}"
+        candidates.epic_close_hints.iter().all(|(id, _)| id != &epic_id),
+        "epic {epic_id} should NOT be in epic_close_hints when not merged; got: {:?}",
+        candidates.epic_close_hints
+    );
+}
+
+#[test]
+fn sync_detect_epic_close_hint_after_squash_merge() {
+    // Epic squash-merged into main → appears in epic_close_hints, not epic_submit_hints.
+    let (dir, epic_id) = setup_epic_with_commit();
+    let p = dir.path();
+    let epic_branch = format!("epic/{epic_id}-my-epic");
+
+    // Squash-merge the epic into main.
+    git(p, &["merge", "--squash", &epic_branch]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "squash merge epic"]);
+
+    let config = apm_core::config::Config::load(p).unwrap();
+    let candidates = apm_core::sync::detect(p, &config).unwrap();
+
+    assert!(
+        candidates.epic_close_hints.iter().any(|(id, _)| id == &epic_id),
+        "expected epic {epic_id} in epic_close_hints after squash merge; got: {:?}",
+        candidates.epic_close_hints
+    );
+    assert!(
+        candidates.epic_submit_hints.iter().all(|(id, _)| id != &epic_id),
+        "epic {epic_id} should NOT be in epic_submit_hints when already merged; got: {:?}",
+        candidates.epic_submit_hints
     );
 }
