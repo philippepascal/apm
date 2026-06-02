@@ -113,7 +113,8 @@ REFERENCES:
 - [ ] `apm epic submit --auto <id>` merges cleanly when no conflict would occur; falls back to opening a PR when a conflict is detected.
 - [ ] `apm epic close <id>` on an epic whose branch is fully merged into `origin/<default>` (regular or squash merge) deletes the local branch, removes the worktree if present, and exits zero.
 - [ ] `apm epic close <id>` on an epic with commits not yet in `origin/<default>` exits non-zero, prints the number of unmerged commits, and suggests `apm epic close --force`.
-- [ ] `apm epic close --force <id>` deletes the local branch and removes the worktree unconditionally regardless of merge status.
+- [ ] `apm epic close <id>` on an epic where any ticket has an active worker (worktree present and PID alive) exits non-zero, names the affected ticket(s) and PID(s), and suggests `apm epic close --force`.
+- [ ] `apm epic close --force <id>` deletes the local branch and removes the worktree unconditionally, bypassing both the live-worker check and the unmerged-commits check.
 - [ ] `apm sync` output includes an "Epics ready to submit" section listing epics whose derived state is `done` and whose branch is not yet merged into `origin/<default>`.
 - [ ] `apm sync` output includes an "Epics ready to close" section listing epics whose branch is merged into `origin/<default>` (squash-aware detection).
 - [ ] `apm sync` prints the epic hint sections without prompting; no action is taken automatically.
