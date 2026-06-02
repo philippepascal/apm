@@ -994,11 +994,11 @@ Examples:\n\
         #[arg(long)]
         explain: bool,
     },
-    /// Output APM system knowledge for agents: state machine, ticket format, session identity, and command reference
+    /// Output APM system knowledge for agents: state machine, exit scenarios (when a ticket id is given), ticket format, session identity, and command reference
     Instructions {
-        /// Ticket ID — substitutes <id> placeholders in command output
+        /// Ticket ID — substitutes <id> placeholders in command output and enables the exit-scenarios section
         ticket_id: Option<String>,
-        /// Scope output to this role (e.g. worker, spec-writer); omit for role listing
+        /// Scope output to this role (e.g. coder, spec-writer); omit for role listing
         #[arg(long, value_name = "ROLE")]
         role: Option<String>,
     },

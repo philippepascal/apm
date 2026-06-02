@@ -327,7 +327,7 @@ const WORKER_COMMAND_ALLOWLIST: &[&str] = &["show", "state", "spec", "set", "new
 /// from clap `///` doc comments. If a subcommand's fundamental purpose changes,
 /// update both this const and the clap string in apm/src/main.rs in the same commit.
 pub(crate) const WORKER_COMMANDS: &[(&str, &str)] = &[
-    ("instructions", "Output APM system knowledge for agents: state machine, ticket format, session identity, and command reference"),
+    ("instructions", "Output APM system knowledge for agents: state machine, exit scenarios (when a ticket id is given), ticket format, session identity, and command reference"),
     ("new",          "Create a new ticket"),
     ("set",          "Set a field on a ticket"),
     ("show",         "Show a ticket"),
