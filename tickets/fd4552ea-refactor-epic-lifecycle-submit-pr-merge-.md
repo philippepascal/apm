@@ -130,7 +130,7 @@ REFERENCES:
 ### Out of scope
 
 - Epic state machine (no `merge_failed`-equivalent state; a conflict in `--merge` is an error, not a state transition)
-- The quiescence check currently in `run_close` — dropped entirely; `submit` and `close` no longer gate on ticket states
+- The non-terminal-ticket portion of the quiescence check in `run_close` is dropped; `submit` and `close` no longer gate on whether tickets are in terminal states. The live-worker portion is kept (see Approach Step 3).
 - Adding tickets to an epic after submission — already works via normal git commits to the epic branch; no code change needed
 - apm-server and apm-ui changes beyond any surface-area rename forced by the `submit`/`close` split
 - Bulk close (`apm epic close --all-merged` or similar)
