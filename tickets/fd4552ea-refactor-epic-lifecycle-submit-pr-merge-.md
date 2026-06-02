@@ -192,17 +192,22 @@ Replace the current body entirely. New signature: `run_close(root, id_arg, force
 
 Steps:
 1. Resolve epic branch (same prefix-match)
-2. Determine main ref (origin preferred): same two-line pattern as Step 1
-3. Call `git::is_branch_content_merged(root, default_branch, &epic_branch)?`
-4. If not merged and not `--force`:
+2. Live-worker safety check (skipped when `--force`):
+   - Load all tickets whose `epic` field matches this epic id using `load_all_from_git` + filter.
+   - For each ticket, call `find_worktree_for_branch(root, &ticket_branch)`. If a worktree path exists, read its lock file and check whether the recorded PID is alive via `kill(pid, 0)`.
+   - This reuses the PID-alive sub-check from `epic_is_quiescent`; extract it into a standalone helper (e.g. `live_worker_pid(root, branch) -> Option<u32>`) if not already standalone.
+   - If any violators: bail `"epic has active worker(s):\n  <ticket-id>  PID <pid>\nUse --force to close unconditionally."`
+3. Determine main ref (origin preferred): same two-line pattern as Step 1
+4. Call `git::is_branch_content_merged(root, default_branch, &epic_branch)?`
+5. If not merged and not `--force`:
    - Count ahead commits: `git rev-list --count <main_ref>..<epic_branch>`
    - Bail: `"epic has N commit(s) not yet in <default_branch>. Use --force to delete unconditionally."`
-5. Remove worktree if present: `find_worktree_for_branch` → `remove_worktree(root, &path, true)`
-6. Delete local branch: `git branch -D <epic_branch>` (force-delete; the old `-d` would fail here on an unmerged branch with `--force`)
-7. Delete remote branch: `git push origin --delete <epic_branch>` (suppress "remote ref does not exist")
-8. Print: `"deleted epic/<id>"` on success
+6. Remove worktree if present: `find_worktree_for_branch` → `remove_worktree(root, &path, true)`
+7. Delete local branch: `git branch -D <epic_branch>` (force-delete; `-d` would fail on an unmerged branch when `--force` is set)
+8. Delete remote branch: `git push origin --delete <epic_branch>` (suppress "remote ref does not exist")
+9. Print: `"deleted epic/<id>"` on success
 
-Delete `run_epic_clean` — no longer called anywhere after Step 5.
+Delete `run_epic_clean` — no longer called anywhere after this refactor.
 
 #### Step 4 — Epic detection in `apm-core/src/sync.rs`
 
@@ -293,7 +298,7 @@ Add dispatch arms for `Submit` → `cmd::epic::run_submit` and updated `Close` �
 
 #### Step 7 — Help text
 
-- `EpicCommand::Close` long_about: "Delete the local epic branch and remove its worktree. Safe by default: refuses when the branch has commits not yet in the default branch. Use --force to delete unconditionally."
+- `EpicCommand::Close` long_about: "Delete the local epic branch and remove its worktree. Safe by default: refuses when the branch has unmerged commits or when any ticket in the epic has an active worker. Use --force to delete unconditionally."
 - `EpicCommand::Submit` long_about: "Push the epic branch to origin and open or update a GitHub PR (default), or merge it locally into the default branch (--merge). Use --auto to merge when clean and fall back to PR on conflict."
 - Update any README section that describes `apm epic close` as the PR-opening command.
 
