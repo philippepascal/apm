@@ -134,7 +134,75 @@ REFERENCES:
 
 ### Approach
 
-How the implementation will work.
+#### Step 1 — config.rs: add fields to TransitionConfig
+
+In `apm-core/src/config.rs`, add two fields to `TransitionConfig` after the existing `outcome` field. Both must carry `#[serde(default)]` because the struct has `#[serde(deny_unknown_fields)]`:
+
+```rust
+#[serde(default)]
+pub worker_hint: Option<String>,
+#[serde(default)]
+pub worker_pre: Option<String>,
+```
+
+#### Step 2 — instructions.rs: extend generate() and add exit_scenarios_body()
+
+Add `current_state: Option<&str>` as a fifth parameter to `generate()`. After step 1 (State Machine), insert before the Ticket Format section:
+
+```rust
+if ticket_id.is_some() {
+    let body = exit_scenarios_body(config.as_ref(), current_state);
+    if !body.is_empty() {
+        out.push_str("## Exit scenarios\n\n");
+        out.push_str(&body);
+    }
+}
+```
+
+New private helper `exit_scenarios_body(config: Option<&Config>, current_state: Option<&str>) -> String`:
+1. Return empty string if config or current_state is None.
+2. Find `StateConfig` where `state.id == current_state`; return empty if not found or `state.worker_profile` is None.
+3. Collect transitions where `transition.worker_hint.is_some()`; return empty if none.
+4. Emit intro: `"Choose the matching scenario and run the commands. Replace any <placeholder> text with your own.\n\n"`.
+5. For each qualifying transition: emit `### <hint>\n\n`, then `<worker_pre>\n` if set, then `apm state <id> <to>\n`. Use the literal `<id>` — the existing end-of-generate() substitution handles replacement.
+
+Update the caller in `apm/src/cmd/instructions.rs`: when `ticket_id` is provided, load the ticket and read its current state field; pass it as `current_state`. Update all existing tests in `instructions.rs` to add `None` as the fifth argument (no existing test supplies a ticket id, so no assertion changes).
+
+#### Step 3 — workflow.toml: annotate transitions and add in_progress → ammend
+
+`in_progress → ammend` does not currently exist in either workflow.toml. Add it after `in_progress → blocked` in both files:
+
+```toml
+[[workflow.states.transitions]]
+to          = "ammend"
+trigger     = "manual"
+outcome     = "needs_input"
+worker_hint = "If the spec is wrong and needs supervisor revision"
+worker_pre  = "apm spec <id> --section 'Amendment requests' --add-task '<what needs to change>'"
+```
+
+Also add `worker_hint` (and `worker_pre` where applicable) to the four existing transitions:
+
+- `in_progress → implemented`: `worker_hint = "If you completed the implementation and tests pass"`
+- `in_progress → blocked`: `worker_hint = "If you lack information to proceed (write your question first)"`, `worker_pre = "apm spec <id> --section 'Open questions' --append '<your question text>'"`
+- `in_design → specd`: `worker_hint = "If you finished writing or revising the spec"`
+- `in_design → question`: `worker_hint = "If you cannot proceed during design without more info"`, `worker_pre = "apm spec <id> --section 'Open questions' --append '<your question text>'"`
+
+Apply the identical changes to `.apm/workflow.toml`.
+
+#### Step 4 — slim role files
+
+In `apm-core/src/default/agents/claude/apm.coder.md`, replace the `apm state <id> implemented` instruction at the end of **"Tests and finishing"** and the three-step procedure in **"Blocked state"** with a single line: `"At end of work, follow **Exit scenarios** in \`apm instructions\` for the exact commands."`
+
+In `apm-core/src/default/agents/claude/apm.spec-writer.md`, replace the `apm state <id> specd` step in **"When you are done"** and the `apm state <id> question` step in **"Open questions"** with the same reference line.
+
+Mirror both edits to `.apm/agents/claude/apm.coder.md` and `.apm/agents/claude/apm.spec-writer.md`.
+
+#### Step 5 — tests
+
+**Unit test** (inline in `apm-core/src/instructions.rs`): build a TOML config with two states — `in_progress` (`worker_profile = "claude/coder"`) with two transitions (`→ implemented` with `worker_hint`, `→ blocked` without), and `specd` (no `worker_profile`) with one transition (`→ closed` with `worker_hint`). Call `generate()` with `current_state = Some("in_progress")`. Assert: (a) output contains `## Exit scenarios`; (b) exactly one `###` scenario appears (the hinted `in_progress` transition); (c) the un-hinted transition is absent; (d) the `specd` transition is absent. Test a second config where `worker_pre` is set — assert it appears before the `apm state` line. Test with `current_state = None` — assert no Exit scenarios section.
+
+**Stable-text test**: call `generate()` with the real `apm-core/src/default/workflow.toml` config and `current_state = "in_progress"`. Assert the three expected scenario headings appear in order: implemented first, blocked second, ammend third.
 
 ### Open questions
 
