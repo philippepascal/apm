@@ -107,7 +107,7 @@ REFERENCES:
 - [x] Each scenario heading is the transition's `worker_hint` text, formatted as a `###` heading
 - [x] When `worker_pre` is set on a transition, it appears as the first command line in the scenario with `<id>` substituted with the ticket id
 - [x] The `apm state <id> <to>` line appears in every scenario with `<id>` substituted
-- [ ] Transitions without `worker_hint` are excluded from the Exit scenarios section
+- [x] Transitions without `worker_hint` are excluded from the Exit scenarios section
 - [ ] `apm instructions` with no ticket id does not emit an Exit scenarios section
 - [ ] A ticket whose current state has no `worker_profile` produces no Exit scenarios section
 - [ ] Both `apm-core/src/default/workflow.toml` and `.apm/workflow.toml` have `worker_hint` (and `worker_pre` where applicable) on: `in_progress → implemented`, `in_progress → blocked`, `in_design → specd`, and `in_design → question`
