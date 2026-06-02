@@ -113,7 +113,7 @@ REFERENCES:
 - [x] Both `apm-core/src/default/workflow.toml` and `.apm/workflow.toml` have `worker_hint` (and `worker_pre` where applicable) on: `in_progress → implemented`, `in_progress → blocked`, `in_design → specd`, and `in_design → question`
 - [x] The coder and spec-writer role files (both default under `apm-core/src/default/agents/claude/` and project copies under `.apm/agents/claude/`) no longer contain exit-command prose; a short reference to Exit scenarios in `apm instructions` replaces it
 - [x] Unit tests cover: only hinted transitions from worker-profile states appear; supervisor-state transitions are excluded even when `worker_hint` is set; `worker_pre` is emitted before `apm state` when set, and absent when not
-- [ ] Stable-text test: the default workflow's cheat sheet for a ticket in `in_progress` contains the two expected scenario headings in order: implemented first, blocked second
+- [x] Stable-text test: the default workflow's cheat sheet for a ticket in `in_progress` contains the two expected scenario headings in order: implemented first, blocked second
 
 ### Out of scope
 
