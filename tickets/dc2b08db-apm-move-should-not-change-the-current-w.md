@@ -32,7 +32,10 @@ The fix is to run the rebase inside a temporary worktree, exactly as `try_worktr
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Semantic changes to what `apm move` does — the ticket is still rebased onto the new epic branch and the epic field is still updated
+- Behaviour when `apm move` is run from inside the ticket's own worktree (separate concern; that case is already guarded by the step-6 "branch checked out in a worktree" check)
+- apm-server and apm-ui (CLI-only bug)
+- Rebase conflict handling — the existing error message and abort logic is preserved unchanged
 
 ### Approach
 
