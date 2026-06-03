@@ -1,7 +1,7 @@
 +++
 id = "697eb55e"
 title = "apm validate bug on new tickets"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 4
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/697eb55e-apm-validate-bug-on-new-tickets"
 created_at = "2026-06-02T21:18:41.660057Z"
-updated_at = "2026-06-03T02:14:19.424346Z"
+updated_at = "2026-06-03T02:19:17.780250Z"
 +++
 
 ## Spec
@@ -168,3 +168,4 @@ placeholder        = "What is broken or missing, and why it matters."
 | 2026-06-03T01:32Z | in_design | specd | claude |
 | 2026-06-03T02:11Z | specd | ammend | philippepascal |
 | 2026-06-03T02:14Z | ammend | in_design | philippepascal |
+| 2026-06-03T02:19Z | in_design | specd | claude |
