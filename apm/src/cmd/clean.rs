@@ -1,5 +1,5 @@
 use anyhow::Result;
-use apm_core::clean;
+use apm_core::{clean, git_util};
 use std::path::Path;
 use crate::ctx::CmdContext;
 
@@ -104,6 +104,8 @@ pub fn run(
         }
     }
 
+    let mut remote_to_delete: Vec<String> = Vec::new();
+
     for candidate in &candidates {
         let scope = match (candidate.local_branch_exists, candidate.remote_branch_exists) {
             (true, true) => "local + remote",
@@ -134,9 +136,12 @@ pub fn run(
                 if branches {
                     println!("removed branch {} ({})", candidate.branch, scope);
                 }
-                let remove_out = clean::remove(root, candidate, true, branches)?;
+                let remove_out = clean::remove(root, candidate, true, branches, branches)?;
                 for w in &remove_out.warnings {
                     eprintln!("{w}");
+                }
+                if branches && candidate.remote_branch_exists {
+                    remote_to_delete.push(candidate.branch.clone());
                 }
             } else {
                 eprintln!("skipping {}", candidate.branch);
@@ -148,10 +153,28 @@ pub fn run(
             if branches {
                 println!("removed branch {} ({})", candidate.branch, scope);
             }
-            let remove_out = clean::remove(root, candidate, false, branches)?;
+            let remove_out = clean::remove(root, candidate, false, branches, branches)?;
             for w in &remove_out.warnings {
                 eprintln!("{w}");
             }
+            if branches && candidate.remote_branch_exists {
+                remote_to_delete.push(candidate.branch.clone());
+            }
+        }
+    }
+
+    if !dry_run && !remote_to_delete.is_empty() {
+        let refs: Vec<&str> = remote_to_delete.iter().map(|s| s.as_str()).collect();
+        match git_util::delete_remote_branches(root, &refs) {
+            Ok(out) => {
+                for branch in &out.deleted {
+                    git_util::prune_remote_tracking(root, branch);
+                }
+                for (branch, reason) in &out.failed {
+                    eprintln!("warning: could not delete remote branch {branch}: {reason}");
+                }
+            }
+            Err(e) => eprintln!("warning: batch remote branch deletion failed: {e}"),
         }
     }
 

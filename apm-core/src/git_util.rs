@@ -1047,6 +1047,71 @@ pub fn delete_remote_branch(root: &Path, branch: &str) -> Result<()> {
         .context("git push origin --delete failed")
 }
 
+pub struct DeleteBranchesOutput {
+    pub deleted: Vec<String>,
+    pub failed: Vec<(String, String)>,
+}
+
+/// Delete multiple remote branches in a single `git push` call.
+///
+/// Empty input returns `Ok` immediately without spawning git.
+/// Uses `--porcelain` to parse per-ref success/failure so that a single
+/// rejected ref does not abort the rest of the batch.
+/// Returns `Err` only when git cannot be spawned at all.
+pub fn delete_remote_branches(root: &Path, branches: &[&str]) -> Result<DeleteBranchesOutput> {
+    if branches.is_empty() {
+        return Ok(DeleteBranchesOutput { deleted: vec![], failed: vec![] });
+    }
+
+    let mut cmd = Command::new("git");
+    cmd.current_dir(root)
+        .args(["push", "--porcelain", "origin", "--delete"]);
+    for b in branches {
+        cmd.arg(format!("refs/heads/{b}"));
+    }
+
+    let out = cmd.output().context("git not found")?;
+
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let mut deleted = Vec::new();
+    let mut failed = Vec::new();
+
+    for line in stdout.lines() {
+        if let Some(rest) = line.strip_prefix("-\t") {
+            let mut parts = rest.splitn(2, '\t');
+            if let Some(ref_field) = parts.next() {
+                let branch = ref_field
+                    .trim_start_matches(':')
+                    .trim_start_matches("refs/heads/")
+                    .to_string();
+                if !branch.is_empty() {
+                    deleted.push(branch);
+                }
+            }
+        } else if let Some(rest) = line.strip_prefix("!\t") {
+            let mut parts = rest.splitn(2, '\t');
+            let ref_field = parts.next().unwrap_or("")
+                .trim_start_matches(':')
+                .trim_start_matches("refs/heads/")
+                .to_string();
+            let reason = parts.next().unwrap_or("").to_string();
+            if !ref_field.is_empty() {
+                failed.push((ref_field, reason));
+            }
+        }
+    }
+
+    // Total failure: no lines parsed and git exited non-zero (e.g. network error).
+    if deleted.is_empty() && failed.is_empty() && !out.status.success() {
+        let stderr = String::from_utf8_lossy(&out.stderr).trim().to_string();
+        for b in branches {
+            failed.push((b.to_string(), stderr.clone()));
+        }
+    }
+
+    Ok(DeleteBranchesOutput { deleted, failed })
+}
+
 /// Move files on a branch in a single commit.
 /// Each element of `moves` is (old_rel_path, new_rel_path, content).
 /// Writes each new file, stages it, then removes each old file via `git rm`.
@@ -2673,5 +2738,14 @@ mod tests {
             "expected RemoteOnly"
         );
         assert!(content.contains("ready"), "expected ready content; got: {content:?}");
+    }
+
+    #[test]
+    fn delete_remote_branches_empty_slice_returns_ok() {
+        let dir = git_init();
+        let result = delete_remote_branches(dir.path(), &[]);
+        let out = result.expect("empty slice should return Ok");
+        assert!(out.deleted.is_empty(), "no branches should be deleted");
+        assert!(out.failed.is_empty(), "no failures expected");
     }
 }
