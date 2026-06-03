@@ -1,7 +1,7 @@
 +++
 id = "612ca2cb"
 title = "apm epic close doesn't detect merged (locally) epic"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/612ca2cb-apm-epic-close-doesn-t-detect-merged-loc"
 created_at = "2026-06-03T02:29:52.020160Z"
-updated_at = "2026-06-03T02:29:52.020160Z"
+updated_at = "2026-06-03T06:32:21.601762Z"
 +++
 
 ## Spec
@@ -61,3 +61,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-06-03T02:29Z | — | new | philippepascal |
+| 2026-06-03T06:32Z | new | groomed | philippepascal |
