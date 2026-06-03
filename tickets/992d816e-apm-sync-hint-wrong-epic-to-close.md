@@ -3,13 +3,13 @@ id = "992d816e"
 title = "apm sync hint wrong epic to close"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 2
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/992d816e-apm-sync-hint-wrong-epic-to-close"
 created_at = "2026-06-03T02:27:42.503993Z"
-updated_at = "2026-06-03T06:34:40.733440Z"
+updated_at = "2026-06-03T06:42:35.805980Z"
 +++
 
 ## Spec
