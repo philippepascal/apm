@@ -32,7 +32,9 @@ The fix is to check local `main` first and treat the branch as merged if its con
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changing the commit count in the "not yet in main" error message — the count is cosmetic and not the source of the bug.
+- Fixing the `apm epic list` freshness display — the "up to date" label after a local merge is a separate concern.
+- Handling the case where `origin/main` is the authoritative source and local `main` should be ignored — that is not a real use case in this workflow.
 
 ### Approach
 
