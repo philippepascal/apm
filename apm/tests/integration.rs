@@ -9125,3 +9125,38 @@ fn sync_detect_epic_close_hint_after_squash_merge() {
         candidates.epic_submit_hints
     );
 }
+
+#[test]
+fn sync_empty_epic_behind_main_not_in_close_hints() {
+    // Epic branch with no commits of its own — its tip is a literal ancestor of main.
+    // sync must NOT list it in epic_close_hints or epic_submit_hints.
+    let dir = init_repo();
+    let p = dir.path();
+    std::fs::write(p.join(".apm/local.toml"), "username = \"test\"\n").unwrap();
+
+    let epic_id = "ab12cd34";
+    let epic_branch = format!("epic/{epic_id}-my-epic");
+
+    // Create the epic branch with NO commits: branch from main, immediately return to main.
+    git(p, &["checkout", "-b", &epic_branch]);
+    git(p, &["checkout", "main"]);
+
+    // Advance main past the epic branch tip so it becomes an ancestor of main.
+    std::fs::write(p.join("unrelated.txt"), "unrelated\n").unwrap();
+    git(p, &["add", "unrelated.txt"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "unrelated: advance main"]);
+
+    let config = apm_core::config::Config::load(p).unwrap();
+    let candidates = apm_core::sync::detect(p, &config).unwrap();
+
+    assert!(
+        candidates.epic_close_hints.iter().all(|(id, _)| id != epic_id),
+        "epic {epic_id} with no own commits should NOT appear in epic_close_hints; got: {:?}",
+        candidates.epic_close_hints
+    );
+    assert!(
+        candidates.epic_submit_hints.iter().all(|(id, _)| id != epic_id),
+        "epic {epic_id} with no own commits should NOT appear in epic_submit_hints; got: {:?}",
+        candidates.epic_submit_hints
+    );
+}
