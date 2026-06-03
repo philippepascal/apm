@@ -1,7 +1,7 @@
 +++
 id = "992d816e"
 title = "apm sync hint wrong epic to close"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/992d816e-apm-sync-hint-wrong-epic-to-close"
 created_at = "2026-06-03T02:27:42.503993Z"
-updated_at = "2026-06-03T06:42:49.414929Z"
+updated_at = "2026-06-03T20:47:30.752614Z"
 +++
 
 ## Spec
@@ -100,3 +100,4 @@ The two existing tests (`sync_detect_epic_submit_hint`, `sync_detect_epic_close_
 | 2026-06-03T06:32Z | new | groomed | philippepascal |
 | 2026-06-03T06:34Z | groomed | in_design | philippepascal |
 | 2026-06-03T06:42Z | in_design | specd | claude |
+| 2026-06-03T20:47Z | specd | ready | philippepascal |
