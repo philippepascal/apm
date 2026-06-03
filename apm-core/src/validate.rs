@@ -550,6 +550,77 @@ fn validate_config_no_agents(config: &Config, root: &Path) -> Vec<String> {
     errors
 }
 
+/// Returns the set of state IDs that can be reached from the workflow's initial states
+/// (non-terminal states with no incoming transitions) via forward BFS, WITHOUT entering
+/// `barrier_state`. States that have any direct incoming transition from outside this
+/// reachable set are also excluded, since they are also reachable from post-barrier states.
+///
+/// These are the "pre-spec" states for which required-section validation should be skipped.
+fn pre_validation_states<'a>(
+    barrier_state: &str,
+    workflow_states: &'a [crate::config::StateConfig],
+) -> HashSet<&'a str> {
+    // Build incoming edges map: state_id → set of state_ids that transition TO it.
+    // Also include on_failure targets so that states like `merge_failed` (which has no
+    // explicit incoming in the transitions vec) are not misidentified as initial states.
+    let mut incoming: std::collections::HashMap<&str, HashSet<&str>> =
+        std::collections::HashMap::new();
+    for state in workflow_states {
+        for transition in &state.transitions {
+            incoming.entry(transition.to.as_str()).or_default().insert(state.id.as_str());
+            if let Some(ref failure_state) = transition.on_failure {
+                incoming.entry(failure_state.as_str()).or_default().insert(state.id.as_str());
+            }
+        }
+    }
+
+    // Step 1: Find initial states — non-terminal with no incoming transitions.
+    // Exclude terminal states: they may have no explicit incoming transitions in the config
+    // (e.g. `closed` via the implicit close rule) and would otherwise be incorrectly treated
+    // as initial states, contaminating the pre-validation set.
+    let initial: Vec<&str> = workflow_states
+        .iter()
+        .filter(|s| !s.terminal && !incoming.contains_key(s.id.as_str()))
+        .map(|s| s.id.as_str())
+        .collect();
+
+    // Step 2: BFS forward from initial states, stopping at barrier (do not add or expand it).
+    let mut pre_bfs: HashSet<&str> = HashSet::new();
+    let mut queue: std::collections::VecDeque<&str> = std::collections::VecDeque::new();
+    for &start in &initial {
+        if pre_bfs.insert(start) {
+            queue.push_back(start);
+        }
+    }
+    while let Some(state_id) = queue.pop_front() {
+        let Some(state) = workflow_states.iter().find(|s| s.id.as_str() == state_id) else {
+            continue;
+        };
+        for transition in &state.transitions {
+            let to = transition.to.as_str();
+            if to == barrier_state {
+                continue;
+            }
+            if pre_bfs.insert(to) {
+                queue.push_back(to);
+            }
+        }
+    }
+
+    // Step 3: Filter — keep only states in pre_bfs whose every incoming transition
+    // originates from within pre_bfs. States with any incoming edge from outside pre_bfs
+    // (e.g. directly from the barrier) are reachable from post-barrier states as well,
+    // so they should not be skipped.
+    pre_bfs
+        .iter()
+        .copied()
+        .filter(|&state_id| match incoming.get(state_id) {
+            None => true,
+            Some(ins) => ins.iter().all(|&src| pre_bfs.contains(src)),
+        })
+        .collect()
+}
+
 pub fn verify_tickets(
     root: &Path,
     config: &Config,
@@ -632,8 +703,21 @@ pub fn verify_tickets(
         }
 
         // Validate document structure (required sections non-empty, AC items present).
+        // Sections with validate_from_state are skipped for tickets in pre-spec states.
         if let Ok(doc) = t.document() {
-            for err in doc.validate(&config.ticket.sections) {
+            let applicable: Vec<crate::config::TicketSection> = config.ticket.sections.iter()
+                .filter(|s| {
+                    match &s.validate_from_state {
+                        None => true,
+                        Some(barrier) => {
+                            let pre = pre_validation_states(barrier, &config.workflow.states);
+                            !pre.contains(fm.state.as_str())
+                        }
+                    }
+                })
+                .cloned()
+                .collect();
+            for err in doc.validate(&applicable) {
                 issues.push(format!("{prefix}: {err}"));
             }
         }
@@ -2969,6 +3053,209 @@ to = "closed"
         assert!(
             errors.iter().any(|e| e.contains("dest") && e.contains("worker_profile")),
             "command:start to state with no worker_profile should be rejected; got: {errors:?}"
+        );
+    }
+
+    // --- pre_validation_states and validate_from_state tests ---
+
+    fn default_workflow_config() -> Config {
+        let base = "[project]\nname = \"test\"\n\n[tickets]\ndir = \"tickets\"\n\n[workers]\ndefault = \"claude/coder\"\n\n[worktrees]\ndir = \"../wt\"\n";
+        let combined = format!("{}\n{}", base, crate::init::default_workflow_toml());
+        toml::from_str(&combined).expect("default workflow config parse failed")
+    }
+
+    #[test]
+    fn pre_validation_states_default_workflow() {
+        let config = default_workflow_config();
+        let pre = super::pre_validation_states("specd", &config.workflow.states);
+        let expected: HashSet<&str> = ["new", "groomed", "in_design", "question"].iter().copied().collect();
+        assert_eq!(pre, expected,
+            "pre_validation_states should be exactly {{new, groomed, in_design, question}}; got: {pre:?}");
+        assert!(!pre.contains("closed"), "closed must not appear in pre_validation_states");
+        assert!(!pre.contains("specd"), "specd (barrier) must not appear in pre_validation_states");
+    }
+
+    fn make_verify_ticket_with_sections(
+        root: &std::path::Path,
+        id: &str,
+        state: &str,
+    ) -> crate::ticket::Ticket {
+        // Ticket body has empty required sections
+        let raw = format!(
+            "+++\nid = \"{id}\"\ntitle = \"Test ticket\"\nstate = \"{state}\"\n+++\n\n## Spec\n\n### Problem\n\n### Acceptance criteria\n\n### Out of scope\n\n### Approach\n\n## History\n"
+        );
+        let path = root.join("tickets").join(format!("{id}-test.md"));
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(&path, &raw).unwrap();
+        crate::ticket::Ticket::parse(&path, &raw).unwrap()
+    }
+
+    fn setup_verify_repo_with_validate_from_state() -> tempfile::TempDir {
+        let dir = tempfile::tempdir().unwrap();
+        let p = dir.path();
+
+        git_cmd(p, &["init", "-q", "-b", "main"]);
+        git_cmd(p, &["config", "user.email", "test@test.com"]);
+        git_cmd(p, &["config", "user.name", "test"]);
+
+        std::fs::create_dir_all(p.join(".apm")).unwrap();
+        std::fs::write(
+            p.join(".apm/config.toml"),
+            r#"[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[workers]
+default = "claude/coder"
+
+[worktrees]
+dir = "../wt"
+
+[[workflow.states]]
+id    = "new"
+label = "New"
+
+  [[workflow.states.transitions]]
+  to      = "specd"
+  trigger = "manual"
+
+[[workflow.states]]
+id    = "specd"
+label = "Specd"
+
+  [[workflow.states.transitions]]
+  to      = "ready"
+  trigger = "manual"
+
+[[workflow.states]]
+id             = "ready"
+label          = "Ready"
+worker_profile = "claude/coder"
+
+  [[workflow.states.transitions]]
+  to      = "in_progress"
+  trigger = "command:start"
+
+[[workflow.states]]
+id             = "in_progress"
+label          = "In Progress"
+worker_profile = "claude/coder"
+"#,
+        )
+        .unwrap();
+
+        // ticket.toml with validate_from_state = "specd"
+        std::fs::write(
+            p.join(".apm/ticket.toml"),
+            r#"[[ticket.sections]]
+name                = "Problem"
+type                = "free"
+required            = true
+validate_from_state = "specd"
+
+[[ticket.sections]]
+name                = "Acceptance criteria"
+type                = "tasks"
+required            = true
+validate_from_state = "specd"
+
+[[ticket.sections]]
+name                = "Out of scope"
+type                = "free"
+required            = true
+validate_from_state = "specd"
+
+[[ticket.sections]]
+name                = "Approach"
+type                = "free"
+required            = true
+validate_from_state = "specd"
+"#,
+        )
+        .unwrap();
+
+        git_cmd(p, &["add", ".apm/config.toml", ".apm/ticket.toml"]);
+        git_cmd(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init"]);
+
+        dir
+    }
+
+    #[test]
+    fn new_state_ticket_skips_required_section_checks() {
+        let dir = setup_verify_repo_with_validate_from_state();
+        let root = dir.path();
+        let config = Config::load(root).unwrap();
+        let ticket = make_verify_ticket_with_sections(root, "abcd1234", "new");
+
+        let issues = verify_tickets(root, &config, &[ticket], &HashSet::new());
+
+        let section_errors: Vec<&String> = issues.iter()
+            .filter(|i| i.contains("section is empty") || i.contains("has no checklist items"))
+            .collect();
+        assert!(
+            section_errors.is_empty(),
+            "new-state ticket should not report required-section errors; got: {section_errors:?}"
+        );
+    }
+
+    #[test]
+    fn specd_state_ticket_reports_required_section_errors() {
+        let dir = setup_verify_repo_with_validate_from_state();
+        let root = dir.path();
+        let config = Config::load(root).unwrap();
+        let ticket = make_verify_ticket_with_sections(root, "abcd1234", "specd");
+
+        let issues = verify_tickets(root, &config, &[ticket], &HashSet::new());
+
+        let section_errors: Vec<&String> = issues.iter()
+            .filter(|i| i.contains("section is empty") || i.contains("has no checklist items"))
+            .collect();
+        assert!(
+            !section_errors.is_empty(),
+            "specd-state ticket with empty required sections should report errors; got: {issues:?}"
+        );
+    }
+
+    #[test]
+    fn ready_state_ticket_reports_required_section_errors() {
+        let dir = setup_verify_repo_with_validate_from_state();
+        let root = dir.path();
+        let config = Config::load(root).unwrap();
+        let ticket = make_verify_ticket_with_sections(root, "abcd1234", "ready");
+
+        let issues = verify_tickets(root, &config, &[ticket], &HashSet::new());
+
+        let section_errors: Vec<&String> = issues.iter()
+            .filter(|i| i.contains("section is empty") || i.contains("has no checklist items"))
+            .collect();
+        assert!(
+            !section_errors.is_empty(),
+            "ready-state ticket with empty required sections should report errors; got: {issues:?}"
+        );
+    }
+
+    #[test]
+    fn empty_tasks_section_error_uses_section_name() {
+        // Verify that EmptyTasksSection(name) uses the config section name in its message,
+        // not a hardcoded string. We test with a custom tasks section name.
+        use crate::ticket::ticket_fmt::ValidationError;
+        let custom_name = "My checklist";
+        let err = ValidationError::EmptyTasksSection(custom_name.to_string());
+        let msg = err.to_string();
+        assert!(
+            msg.contains(custom_name),
+            "EmptyTasksSection should include the section name '{custom_name}'; got: {msg}"
+        );
+        assert!(
+            msg.contains("no checklist items"),
+            "EmptyTasksSection message should include 'no checklist items'; got: {msg}"
+        );
+        // Also verify it does NOT hardcode "Acceptance criteria"
+        assert!(
+            !msg.contains("Acceptance criteria"),
+            "EmptyTasksSection must not hardcode 'Acceptance criteria'; got: {msg}"
         );
     }
 
