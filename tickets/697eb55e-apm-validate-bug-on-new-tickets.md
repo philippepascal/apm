@@ -23,7 +23,7 @@ Additionally, the error variant `ValidationError::NoAcceptanceCriteria` hardcode
 ### Acceptance criteria
 
 - [x] `apm validate` reports no integrity errors for tickets in `new` state when required sections are empty
-- [ ] `apm validate` reports no integrity errors for tickets in `groomed`, `in_design`, or `question` state when required sections are empty
+- [x] `apm validate` reports no integrity errors for tickets in `groomed`, `in_design`, or `question` state when required sections are empty
 - [ ] `apm validate` does report integrity errors for tickets in `specd` state when required sections are empty
 - [ ] `apm validate` does report integrity errors for tickets in `ready` and `in_progress` state when required sections are empty
 - [ ] The integrity error message for a `tasks` section with no checklist items uses the section name from config (not the hardcoded string "Acceptance criteria")
