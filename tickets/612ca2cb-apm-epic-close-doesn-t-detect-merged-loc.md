@@ -16,24 +16,11 @@ updated_at = "2026-06-03T06:43:00.715608Z"
 
 ### Problem
 
-syn git:(main) apm epic submit --merge 5ca89700
-Merged epic/5ca89700-syn-server-ui into branch.
-➜  syn git:(main) git status
-On branch main
-Your branch is ahead of 'origin/main' by 251 commits.
-  (use "git push" to publish your local commits)
+`apm epic close` calls `apm_core::git::is_branch_content_merged` to decide whether the epic branch has been merged into the default branch before deleting it. That function currently prefers `origin/<default>` when the remote ref is present, and only falls back to the local ref when no remote exists.
 
-nothing to commit, working tree clean
-➜  syn git:(main) apm epic list
-25ae8e6c [in_progress ] Aws Transfer Family Adapter              2 new                          ↓2219 clean
-364a3bd0 [in_progress ] Syn Client Bindings                      2 new                          ↓2219 clean
-5ca89700 [done        ] Syn Server Ui                            6 closed                       up to date
-b8683407 [in_progress ] Syn Test                                 5 new                          ↓2219 clean
-d9989d21 [in_progress ] Release Pipeline                         3 new                          ↓2219 clean
-f2b57ba1 [in_progress ] Sftpgo Adapter                           1 new                          ↓2219 clean
-➜  syn git:(main) apm epic close 5ca89700
-Error: epic has 251 commit(s) not yet in main. Use --force to delete unconditionally.
-➜  syn git:(main)
+When a user runs `apm epic submit --merge`, the epic is merged into the **local** `main` but `origin/main` is not updated (the push either hasn't happened or was skipped). At that point `is_branch_content_merged` sees `origin/main` exists, uses it as the reference, and returns `false` — because the epic commits are not yet in `origin/main`. `run_close` then refuses to delete the epic branch with "epic has N commit(s) not yet in main", even though the local merge is complete and the working tree is clean.
+
+The fix is to check local `main` first and treat the branch as merged if its content is present in **either** local `main` or `origin/main`, rather than exclusively preferring the remote.
 
 ### Acceptance criteria
 
