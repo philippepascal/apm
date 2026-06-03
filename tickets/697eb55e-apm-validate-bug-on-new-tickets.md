@@ -30,7 +30,7 @@ Additionally, the error variant `ValidationError::NoAcceptanceCriteria` hardcode
 - [x] `TicketSection` in config accepts an optional `validate_from_state` field
 - [x] The default `ticket.toml` sets `validate_from_state = "specd"` for the four required sections (Problem, Acceptance criteria, Out of scope, Approach)
 - [x] `pre_validation_states` with `barrier = "specd"` against the default workflow returns exactly `{new, groomed, in_design, question}`; `closed` is not in the set
-- [ ] `cargo test --workspace` passes with no regressions
+- [x] `cargo test --workspace` passes with no regressions
 
 ### Out of scope
 
