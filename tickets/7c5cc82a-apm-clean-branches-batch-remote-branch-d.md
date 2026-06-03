@@ -1,7 +1,7 @@
 +++
 id = "7c5cc82a"
 title = "apm clean --branches: batch remote branch deletions into a single push"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/7c5cc82a-apm-clean-branches-batch-remote-branch-d"
 created_at = "2026-06-03T03:03:55.652009Z"
-updated_at = "2026-06-03T06:32:24.138193Z"
+updated_at = "2026-06-03T06:46:04.593572Z"
 +++
 
 ## Spec
@@ -106,3 +106,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-06-03T03:03Z | — | new | philippepascal |
 | 2026-06-03T06:32Z | new | groomed | philippepascal |
+| 2026-06-03T06:46Z | groomed | in_design | philippepascal |
