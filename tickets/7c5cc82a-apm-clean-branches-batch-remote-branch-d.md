@@ -1,7 +1,7 @@
 +++
 id = "7c5cc82a"
 title = "apm clean --branches: batch remote branch deletions into a single push"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 3
 risk = 3
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/7c5cc82a-apm-clean-branches-batch-remote-branch-d"
 created_at = "2026-06-03T03:03:55.652009Z"
-updated_at = "2026-06-03T06:52:19.053181Z"
+updated_at = "2026-06-03T06:52:28.794382Z"
 +++
 
 ## Spec
@@ -137,3 +137,4 @@ The single-push property is verified by reading the `delete_remote_branches` imp
 | 2026-06-03T03:03Z | — | new | philippepascal |
 | 2026-06-03T06:32Z | new | groomed | philippepascal |
 | 2026-06-03T06:46Z | groomed | in_design | philippepascal |
+| 2026-06-03T06:52Z | in_design | specd | claude |
