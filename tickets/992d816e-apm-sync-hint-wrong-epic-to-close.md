@@ -22,7 +22,7 @@ The result is that every stale, undeveloped epic branch (visible in `apm epic li
 
 ### Acceptance criteria
 
-- [ ] An epic branch that has no commits beyond its merge-base with main is NOT listed in "Epics ready to close" by `apm sync`
+- [x] An epic branch that has no commits beyond its merge-base with main is NOT listed in "Epics ready to close" by `apm sync`
 - [ ] An epic branch whose content was squash-merged into main IS listed in "Epics ready to close" by `apm sync`
 - [ ] An epic branch whose content was regular-merged into main IS listed in "Epics ready to close" by `apm sync`
 - [ ] An epic branch whose content has not been merged into main AND all its tickets are terminal IS listed in "Epics ready to submit" (not "close") by `apm sync`
