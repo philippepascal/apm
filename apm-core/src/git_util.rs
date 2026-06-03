@@ -790,16 +790,20 @@ pub fn is_branch_merged_into(root: &Path, branch: &str, target_ref: &str) -> Res
 /// Return `true` when `branch`'s content has been merged into `default_branch` —
 /// either by a regular merge (fast-forward or --no-ff) or by a squash merge.
 ///
-/// Prefers `origin/<default_branch>` when that remote ref is present; falls back
-/// to the local ref when the remote is absent (matches `merged_into_main`'s pattern).
+/// Checks local `default_branch` first (covers `submit --merge` before push),
+/// then also checks `origin/<default_branch>` (covers merge-via-PR before local
+/// fetch). Returns `true` if the content is present in either ref.
 pub fn is_branch_content_merged(root: &Path, default_branch: &str, branch: &str) -> Result<bool> {
+    // Check local branch first — covers submit --merge before push.
+    if is_branch_merged_into(root, branch, default_branch)? {
+        return Ok(true);
+    }
+    // Also check origin/<default_branch> — covers merge-via-PR before local fetch.
     let remote_ref = format!("refs/remotes/origin/{default_branch}");
-    let main_ref = if run(root, &["rev-parse", "--verify", &remote_ref]).is_ok() {
-        format!("origin/{default_branch}")
-    } else {
-        default_branch.to_string()
-    };
-    is_branch_merged_into(root, branch, &main_ref)
+    if run(root, &["rev-parse", "--verify", &remote_ref]).is_ok() {
+        return is_branch_merged_into(root, branch, &format!("origin/{default_branch}"));
+    }
+    Ok(false)
 }
 
 /// Classification of a local branch relative to its origin counterpart.
@@ -2597,7 +2601,7 @@ mod tests {
     }
 
     #[test]
-    fn is_branch_content_merged_prefers_origin_when_present() {
+    fn is_branch_content_merged_merged_into_both_returns_true() {
         let (bare, local) = git_init_with_remote();
         let p = local.path();
         make_commit(p, "README", "base");
@@ -2612,6 +2616,25 @@ mod tests {
         git_cmd(p, &["push", "origin", "main"]);
         // origin/main exists and has the merge — should return true.
         assert!(is_branch_content_merged(p, "main", "epic/ee000005-feature").unwrap());
+        drop(bare); // keep alive
+    }
+
+    #[test]
+    fn is_branch_content_merged_local_merge_origin_behind_returns_true() {
+        // Simulates: apm epic submit --merge completed, but push not yet done.
+        // local main has the merge; origin/main does not.
+        let (bare, local) = git_init_with_remote();
+        let p = local.path();
+        make_commit(p, "README", "base");
+        git_cmd(p, &["push", "origin", "main"]);
+        // Create epic branch and merge it into local main without pushing.
+        git_cmd(p, &["checkout", "-b", "epic/ff000006-feature"]);
+        make_commit(p, "feature.md", "feature");
+        git_cmd(p, &["checkout", "main"]);
+        git_cmd(p, &["merge", "--no-ff", "epic/ff000006-feature", "-m", "merge epic"]);
+        // Do NOT push — origin/main is behind local main.
+        // is_branch_content_merged must return true because local main has the merge.
+        assert!(is_branch_content_merged(p, "main", "epic/ff000006-feature").unwrap());
         drop(bare); // keep alive
     }
 
