@@ -87,7 +87,7 @@ fn pre_validation_states<'a>(
 ```
 
 Algorithm:
-1. Collect initial states: states with no incoming transition from any other state.
+1. Collect initial states: states where `state.terminal == false` AND with no incoming transition from any other state. Terminal states are excluded because they may lack explicit incoming transitions in the workflow config (e.g. `closed` after commit e20488b3 made it implicit), which would otherwise cause the naive rule to treat them as initial states and incorrectly include them in the pre-validation set.
 2. BFS forward from each initial state, expanding a state's outgoing transitions but stopping at `barrier_state` (do not add it or expand from it).
 3. Return all visited state IDs.
 
@@ -145,7 +145,7 @@ placeholder        = "What is broken or missing, and why it matters."
 
 - Add a unit test in `apm-core/src/validate.rs` (inline `#[cfg(test)]` block) that calls `verify_tickets` with a `new`-state ticket lacking required sections and asserts no integrity errors are returned.
 - Add a counterpart test with a `specd`-state ticket lacking required sections and asserts the error IS returned.
-- Add a unit test for `pre_validation_states` directly, verifying that `new`, `groomed`, `in_design`, `question` are returned as pre-validation states when `barrier = "specd"` against the default workflow.
+- Add a unit test for `pre_validation_states` directly, asserting the returned set is exactly `{new, groomed, in_design, question}` — and that `closed` is not present — when `barrier = "specd"` against the default workflow.
 - Update any existing tests that reference `ValidationError::NoAcceptanceCriteria` to use `EmptyTasksSection`.
 
 ### Open questions
