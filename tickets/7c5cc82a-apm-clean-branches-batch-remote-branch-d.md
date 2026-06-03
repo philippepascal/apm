@@ -22,14 +22,14 @@ Git natively supports deleting multiple refs in a single push: `git push origin 
 
 ### Acceptance criteria
 
-- [ ] `git_util::delete_remote_branches` called with an empty slice returns `Ok` immediately without spawning a git process
-- [ ] `git_util::delete_remote_branches` with N > 0 branches issues exactly one `git push` command containing all N refspecs
-- [ ] `apm clean --branches` with N remote-eligible candidates issues exactly one `git push` for remote deletion, regardless of N
-- [ ] A failure deleting one remote ref in the batch does not prevent the remaining refs from being deleted; each per-ref failure appears as a warning on stderr
-- [ ] `prune_remote_tracking` is called for each successfully deleted remote branch after the batch push
-- [ ] `apm clean --branches --dry-run` prints "would remove branch" lines for remote-eligible candidates and issues no `git push`
-- [ ] `apm-server` clean handler behaviour is unchanged: it continues calling `clean::remove` with per-branch remote deletion (no batching)
-- [ ] All existing `cargo test --workspace` tests pass
+- [x] `git_util::delete_remote_branches` called with an empty slice returns `Ok` immediately without spawning a git process
+- [x] `git_util::delete_remote_branches` with N > 0 branches issues exactly one `git push` command containing all N refspecs
+- [x] `apm clean --branches` with N remote-eligible candidates issues exactly one `git push` for remote deletion, regardless of N
+- [x] A failure deleting one remote ref in the batch does not prevent the remaining refs from being deleted; each per-ref failure appears as a warning on stderr
+- [x] `prune_remote_tracking` is called for each successfully deleted remote branch after the batch push
+- [x] `apm clean --branches --dry-run` prints "would remove branch" lines for remote-eligible candidates and issues no `git push`
+- [x] `apm-server` clean handler behaviour is unchanged: it continues calling `clean::remove` with per-branch remote deletion (no batching)
+- [x] All existing `cargo test --workspace` tests pass
 
 ### Out of scope
 
