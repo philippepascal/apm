@@ -1,7 +1,7 @@
 +++
 id = "697eb55e"
 title = "apm validate bug on new tickets"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/697eb55e-apm-validate-bug-on-new-tickets"
 created_at = "2026-06-02T21:18:41.660057Z"
-updated_at = "2026-06-02T21:18:41.660057Z"
+updated_at = "2026-06-03T01:24:32.062647Z"
 +++
 
 ## Spec
@@ -65,3 +65,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-06-02T21:18Z | — | new | philippepascal |
+| 2026-06-03T01:24Z | new | groomed | philippepascal |
