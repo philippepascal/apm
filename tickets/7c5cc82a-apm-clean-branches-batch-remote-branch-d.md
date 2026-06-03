@@ -3,13 +3,13 @@ id = "7c5cc82a"
 title = "apm clean --branches: batch remote branch deletions into a single push"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 3
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/7c5cc82a-apm-clean-branches-batch-remote-branch-d"
 created_at = "2026-06-03T03:03:55.652009Z"
-updated_at = "2026-06-03T06:46:04.593572Z"
+updated_at = "2026-06-03T06:52:14.329446Z"
 +++
 
 ## Spec
