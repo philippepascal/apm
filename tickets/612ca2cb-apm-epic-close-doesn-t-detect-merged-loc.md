@@ -1,7 +1,7 @@
 +++
 id = "612ca2cb"
 title = "apm epic close doesn't detect merged (locally) epic"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 1
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/612ca2cb-apm-epic-close-doesn-t-detect-merged-loc"
 created_at = "2026-06-03T02:29:52.020160Z"
-updated_at = "2026-06-03T06:45:50.234542Z"
+updated_at = "2026-06-03T06:45:54.622499Z"
 +++
 
 ## Spec
@@ -96,3 +96,4 @@ The change is strictly more permissive: returns `true` if the branch content is 
 | 2026-06-03T02:29Z | — | new | philippepascal |
 | 2026-06-03T06:32Z | new | groomed | philippepascal |
 | 2026-06-03T06:43Z | groomed | in_design | philippepascal |
+| 2026-06-03T06:45Z | in_design | specd | claude |
