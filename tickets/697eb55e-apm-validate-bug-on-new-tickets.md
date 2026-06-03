@@ -1,7 +1,7 @@
 +++
 id = "697eb55e"
 title = "apm validate bug on new tickets"
-state = "in_design"
+state = "ammend"
 priority = 0
 effort = 4
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/697eb55e-apm-validate-bug-on-new-tickets"
 created_at = "2026-06-02T21:18:41.660057Z"
-updated_at = "2026-06-03T02:11:41.176979Z"
+updated_at = "2026-06-03T02:11:29.601061Z"
 +++
 
 ## Spec
@@ -152,6 +152,7 @@ placeholder        = "What is broken or missing, and why it matters."
 
 ### Amendment requests
 
+- [ ] Fix the initial-states detection in pre_validation_states. The current algorithm step 1 says to collect states with no incoming transition from any other state. In the current workflow (post-e20488b3, which made close implicit), the closed state has no explicit incoming transition in workflow.toml, so the naive rule treats closed as an initial state. BFS from closed adds only closed itself (it has no outgoing), but the result then incorrectly includes closed in the pre-validation set. Tickets in closed silently skip required-section checks. Today this is invisible (closed tickets do not get re-validated anyway), but it is wrong-by-luck and would break if another terminal state is added later (abandoned, wontfix, etc). Required change: in step 1 of pre_validation_states, exclude terminal states from the initial set. The terminal flag is already on StateConfig (introduced by e20488b3). One additional filter: skip any state where state.terminal is true before checking for incoming transitions. Also add an AC: pre_validation_states for the default workflow returns exactly the set new, groomed, in_design, question when barrier is specd — closed must not appear. Add a unit test asserting this exact set.
 
 ### Code review
 
@@ -165,4 +166,3 @@ placeholder        = "What is broken or missing, and why it matters."
 | 2026-06-03T01:24Z | groomed | in_design | philippepascal |
 | 2026-06-03T01:32Z | in_design | specd | claude |
 | 2026-06-03T02:11Z | specd | ammend | philippepascal |
-| 2026-06-03T02:11Z | ammend | in_design | philippepascal |
