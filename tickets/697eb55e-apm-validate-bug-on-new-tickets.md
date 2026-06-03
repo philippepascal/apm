@@ -33,7 +33,10 @@ Additionally, the error variant `ValidationError::NoAcceptanceCriteria` hardcode
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changing validation at state-transition time (`apm state` guards) — this ticket only fixes `apm validate`
+- Changing the `## Spec` or `## History` structural checks (those are always enforced)
+- Adding `validate_from_state` support to the `apm state in_design → specd` transition guard (a separate concern)
+- Changing `required` semantics for projects that do not set `validate_from_state`
 
 ### Approach
 
