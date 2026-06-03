@@ -185,8 +185,20 @@ pub fn detect(root: &Path, config: &Config) -> Result<Candidates> {
                 .filter_map(|t| config.workflow.states.iter().find(|s| s.id == t.frontmatter.state))
                 .collect();
             let derived = crate::epic::derive_epic_state(&state_cfgs);
-            let is_merged = git::is_branch_content_merged(root, default_branch, branch)
+            // An epic branch with no commits beyond its merge-base with main was never
+            // developed; is_ancestor returns true for such branches (their tip is literally
+            // reachable from main), producing false positives in epic_close_hints.
+            let has_own_commits = git::run(root, &["merge-base", &main_ref, branch])
+                .ok()
+                .and_then(|base| {
+                    git::run(root, &["rev-list", "--count", &format!("{base}..{branch}")]).ok()
+                })
+                .and_then(|s| s.trim().parse::<usize>().ok())
+                .map(|n| n > 0)
                 .unwrap_or(false);
+
+            let is_merged = has_own_commits
+                && git::is_branch_content_merged(root, default_branch, branch).unwrap_or(false);
             if is_merged {
                 epic_close_hints.push((id.to_string(), title));
             } else if derived == "done" {
