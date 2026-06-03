@@ -29,6 +29,7 @@ Additionally, the error variant `ValidationError::NoAcceptanceCriteria` hardcode
 - [ ] The integrity error message for a `tasks` section with no checklist items uses the section name from config (not the hardcoded string "Acceptance criteria")
 - [ ] `TicketSection` in config accepts an optional `validate_from_state` field
 - [ ] The default `ticket.toml` sets `validate_from_state = "specd"` for the four required sections (Problem, Acceptance criteria, Out of scope, Approach)
+- [ ] `pre_validation_states` with `barrier = "specd"` against the default workflow returns exactly `{new, groomed, in_design, question}`; `closed` is not in the set
 - [ ] `cargo test --workspace` passes with no regressions
 
 ### Out of scope
