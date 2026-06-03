@@ -16,38 +16,9 @@ updated_at = "2026-06-03T06:34:40.733440Z"
 
 ### Problem
 
-➜  syn git:(main) apm sync
-sync: 22 ticket branches visible
+When `apm sync` computes which epics to list as "ready to close", it calls `is_branch_content_merged(root, default_branch, epic_branch)` for each epic branch. That function checks first whether `epic_branch` is a git ancestor of main (`git merge-base --is-ancestor epic main`). For any epic branch that was created from an old commit of main but never had development committed to it, the branch tip IS a literal ancestor of main — so the function returns `true` and the epic is added to `epic_close_hints`.
 
-Tickets ready to close:
-  #288b434c  syn-server UI: invite link flow (server operator and client acceptance)  (branch merged into target)
-  #3a2a9a09  syn-server UI: audit log screen  (branch merged into target)
-  #4619bdbd  syn-server UI: tenant onboarding screen  (branch merged into target)
-  #46b89e25  syn-server UI: Google sign-in for admin authentication  (branch merged into target)
-  #4d9ff76e  syn-server UI: entitlement management screen  (branch merged into target)
-  #6733fc52  syn-server UI: React and Vite scaffold  (branch merged into target)
-
-Close all? [y/N] y
-288b434c: implemented → closed
-3a2a9a09: implemented → closed
-4619bdbd: implemented → closed
-46b89e25: implemented → closed
-4d9ff76e: implemented → closed
-6733fc52: implemented → closed
-
-Epics ready to close (apm epic close <id>):
-  25ae8e6c  Aws Transfer Family Adapter
-  364a3bd0  Syn Client Bindings
-  b8683407  Syn Test
-  d9989d21  Release Pipeline
-  f2b57ba1  Sftpgo Adapter
-➜  syn git:(main) apm epic list
-25ae8e6c [in_progress ] Aws Transfer Family Adapter              2 new                          ↓1968 clean
-364a3bd0 [in_progress ] Syn Client Bindings                      2 new                          ↓1968 clean
-5ca89700 [done        ] Syn Server Ui                            6 closed                       up to date
-b8683407 [in_progress ] Syn Test                                 5 new                          ↓1968 clean
-d9989d21 [in_progress ] Release Pipeline                         3 new                          ↓1968 clean
-f2b57ba1 [in_progress ] Sftpgo Adapter                           1 new                          ↓1968 clean
+The result is that every stale, undeveloped epic branch (visible in `apm epic list` as `↓N clean`) is incorrectly listed as "Epics ready to close (apm epic close <id>)", while epics that have actual unmerged work (like the `done` epic whose branch is ahead of main) are correctly omitted. The user is prompted to run `apm epic close` on in-progress epics that have open tickets and no merged content.
 
 ### Acceptance criteria
 
