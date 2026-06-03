@@ -1,7 +1,7 @@
 +++
 id = "992d816e"
 title = "apm sync hint wrong epic to close"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/992d816e-apm-sync-hint-wrong-epic-to-close"
 created_at = "2026-06-03T02:27:42.503993Z"
-updated_at = "2026-06-03T02:27:42.503993Z"
+updated_at = "2026-06-03T06:32:17.623247Z"
 +++
 
 ## Spec
@@ -75,3 +75,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-06-03T02:27Z | — | new | philippepascal |
+| 2026-06-03T06:32Z | new | groomed | philippepascal |
