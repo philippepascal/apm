@@ -24,7 +24,11 @@ The fix is to check local `main` first and treat the branch as merged if its con
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm epic close <id>` succeeds after `apm epic submit --merge` when `origin/main` is behind local `main` (push not yet done).
+- [ ] `apm epic close <id>` succeeds when the epic was merged via PR into `origin/main` and local `main` is up to date.
+- [ ] `apm epic close <id>` succeeds when the epic was merged via PR and local `main` is behind `origin/main`.
+- [ ] `apm epic close <id>` refuses with an "not yet in" error when the epic is present in neither local `main` nor `origin/main`.
+- [ ] A unit test in `apm-core/src/git_util.rs` covers: epic merged into local `main`, `origin/main` not updated → `is_branch_content_merged` returns `true`.
 
 ### Out of scope
 
