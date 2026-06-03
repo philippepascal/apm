@@ -142,14 +142,14 @@ pub struct ChecklistItem {
 #[derive(Debug, Clone)]
 pub enum ValidationError {
     EmptySection(String),
-    NoAcceptanceCriteria,
+    EmptyTasksSection(String),
 }
 
 impl std::fmt::Display for ValidationError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::EmptySection(s) => write!(f, "### {s} section is empty"),
-            Self::NoAcceptanceCriteria => write!(f, "### Acceptance criteria has no checklist items"),
+            Self::EmptyTasksSection(s) => write!(f, "### {s} has no checklist items"),
         }
     }
 }
@@ -246,14 +246,14 @@ impl TicketDocument {
             let val = self.sections.get(&sec.name).map(|s| s.as_str()).unwrap_or("");
             if val.is_empty() {
                 if sec.type_ == SectionType::Tasks {
-                    errors.push(ValidationError::NoAcceptanceCriteria);
+                    errors.push(ValidationError::EmptyTasksSection(sec.name.clone()));
                 } else {
                     errors.push(ValidationError::EmptySection(sec.name.clone()));
                 }
                 continue;
             }
             if sec.type_ == SectionType::Tasks && parse_checklist(val).is_empty() {
-                errors.push(ValidationError::NoAcceptanceCriteria);
+                errors.push(ValidationError::EmptyTasksSection(sec.name.clone()));
             }
         }
         errors
@@ -670,10 +670,10 @@ mod tests {
     fn minimal_ticket_sections() -> Vec<crate::config::TicketSection> {
         use crate::config::{SectionType, TicketSection};
         vec![
-            TicketSection { name: "Problem".into(), type_: SectionType::Free, required: true, placeholder: None },
-            TicketSection { name: "Acceptance criteria".into(), type_: SectionType::Tasks, required: true, placeholder: None },
-            TicketSection { name: "Out of scope".into(), type_: SectionType::Free, required: true, placeholder: None },
-            TicketSection { name: "Approach".into(), type_: SectionType::Free, required: true, placeholder: None },
+            TicketSection { name: "Problem".into(), type_: SectionType::Free, required: true, placeholder: None, validate_from_state: None },
+            TicketSection { name: "Acceptance criteria".into(), type_: SectionType::Tasks, required: true, placeholder: None, validate_from_state: None },
+            TicketSection { name: "Out of scope".into(), type_: SectionType::Free, required: true, placeholder: None, validate_from_state: None },
+            TicketSection { name: "Approach".into(), type_: SectionType::Free, required: true, placeholder: None, validate_from_state: None },
         ]
     }
 
@@ -744,7 +744,7 @@ mod tests {
         let body = "## Spec\n\n### Problem\n\nfoo\n\n### Acceptance criteria\n\n\n### Out of scope\n\nbar\n\n### Approach\n\nbaz\n";
         let doc = TicketDocument::parse(body).unwrap();
         let errs = doc.validate(&minimal_ticket_sections());
-        assert!(errs.iter().any(|e| matches!(e, ValidationError::NoAcceptanceCriteria)));
+        assert!(errs.iter().any(|e| matches!(e, ValidationError::EmptyTasksSection(_))));
     }
 
     #[test]
@@ -753,8 +753,8 @@ mod tests {
         let body = "## Spec\n\n### Problem\n\nfoo\n\n";
         let doc = TicketDocument::parse(body).unwrap();
         let sections = vec![
-            TicketSection { name: "Problem".into(), type_: SectionType::Free, required: true, placeholder: None },
-            TicketSection { name: "Context".into(), type_: SectionType::Free, required: true, placeholder: None },
+            TicketSection { name: "Problem".into(), type_: SectionType::Free, required: true, placeholder: None, validate_from_state: None },
+            TicketSection { name: "Context".into(), type_: SectionType::Free, required: true, placeholder: None, validate_from_state: None },
         ];
         let errs = doc.validate(&sections);
         let msgs: Vec<String> = errs.iter().map(|e| e.to_string()).collect();

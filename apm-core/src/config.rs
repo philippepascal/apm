@@ -26,6 +26,11 @@ pub struct TicketSection {
     /// Hint text pre-filled into an empty section when a new ticket is created.
     #[serde(default)]
     pub placeholder: Option<String>,
+    /// When set, required-section checks only apply to tickets whose current state is not in
+    /// the set of states reachable from the initial workflow state without passing through this
+    /// state. Absent means always validate.
+    #[serde(default)]
+    pub validate_from_state: Option<String>,
 }
 
 /// Configuration for the sections that appear on every ticket, in order.
