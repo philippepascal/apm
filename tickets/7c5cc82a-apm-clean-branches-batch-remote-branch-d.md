@@ -33,7 +33,14 @@ Git natively supports deleting multiple refs in a single push: `git push origin 
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- `--no-remote` flag for skipping remote deletion entirely (separate concern)
+- Parallel pushes (the batch makes this moot)
+- Batching remote deletions in `apm-server`'s maintenance handler
+- Changing `apm epic close`'s remote branch deletion (it inlines its own `git push --delete` and is unchanged)
+- Changing the local cleanup path inside `clean::remove` (worktree removal, local branch delete, local prune)
+- Changing what counts as `remote_branch_exists` (the `ls-remote` check at candidate-collection time is preserved)
+- Detecting or warning about protected branches on origin
+- Changing `apm sync` behaviour around remote branches
 
 ### Approach
 
