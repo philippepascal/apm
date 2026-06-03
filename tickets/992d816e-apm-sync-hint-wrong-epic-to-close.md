@@ -30,7 +30,10 @@ The result is that every stale, undeveloped epic branch (visible in `apm epic li
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Whether a `done` epic should appear in close hints in the same `apm sync` run that just closed its tickets (the hint is computed before apply, so the tickets appear as `implemented` at hint time)
+- Changes to `is_branch_content_merged` itself — the guard is added at the call site in `sync.rs`, not inside the helper
+- Changes to `apm epic close`, `apm epic submit`, or `apm epic list`
+- Handling of epics with no tickets at all (`derived == "empty"`)
 
 ### Approach
 
