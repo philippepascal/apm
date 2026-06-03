@@ -38,7 +38,47 @@ The fix is to check local `main` first and treat the branch as merged if its con
 
 ### Approach
 
-How the implementation will work.
+#### Change `is_branch_content_merged` (apm-core/src/git_util.rs ~line 795)
+
+Replace the current "prefer origin, fall back to local" logic with "check local first, then also check origin":
+
+```rust
+pub fn is_branch_content_merged(root: &Path, default_branch: &str, branch: &str) -> Result<bool> {
+    // Check local branch first — covers submit --merge before push.
+    if is_branch_merged_into(root, branch, default_branch)? {
+        return Ok(true);
+    }
+    // Also check origin/<default_branch> — covers merge-via-PR before local fetch.
+    let remote_ref = format!("refs/remotes/origin/{default_branch}");
+    if run(root, &["rev-parse", "--verify", &remote_ref]).is_ok() {
+        return is_branch_merged_into(root, branch, &format!("origin/{default_branch}"));
+    }
+    Ok(false)
+}
+```
+
+The change is strictly more permissive: returns `true` if the branch content is present in either local `main` or `origin/main`.
+
+#### Add unit test (apm-core/src/git_util.rs, after `is_branch_content_merged_prefers_origin_when_present`)
+
+`is_branch_content_merged_local_merge_origin_behind_returns_true`:
+1. `git_init_with_remote()` — local repo with bare remote.
+2. Push initial commit to `origin/main`.
+3. Create `epic/ff000006-feature`, add a commit, check out `main`.
+4. `git merge --no-ff epic/ff000006-feature` into local `main`. **Do not push.**
+5. Assert `is_branch_content_merged(p, "main", "epic/ff000006-feature")` returns `true`.
+
+#### Rename existing test
+
+`is_branch_content_merged_prefers_origin_when_present` → `is_branch_content_merged_merged_into_both_returns_true`. The test body is unchanged; only the name is updated to reflect that both refs agree after a push.
+
+#### No changes to apm/src/cmd/epic.rs
+
+`run_close` already calls `is_branch_content_merged` with the right arguments. The bug is entirely inside that function.
+
+#### Existing integration test coverage
+
+`epic_submit_merge_then_close` in `apm/tests/integration.rs` (no-remote repo) already covers the submit-then-close path and will continue to pass. No new integration test is required.
 
 ### Open questions
 
