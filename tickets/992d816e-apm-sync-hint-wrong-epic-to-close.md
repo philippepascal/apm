@@ -37,7 +37,51 @@ The result is that every stale, undeveloped epic branch (visible in `apm epic li
 
 ### Approach
 
-How the implementation will work.
+#### Change: `apm-core/src/sync.rs`, epic detection block (~line 187)
+
+The `main_ref` variable (already computed above the epic loop, at ~line 43) resolves to `origin/<default>` when the remote ref exists, falling back to the local branch name — reuse it.
+
+Replace the current `is_merged` line:
+
+```rust
+let is_merged = git::is_branch_content_merged(root, default_branch, branch)
+    .unwrap_or(false);
+```
+
+with a two-step guard:
+
+```rust
+// An epic branch with no commits beyond its merge-base with main was never
+// developed; is_ancestor returns true for such branches (their tip is literally
+// reachable from main), producing false positives in epic_close_hints.
+let has_own_commits = git::run(root, &["merge-base", &main_ref, branch])
+    .ok()
+    .and_then(|base| {
+        git::run(root, &["rev-list", "--count", &format!("{base}..{branch}")]).ok()
+    })
+    .and_then(|s| s.trim().parse::<usize>().ok())
+    .map(|n| n > 0)
+    .unwrap_or(false);
+
+let is_merged = has_own_commits
+    && git::is_branch_content_merged(root, default_branch, branch).unwrap_or(false);
+```
+
+`git::run` already trims its output, so the SHA from `merge-base` is clean and safe to interpolate into the `rev-list` range.
+
+The `if is_merged` / `else if derived == "done"` block below is unchanged.
+
+#### Test: `apm/tests/integration.rs`
+
+Add `fn sync_empty_epic_behind_main_not_in_close_hints` after the existing `sync_detect_epic_close_hint_after_squash_merge` test. The test:
+
+1. `init_repo()` — standard local repo with no remote
+2. Create epic branch with NO commits (branch from main, immediately check out main again) — do NOT use `setup_with_epic` which adds a commit
+3. Advance main with an unrelated commit so the epic tip is now an ancestor of main
+4. `apm_core::sync::detect(p, &config).unwrap()`
+5. Assert epic id is in neither `epic_close_hints` nor `epic_submit_hints`
+
+The two existing tests (`sync_detect_epic_submit_hint`, `sync_detect_epic_close_hint_after_squash_merge`) exercise the non-regressed paths (epic with own commits, not-merged and squash-merged respectively) and should continue to pass unchanged.
 
 ### Open questions
 
