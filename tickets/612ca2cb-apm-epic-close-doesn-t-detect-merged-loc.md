@@ -3,13 +3,13 @@ id = "612ca2cb"
 title = "apm epic close doesn't detect merged (locally) epic"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 1
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/612ca2cb-apm-epic-close-doesn-t-detect-merged-loc"
 created_at = "2026-06-03T02:29:52.020160Z"
-updated_at = "2026-06-03T06:43:00.715608Z"
+updated_at = "2026-06-03T06:45:44.429119Z"
 +++
 
 ## Spec
