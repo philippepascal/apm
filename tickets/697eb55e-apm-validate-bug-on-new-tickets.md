@@ -28,7 +28,7 @@ Additionally, the error variant `ValidationError::NoAcceptanceCriteria` hardcode
 - [x] `apm validate` does report integrity errors for tickets in `ready` and `in_progress` state when required sections are empty
 - [x] The integrity error message for a `tasks` section with no checklist items uses the section name from config (not the hardcoded string "Acceptance criteria")
 - [x] `TicketSection` in config accepts an optional `validate_from_state` field
-- [ ] The default `ticket.toml` sets `validate_from_state = "specd"` for the four required sections (Problem, Acceptance criteria, Out of scope, Approach)
+- [x] The default `ticket.toml` sets `validate_from_state = "specd"` for the four required sections (Problem, Acceptance criteria, Out of scope, Approach)
 - [ ] `pre_validation_states` with `barrier = "specd"` against the default workflow returns exactly `{new, groomed, in_design, question}`; `closed` is not in the set
 - [ ] `cargo test --workspace` passes with no regressions
 
