@@ -16,28 +16,9 @@ updated_at = "2026-06-03T01:24:34.530805Z"
 
 ### Problem
 
-apm validate
-error [integrity] : #020ef344 [new]: ### Acceptance criteria has no checklist items
-error [integrity] : #e944a5b2 [new]: ### Acceptance criteria has no checklist items
-error [integrity] : #b79cd7d1 [new]: ### Acceptance criteria has no checklist items
-error [integrity] : #d30843ef [new]: ### Acceptance criteria has no checklist items
-error [integrity] : #7ca15981 [new]: ### Acceptance criteria has no checklist items
-error [integrity] : #4dae95be [new]: ### Acceptance criteria has no checklist items
-error [integrity] : #b45438f8 [new]: ### Acceptance criteria has no checklist items
-error [integrity] : #3f59d62c [new]: ### Acceptance criteria has no checklist items
-error [integrity] : #472636ab [new]: ### Acceptance criteria has no checklist items
-error [integrity] : #9b42371e [new]: ### Acceptance criteria has no checklist items
-error [integrity] : #ef26c640 [new]: ### Acceptance criteria has no checklist items
-error [integrity] : #4896fdbc [new]: ### Acceptance criteria has no checklist items
-error [integrity] : #d3db906e [new]: ### Acceptance criteria has no checklist items
-error [integrity] : #cf90954a [new]: ### Acceptance criteria has no checklist items
-error [integrity] : #d10b720d [new]: ### Acceptance criteria has no checklist items
-error [integrity] : #4f1f2516 [new]: ### Acceptance criteria has no checklist items
-22 tickets checked, 0 config errors, 0 warnings, 16 ticket errors
-Error: 0 config errors, 16 ticket errors
+`apm validate` runs integrity checks on every non-terminal ticket. One check calls `TicketDocument::validate(&config.ticket.sections)`, which iterates over sections marked `required = true` and flags any that are empty or (for `tasks` sections) contain no checklist items. This check fires regardless of the ticket's current state, so tickets in `new` (and similarly `groomed`, `in_design`, `question`) are flagged even though they haven't been through the spec-writing phase yet. The `required` field's own docstring says it applies "before the ticket can transition out of in_design" — i.e., it is a spec-completeness check, not a universal invariant.
 
-new tickets do not have to have an acceptance criteria. 
-Also make sure that rules on tickets format are derived from config, not hardcoded.
+Additionally, the error variant `ValidationError::NoAcceptanceCriteria` hardcodes the string "Acceptance criteria" in its `Display` impl. This means the error message does not reflect the actual section name from the config, violating the principle that validation rules should be derived from config.
 
 ### Acceptance criteria
 
