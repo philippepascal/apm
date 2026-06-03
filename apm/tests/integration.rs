@@ -3461,6 +3461,106 @@ fn clean_force_skips_modified_tracked() {
     assert!(wt_path.exists(), "worktree should NOT be removed — modified tracked file");
 }
 
+// ── apm clean --branches batch remote deletion ────────────────────────────────
+
+#[test]
+fn clean_branches_batch_deletes_remote_branches() {
+    // Set up a bare repo as origin and a working clone.
+    let bare = tempfile::tempdir().unwrap();
+    let bp = bare.path();
+    git(bp, &["init", "--bare", "-q"]);
+
+    let dir = tempfile::tempdir().unwrap();
+    let p = dir.path();
+    git(p, &["clone", &bp.to_string_lossy(), "."]);
+    git(p, &["config", "user.email", "test@test.com"]);
+    git(p, &["config", "user.name", "test"]);
+
+    // Minimal APM config with a terminal "closed" state.
+    std::fs::create_dir_all(p.join(".apm")).unwrap();
+    std::fs::write(
+        p.join(".apm/config.toml"),
+        r#"[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[workers]
+default = "claude/coder"
+
+[agents]
+max_concurrent = 1
+
+[workflow.prioritization]
+priority_weight = 10.0
+effort_weight = -2.0
+risk_weight = -1.0
+
+[[workflow.states]]
+id    = "new"
+label = "New"
+
+[[workflow.states]]
+id       = "closed"
+label    = "Closed"
+terminal = true
+"#,
+    ).unwrap();
+    git(p, &["add", ".apm/config.toml"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init", "--allow-empty"]);
+    git(p, &["push", "origin", "main"]);
+    std::fs::create_dir_all(p.join("tickets")).unwrap();
+
+    // Create two closed ticket branches and push them to origin.
+    let (branch_a, _) = write_closed_ticket(p, "batch-a");
+    let (branch_b, _) = write_closed_ticket(p, "batch-b");
+    git(p, &["push", "origin", &branch_a]);
+    git(p, &["push", "origin", &branch_b]);
+    merge_into_main(p, &branch_a);
+    merge_into_main(p, &branch_b);
+    git(p, &["push", "origin", "main"]);
+
+    // Verify remote branches exist before clean.
+    let remote_before = std::process::Command::new("git")
+        .args(["ls-remote", "--heads", "origin", "ticket/*"])
+        .current_dir(p)
+        .output()
+        .unwrap();
+    let before = String::from_utf8_lossy(&remote_before.stdout);
+    assert!(before.contains(&branch_a), "branch_a should be on remote before clean");
+    assert!(before.contains(&branch_b), "branch_b should be on remote before clean");
+
+    // Run apm clean --branches.
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
+        .args(["clean", "--branches"])
+        .current_dir(p)
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "apm clean --branches failed\nstdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr),
+    );
+
+    // Both remote branches must be gone.
+    let remote_after = std::process::Command::new("git")
+        .args(["ls-remote", "--heads", "origin", "ticket/*"])
+        .current_dir(p)
+        .output()
+        .unwrap();
+    let after = String::from_utf8_lossy(&remote_after.stdout);
+    assert!(
+        !after.contains(&branch_a),
+        "branch_a should be deleted from remote after clean; ls-remote: {after}"
+    );
+    assert!(
+        !after.contains(&branch_b),
+        "branch_b should be deleted from remote after clean; ls-remote: {after}"
+    );
+}
+
 // --- resolve_caller_name fallback ---
 
 #[test]

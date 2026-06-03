@@ -204,7 +204,7 @@ pub async fn clean_handler(
                     ));
                 }
             } else {
-                let remove_out = apm_core::clean::remove(&root, candidate, force, branches)?;
+                let remove_out = apm_core::clean::remove(&root, candidate, force, branches, false)?;
                 if let Some(ref path) = candidate.worktree {
                     log.push(format!("removed worktree {}", path.display()));
                     count += 1;

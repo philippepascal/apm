@@ -303,7 +303,7 @@ pub fn remote_only_candidates(
     Ok(result)
 }
 
-pub fn remove(root: &Path, candidate: &CleanCandidate, force: bool, remove_branches: bool) -> Result<RemoveOutput> {
+pub fn remove(root: &Path, candidate: &CleanCandidate, force: bool, remove_branches: bool, skip_remote_delete: bool) -> Result<RemoveOutput> {
     let mut warnings: Vec<String> = Vec::new();
 
     if let Some(ref path) = candidate.worktree {
@@ -336,14 +336,15 @@ pub fn remove(root: &Path, candidate: &CleanCandidate, force: bool, remove_branc
         }
         // Remote deletion: only attempt when origin actually has the
         // branch (authoritative ls-remote check at candidate-collection
-        // time). Avoids noisy "remote ref does not exist" failures that
-        // happen routinely when GitHub auto-deletes branches on merge.
+        // time) AND the caller has not opted into batched remote deletion.
+        // Avoids noisy "remote ref does not exist" failures that happen
+        // routinely when GitHub auto-deletes branches on merge.
         //
         // On success, also prune the local remote-tracking ref. `git push
         // origin --delete` updates the remote but leaves the local
         // refs/remotes/origin/<branch> ref behind; without this prune the
         // stale ref would keep surfacing the ticket in `apm list`.
-        if candidate.remote_branch_exists {
+        if candidate.remote_branch_exists && !skip_remote_delete {
             match git_util::delete_remote_branch(root, &candidate.branch) {
                 Ok(()) => git_util::prune_remote_tracking(root, &candidate.branch),
                 Err(e) => warnings.push(format!(
