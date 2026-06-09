@@ -16,7 +16,8 @@ updated_at = "2026-06-09T21:47:31.578694Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+when apm sync detects that a ticket hasn't been properly merge despite being marked as implemented, it default the error message to say that the ticket wasn't merged to main.
+however the ticket's default branch could be an epic or a default branch. 
 
 ### Acceptance criteria
 
