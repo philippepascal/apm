@@ -16,7 +16,7 @@ updated_at = "2026-06-10T02:50:51.566252Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+and show the same list as apm list --all
 
 ### Acceptance criteria
 
