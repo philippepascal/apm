@@ -16,7 +16,7 @@ updated_at = "2026-06-10T02:49:43.077397Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+it should list all tickets that have not been archived (include all files in the ticket directory)
 
 ### Acceptance criteria
 
