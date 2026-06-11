@@ -16,7 +16,9 @@ updated_at = "2026-06-11T01:16:40.055105Z"
 
 ### Problem
 
-most important of which is to return only ticket numbers as a comma separated list.
+`apm list` produces a human-readable table (columns: id, state, owner, base, title) plus footer blocks for stale warnings and recovery hints. This output is hostile to pipes — extracting ticket IDs requires something like `awk '{print $1}' | sed 's/^\*//'`, which breaks whenever the stale marker or column alignment changes.
+
+Users need a machine-readable output mode so that `apm list` results can feed directly into shell scripts, other `apm` commands, and automation pipelines. The most important use case is a flat comma-separated list of ticket IDs.
 
 ### Acceptance criteria
 
@@ -33,13 +35,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
