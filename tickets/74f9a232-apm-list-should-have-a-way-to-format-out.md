@@ -1,7 +1,7 @@
 +++
 id = "74f9a232"
 title = "apm list should have a way to format output to use in pipes"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/74f9a232-apm-list-should-have-a-way-to-format-out"
 created_at = "2026-06-11T01:10:29.686451Z"
-updated_at = "2026-06-11T05:35:13.178716Z"
+updated_at = "2026-06-11T05:41:17.214007Z"
 depends_on = ["67f83715"]
 +++
 
@@ -93,3 +93,4 @@ No new dependencies are required: `serde_json` is already in `apm/Cargo.toml`.
 | 2026-06-11T01:19Z | in_design | specd | claude |
 | 2026-06-11T05:29Z | specd | ready | philippepascal |
 | 2026-06-11T05:35Z | ready | in_progress | philippepascal |
+| 2026-06-11T05:41Z | in_progress | implemented | claude |
