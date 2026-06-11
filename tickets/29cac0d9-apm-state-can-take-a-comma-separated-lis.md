@@ -38,7 +38,49 @@ The desired behaviour is that the ID argument accepts a comma-separated list (`a
 
 ### Approach
 
-How the implementation will work.
+All changes are in the CLI layer; `apm-core` is untouched.
+
+#### `apm/src/cmd/state.rs`
+
+Replace the current single-ticket body with a loop:
+
+1. Split `id_arg` on `','`, trim whitespace from each token, discard empty tokens.
+2. If exactly one token results, call `apm_core::state::transition` and handle output exactly as today (no behaviour change for the single-ID path).
+3. If multiple tokens, iterate sequentially:
+   - Call `apm_core::state::transition(root, token, new_state.clone(), no_aggressive, force)` for each.
+   - On success: print `{out.id}: {out.old_state} → {out.new_state}`, then any `out.worktree_path`, `out.messages`, and `out.warnings`.
+   - On error: push the error into a local `Vec<anyhow::Error>` and continue.
+4. After the loop, if the error vec is non-empty, print each error to stderr and return the first error via `Err(...)`.
+
+Signature of `run` does not change — `id_arg: &str` already accepts a comma-separated string from the CLI.
+
+#### `apm/src/main.rs`
+
+In the `State` variant of `Command`, update the `id` argument description from:
+
+```
+Ticket ID (8-char hex, 4+ char prefix, or plain integer)
+```
+
+to:
+
+```
+Ticket ID or comma-separated list of IDs (8-char hex, 4+ char prefix, or plain integer)
+```
+
+Also add an example line to the `long_about` string:
+
+```
+apm state 42,43 ready        # transition multiple tickets at once
+```
+
+#### `apm/tests/integration.rs`
+
+Add one test `state_batch_transition`:
+
+1. Create two tickets with `cmd::new::run`.
+2. Call `cmd::state::run(dir.path(), "id1,id2", "specd".into(), false, true)` (force=true to bypass workflow rules in test).
+3. Assert both ticket branch blobs contain `state = "specd"`.
 
 ### Open questions
 
