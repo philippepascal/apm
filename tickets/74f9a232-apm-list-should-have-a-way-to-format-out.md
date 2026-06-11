@@ -1,7 +1,7 @@
 +++
 id = "74f9a232"
 title = "apm list should have a way to format output to use in pipes"
-state = "merge_failed"
+state = "implemented"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/74f9a232-apm-list-should-have-a-way-to-format-out"
 created_at = "2026-06-11T01:10:29.686451Z"
-updated_at = "2026-06-11T05:41:19.330870Z"
+updated_at = "2026-06-11T06:15:11.675526Z"
 depends_on = ["67f83715"]
 +++
 
@@ -99,3 +99,4 @@ merge conflict — resolve manually and push:
 | 2026-06-11T05:35Z | ready | in_progress | philippepascal |
 | 2026-06-11T05:41Z | in_progress | implemented | claude |
 | 2026-06-11T05:41Z | implemented | merge_failed | claude |
+| 2026-06-11T06:15Z | merge_failed | implemented | philippepascal |
