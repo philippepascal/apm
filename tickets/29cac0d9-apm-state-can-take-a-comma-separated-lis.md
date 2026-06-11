@@ -46,12 +46,13 @@ All changes are in the CLI layer; `apm-core` is untouched.
 Replace the current single-ticket body with a loop:
 
 1. Split `id_arg` on `','`, trim whitespace from each token, discard empty tokens.
-2. If exactly one token results, call `apm_core::state::transition` and handle output exactly as today (no behaviour change for the single-ID path).
-3. If multiple tokens, iterate sequentially:
+2. If zero tokens result, return `Ok(())` immediately — no output, exits 0. This handles the common scripting pattern `apm state "$(apm list --format ids)" <state>` when no tickets match.
+3. If exactly one token results, call `apm_core::state::transition` and handle output and errors exactly as today, propagating errors with `?`. **Do not fold this into the multi-ticket loop.** The loop uses a summary error (`"{n} of {m} transitions failed"`), which would change the error output for the single-ID path and break the "single ID behaves identically" AC. The special case exists solely to preserve the current raw anyhow error chain for single-ticket calls.
+4. If multiple tokens result, iterate sequentially:
    - Call `apm_core::state::transition(root, token, new_state.clone(), no_aggressive, force)` for each.
    - On success: print `{out.id}: {out.old_state} → {out.new_state}`, then any `out.worktree_path`, `out.messages`, and `out.warnings`.
-   - On error: push the error into a local `Vec<anyhow::Error>` and continue.
-4. After the loop, if the error vec is non-empty, print each error to stderr and return the first error via `Err(...)`.
+   - On error: print the error to stderr immediately and increment a failure counter; continue to the next ticket.
+5. After the loop, if any transitions failed, call `anyhow::bail!("{n} of {m} transitions failed")` where `n` is the failure count and `m` is the total ticket count. This produces a clean non-zero exit without duplicating the per-ticket error text already printed in step 4.
 
 Signature of `run` does not change — `id_arg: &str` already accepts a comma-separated string from the CLI.
 
@@ -82,6 +83,11 @@ Add one test `state_batch_transition`:
 1. Create two tickets with `cmd::new::run`.
 2. Call `cmd::state::run(dir.path(), "id1,id2", "specd".into(), false, true)` (force=true to bypass workflow rules in test).
 3. Assert both ticket branch blobs contain `state = "specd"`.
+
+Add one test `state_empty_id_noop`:
+
+1. Call `cmd::state::run(dir.path(), "", "specd".into(), false, false)`.
+2. Assert it returns `Ok(())` and produces no output.
 
 ### Open questions
 
