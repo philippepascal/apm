@@ -88,6 +88,7 @@ Add one test `state_batch_transition`:
 ### Amendment requests
 
 - [ ] Define behaviour for an empty/whitespace-only id argument (zero tokens after split+trim). This is the primary use case: 'apm state "$(apm list --format ids)" <state>' yields an empty id arg when no tickets match, since 'apm list --format ids' prints an empty line. Add an AC that an empty/whitespace-only id list is a no-op exiting 0 (do not error). Note this changes today's single-ID behaviour, where 'apm state "" <state>' currently errors with 'no ticket found'.
+- [ ] Fix the error-reporting contract so the first error is not printed twice. main() returns anyhow::Result, so a returned Err is already printed by anyhow's handler (exit 1). Instead of printing each error in the loop AND returning the first error, print each per-ticket error to stderr in the loop, then return a summary via anyhow::bail!("{n} of {m} transitions failed") — preserves non-zero exit without duplicating the first error.
 
 ### Code review
 
