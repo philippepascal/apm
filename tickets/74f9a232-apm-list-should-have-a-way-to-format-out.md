@@ -41,7 +41,37 @@ Users need a machine-readable output mode so that `apm list` results can feed di
 
 ### Approach
 
-How the implementation will work.
+All changes are contained to two files: `apm/src/main.rs` and `apm/src/cmd/list.rs`. No changes to `apm-core`.
+
+#### `apm/src/main.rs`
+
+Add a `format` field to the `List` command variant, after the `owner` field:
+
+```rust
+/// Output format: ids (comma-separated IDs) or json (JSON array)
+#[arg(long, value_name = "FORMAT")]
+format: Option<String>,
+```
+
+Update the `Command::List { ... }` destructure and the `cmd::list::run(...)` call to pass `format` as the last argument.
+
+Add `--format ids` to the `apm list` examples in the long `help` string.
+
+#### `apm/src/cmd/list.rs`
+
+Add `format: Option<String>` as the last parameter to `run(...)`.
+
+After `list_filtered` returns the `filtered` vec, branch on the format value before the existing rendering loop:
+
+- **`Some("ids")`** — Collect `fm.id` for each ticket, join with `","`, and `println!` the result (empty line when the vec is empty). Return immediately — skip all footer blocks.
+
+- **`Some("json")`** — Build a `Vec<&Frontmatter>` from `filtered`, serialize with `serde_json::to_string(...)`, and `println!` the result (`"[]"` naturally when vec is empty). Return immediately — skip all footer blocks. `Frontmatter` already derives `serde::Serialize`, so no extra work is needed.
+
+- **`Some(other)`** — `anyhow::bail!("unknown format {:?}; supported: ids, json", other)`
+
+- **`None`** — fall through to the existing table rendering loop unchanged.
+
+No new dependencies are required: `serde_json` is already in `apm/Cargo.toml`.
 
 ### Open questions
 
