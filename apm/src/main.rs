@@ -232,6 +232,7 @@ Examples:
   apm list --all                    # everything including closed
   apm list --mine                   # only your tickets
   apm list --author alice           # only tickets by alice
+  apm list --epic 57bce963          # only tickets in this epic
   apm list --format ids             # comma-separated IDs for scripting
   apm list --format json            # JSON array of ticket objects")]
     List {
@@ -259,6 +260,9 @@ Examples:
         /// Show only tickets owned by USERNAME (owner field)
         #[arg(long, value_name = "USERNAME", conflicts_with = "mine")]
         owner: Option<String>,
+        /// Show only tickets in this epic (4–8 char hex prefix)
+        #[arg(long, value_name = "ID")]
+        epic: Option<String>,
         /// Output format: ids (comma-separated IDs) or json (JSON array)
         #[arg(long, value_name = "FORMAT")]
         format: Option<String>,
@@ -1103,6 +1107,7 @@ fn main() -> Result<()> {
             mine,
             author,
             owner,
+            epic,
             format,
         } => cmd::list::run(
             &root,
@@ -1114,6 +1119,7 @@ fn main() -> Result<()> {
             mine,
             author,
             owner,
+            epic,
             format,
         ),
         Command::New {
