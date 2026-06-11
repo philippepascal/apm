@@ -16,7 +16,9 @@ updated_at = "2026-06-11T06:35:39.990084Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+`apm state <id> <state>` currently accepts a single ticket ID. When a supervisor or agent wants to batch-transition several tickets to the same state — e.g. marking a set of groomed tickets `ready` before dispatching workers — they must invoke the command once per ticket. This creates unnecessary friction in scripts and agent workflows.
+
+The desired behaviour is that the ID argument accepts a comma-separated list (`apm state id1,id2,id3 ready`), transitions each ticket in turn, prints a result line per ticket, and exits non-zero if any transition failed.
 
 ### Acceptance criteria
 
@@ -33,13 +35,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
