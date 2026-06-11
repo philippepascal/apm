@@ -34,7 +34,10 @@ Users need a machine-readable output mode so that `apm list` results can feed di
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Newline-separated output (one ID per line) — the comma format is sufficient for scripting
+- Additional format values beyond `ids` and `json`
+- Changes to `apm next` output format
+- Changes to any other `apm` subcommand
 
 ### Approach
 
