@@ -4,12 +4,12 @@ title = "apm list should have a way to filter per epic"
 state = "in_design"
 priority = 0
 effort = 2
-risk = 0
+risk = 1
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/67f83715-apm-list-should-have-a-way-to-filter-per"
 created_at = "2026-06-11T01:09:44.527139Z"
-updated_at = "2026-06-11T01:16:20.610655Z"
+updated_at = "2026-06-11T01:16:24.739822Z"
 +++
 
 ## Spec
