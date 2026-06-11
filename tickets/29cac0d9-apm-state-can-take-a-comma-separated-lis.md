@@ -31,7 +31,10 @@ The desired behaviour is that the ID argument accepts a comma-separated list (`a
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Parallel execution of transitions (they run sequentially).
+- Accepting IDs via stdin or a file flag.
+- Batch transition to different target states per ticket (all IDs share the same target state).
+- Changes to `apm-core/src/state::transition` — the core function stays single-ticket.
 
 ### Approach
 
