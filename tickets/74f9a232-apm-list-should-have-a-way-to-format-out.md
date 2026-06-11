@@ -9,7 +9,8 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/74f9a232-apm-list-should-have-a-way-to-format-out"
 created_at = "2026-06-11T01:10:29.686451Z"
-updated_at = "2026-06-11T01:19:20.879204Z"
+updated_at = "2026-06-11T05:27:59.011011Z"
+depends_on = ["67f83715"]
 +++
 
 ## Spec
