@@ -22,7 +22,12 @@ The desired behaviour is that the ID argument accepts a comma-separated list (`a
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm state <id> <state>` with a single ID behaves identically to the current implementation (no regression).
+- [ ] `apm state id1,id2 <state>` transitions both tickets and prints one `id: old → new` line per ticket.
+- [ ] Whitespace around commas is trimmed: `apm state "id1, id2" <state>` works the same as `apm state id1,id2 <state>`.
+- [ ] If one ticket in the list fails to transition, the command continues processing the remaining tickets.
+- [ ] All errors are reported after all tickets are processed, and the command exits non-zero when any transition failed.
+- [ ] The `id` argument description in `--help` output mentions comma-separated IDs.
 
 ### Out of scope
 
