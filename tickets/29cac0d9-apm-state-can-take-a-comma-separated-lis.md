@@ -1,7 +1,7 @@
 +++
 id = "29cac0d9"
 title = "apm state can take a comma separated list of ids"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/29cac0d9-apm-state-can-take-a-comma-separated-lis"
 created_at = "2026-06-11T06:35:11.889410Z"
-updated_at = "2026-06-11T06:35:33.537453Z"
+updated_at = "2026-06-11T06:35:39.990084Z"
 +++
 
 ## Spec
@@ -48,3 +48,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-06-11T06:35Z | — | new | philippepascal |
 | 2026-06-11T06:35Z | new | groomed | philippepascal |
+| 2026-06-11T06:35Z | groomed | in_design | philippepascal |
