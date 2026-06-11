@@ -22,11 +22,11 @@ The `epic` field is already stored on each ticket's frontmatter and the `list_fi
 
 ### Acceptance criteria
 
-- [ ] `apm list --epic <ID>` outputs only tickets whose `epic` frontmatter field starts with `<ID>`
-- [ ] `apm list --epic <ID>` with no matching tickets produces no rows and exits 0
-- [ ] `apm list --epic <ID>` composes with `--state`: only tickets matching both filters are shown
-- [ ] `apm list` without `--epic` behaves identically to before (no regression)
-- [ ] `apm list --help` lists `--epic` with a short description and `<ID>` as the value name
+- [x] `apm list --epic <ID>` outputs only tickets whose `epic` frontmatter field starts with `<ID>`
+- [x] `apm list --epic <ID>` with no matching tickets produces no rows and exits 0
+- [x] `apm list --epic <ID>` composes with `--state`: only tickets matching both filters are shown
+- [x] `apm list` without `--epic` behaves identically to before (no regression)
+- [x] `apm list --help` lists `--epic` with a short description and `<ID>` as the value name
 
 ### Out of scope
 
