@@ -107,6 +107,7 @@ mod tests {
             author: None,
             owner: None,
             epic: None,
+            format: None,
         };
         assert!(is_read_only_command(&cmd));
     }
