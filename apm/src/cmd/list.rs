@@ -5,7 +5,7 @@ use crate::ctx::CmdContext;
 
 #[allow(clippy::too_many_arguments)]
 // Each argument maps to a distinct CLI flag.
-pub fn run(root: &Path, state_filter: Option<String>, unassigned: bool, all: bool, actionable_filter: Option<String>, no_aggressive: bool, mine: bool, author: Option<String>, owner: Option<String>) -> Result<()> {
+pub fn run(root: &Path, state_filter: Option<String>, unassigned: bool, all: bool, actionable_filter: Option<String>, no_aggressive: bool, mine: bool, author: Option<String>, owner: Option<String>, format: Option<String>) -> Result<()> {
     let ctx = CmdContext::load(root, no_aggressive)?;
 
     let mine_user: Option<String> = if mine {
@@ -26,6 +26,23 @@ pub fn run(root: &Path, state_filter: Option<String>, unassigned: bool, all: boo
         owner.as_deref(),
         mine_user.as_deref(),
     );
+
+    match format.as_deref() {
+        Some("ids") => {
+            let ids: Vec<&str> = filtered.iter().map(|t| t.frontmatter.id.as_str()).collect();
+            println!("{}", ids.join(","));
+            return Ok(());
+        }
+        Some("json") => {
+            let fms: Vec<_> = filtered.iter().map(|t| &t.frontmatter).collect();
+            println!("{}", serde_json::to_string(&fms)?);
+            return Ok(());
+        }
+        Some(other) => {
+            anyhow::bail!("unknown format {:?}; supported: ids, json", other);
+        }
+        None => {}
+    }
 
     // Pre-compute stale epic IDs before printing rows.
     let default_branch = &ctx.config.project.default_branch;

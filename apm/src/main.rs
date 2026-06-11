@@ -231,7 +231,9 @@ Examples:
   apm list --actionable agent       # tickets an agent can act on now
   apm list --all                    # everything including closed
   apm list --mine                   # only your tickets
-  apm list --author alice           # only tickets by alice")]
+  apm list --author alice           # only tickets by alice
+  apm list --format ids             # comma-separated IDs for scripting
+  apm list --format json            # JSON array of ticket objects")]
     List {
         /// Filter by state (e.g. new, ready, in_progress, implemented, closed)
         #[arg(long)]
@@ -257,6 +259,9 @@ Examples:
         /// Show only tickets owned by USERNAME (owner field)
         #[arg(long, value_name = "USERNAME", conflicts_with = "mine")]
         owner: Option<String>,
+        /// Output format: ids (comma-separated IDs) or json (JSON array)
+        #[arg(long, value_name = "FORMAT")]
+        format: Option<String>,
     },
     /// Show a ticket
     #[command(long_about = "Show the full content of a ticket.
@@ -1098,6 +1103,7 @@ fn main() -> Result<()> {
             mine,
             author,
             owner,
+            format,
         } => cmd::list::run(
             &root,
             state,
@@ -1108,6 +1114,7 @@ fn main() -> Result<()> {
             mine,
             author,
             owner,
+            format,
         ),
         Command::New {
             title,
