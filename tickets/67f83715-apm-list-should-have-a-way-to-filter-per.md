@@ -36,7 +36,38 @@ The `epic` field is already stored on each ticket's frontmatter and the `list_fi
 
 ### Approach
 
-How the implementation will work.
+#### 1. `apm-core/src/ticket/ticket_util.rs` — extend `list_filtered`
+
+Add `epic_filter: Option<&str>` as the last parameter of `list_filtered`. Inside the existing filter closure add:
+
+```rust
+let epic_ok = epic_filter.is_none_or(|id| {
+    fm.epic.as_deref().is_some_and(|e| e.starts_with(id))
+});
+```
+
+Include `epic_ok` in the final `&&` chain. Update every in-file call site in the test section (add `None` as the new final argument). Add one new unit test `list_filtered_by_epic` that constructs tickets with and without an `epic` field, passes a 4-char prefix, and asserts only the matching ticket is returned.
+
+#### 2. `apm/src/cmd/list.rs` — thread the parameter
+
+Add `epic: Option<String>` to `run`'s signature (after `owner`). Pass `epic.as_deref()` as the new last argument to `list_filtered`.
+
+#### 3. `apm/src/main.rs` — expose the CLI flag
+
+In the `List` variant of `Command`:
+- Add a new field:
+  ```rust
+  /// Show only tickets in this epic (4–8 char hex prefix)
+  #[arg(long, value_name = "ID")]
+  epic: Option<String>,
+  ```
+- Add `epic` to the destructuring pattern and to the `cmd::list::run(...)` call.
+- Add an example line to the long_about string:
+  ```
+  apm list --epic 57bce963      # only tickets in this epic
+  ```
+
+No changes to `apm-core`'s public API surface beyond the added parameter; callers outside this ticket (none exist) would need updating, but the only callers are inside `apm/src/cmd/list.rs` and the inline tests.
 
 ### Open questions
 
