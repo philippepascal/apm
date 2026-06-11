@@ -1,7 +1,7 @@
 +++
 id = "67f83715"
 title = "apm list should have a way to filter per epic"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/67f83715-apm-list-should-have-a-way-to-filter-per"
 created_at = "2026-06-11T01:09:44.527139Z"
-updated_at = "2026-06-11T01:16:28.651678Z"
+updated_at = "2026-06-11T05:29:20.274817Z"
 +++
 
 ## Spec
@@ -86,3 +86,4 @@ No changes to `apm-core`'s public API surface beyond the added parameter; caller
 | 2026-06-11T01:12Z | new | groomed | philippepascal |
 | 2026-06-11T01:13Z | groomed | in_design | philippepascal |
 | 2026-06-11T01:16Z | in_design | specd | claude |
+| 2026-06-11T05:29Z | specd | ready | philippepascal |
