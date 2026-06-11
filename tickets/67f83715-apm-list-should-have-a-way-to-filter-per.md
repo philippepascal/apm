@@ -1,7 +1,7 @@
 +++
 id = "67f83715"
 title = "apm list should have a way to filter per epic"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/67f83715-apm-list-should-have-a-way-to-filter-per"
 created_at = "2026-06-11T01:09:44.527139Z"
-updated_at = "2026-06-11T01:12:19.077132Z"
+updated_at = "2026-06-11T01:13:49.796268Z"
 +++
 
 ## Spec
@@ -48,3 +48,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-06-11T01:09Z | — | new | philippepascal |
 | 2026-06-11T01:12Z | new | groomed | philippepascal |
+| 2026-06-11T01:13Z | groomed | in_design | philippepascal |
