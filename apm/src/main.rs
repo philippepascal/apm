@@ -231,7 +231,8 @@ Examples:
   apm list --actionable agent       # tickets an agent can act on now
   apm list --all                    # everything including closed
   apm list --mine                   # only your tickets
-  apm list --author alice           # only tickets by alice")]
+  apm list --author alice           # only tickets by alice
+  apm list --epic 57bce963          # only tickets in this epic")]
     List {
         /// Filter by state (e.g. new, ready, in_progress, implemented, closed)
         #[arg(long)]
@@ -257,6 +258,9 @@ Examples:
         /// Show only tickets owned by USERNAME (owner field)
         #[arg(long, value_name = "USERNAME", conflicts_with = "mine")]
         owner: Option<String>,
+        /// Show only tickets in this epic (4–8 char hex prefix)
+        #[arg(long, value_name = "ID")]
+        epic: Option<String>,
     },
     /// Show a ticket
     #[command(long_about = "Show the full content of a ticket.
@@ -1098,6 +1102,7 @@ fn main() -> Result<()> {
             mine,
             author,
             owner,
+            epic,
         } => cmd::list::run(
             &root,
             state,
@@ -1108,6 +1113,7 @@ fn main() -> Result<()> {
             mine,
             author,
             owner,
+            epic,
         ),
         Command::New {
             title,

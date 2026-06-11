@@ -5,7 +5,7 @@ use crate::ctx::CmdContext;
 
 #[allow(clippy::too_many_arguments)]
 // Each argument maps to a distinct CLI flag.
-pub fn run(root: &Path, state_filter: Option<String>, unassigned: bool, all: bool, actionable_filter: Option<String>, no_aggressive: bool, mine: bool, author: Option<String>, owner: Option<String>) -> Result<()> {
+pub fn run(root: &Path, state_filter: Option<String>, unassigned: bool, all: bool, actionable_filter: Option<String>, no_aggressive: bool, mine: bool, author: Option<String>, owner: Option<String>, epic: Option<String>) -> Result<()> {
     let ctx = CmdContext::load(root, no_aggressive)?;
 
     let mine_user: Option<String> = if mine {
@@ -25,6 +25,7 @@ pub fn run(root: &Path, state_filter: Option<String>, unassigned: bool, all: boo
         author_filter.as_deref(),
         owner.as_deref(),
         mine_user.as_deref(),
+        epic.as_deref(),
     );
 
     // Pre-compute stale epic IDs before printing rows.
