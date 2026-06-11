@@ -25,7 +25,7 @@ Users need a machine-readable output mode so that `apm list` results can feed di
 
 - [x] `apm list --format ids` prints a comma-separated list of ticket IDs on a single line (e.g. `74f9a232,3a1b2c3d`)
 - [x] `apm list --format ids` with no matching tickets prints an empty line and exits 0
-- [ ] `apm list --format ids` respects all existing filter flags (`--state`, `--unassigned`, `--actionable`, `--mine`, `--author`, `--owner`, `--all`)
+- [x] `apm list --format ids` respects all existing filter flags (`--state`, `--unassigned`, `--actionable`, `--mine`, `--author`, `--owner`, `--all`)
 - [ ] `apm list --format ids` omits the stale-ticket footer, diverged-ticket warning, and recovery hint block
 - [ ] `apm list --format json` prints a JSON array of objects, each containing the ticket's frontmatter fields
 - [ ] `apm list --format json` with no matching tickets prints `[]`
