@@ -1,7 +1,7 @@
 +++
 id = "74f9a232"
 title = "apm list should have a way to format output to use in pipes"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,14 +9,14 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/74f9a232-apm-list-should-have-a-way-to-format-out"
 created_at = "2026-06-11T01:10:29.686451Z"
-updated_at = "2026-06-11T01:10:29.686451Z"
+updated_at = "2026-06-11T01:12:40.059261Z"
 +++
 
 ## Spec
 
 ### Problem
 
-What is broken or missing, and why it matters.
+most important of which is to return only ticket numbers as a comma separated list.
 
 ### Acceptance criteria
 
@@ -47,3 +47,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-06-11T01:10Z | — | new | philippepascal |
+| 2026-06-11T01:12Z | new | groomed | philippepascal |
