@@ -25,8 +25,9 @@ The desired behaviour is that the ID argument accepts a comma-separated list (`a
 - [ ] `apm state <id> <state>` with a single ID behaves identically to the current implementation (no regression).
 - [ ] `apm state id1,id2 <state>` transitions both tickets and prints one `id: old → new` line per ticket.
 - [ ] Whitespace around commas is trimmed: `apm state "id1, id2" <state>` works the same as `apm state id1,id2 <state>`.
+- [ ] An empty or whitespace-only id argument is a no-op: the command prints nothing and exits 0.
 - [ ] If one ticket in the list fails to transition, the command continues processing the remaining tickets.
-- [ ] All errors are reported after all tickets are processed, and the command exits non-zero when any transition failed.
+- [ ] Each failed transition's error is printed to stderr immediately; after all tickets are processed, the command exits non-zero with a `{n} of {m} transitions failed` summary.
 - [ ] The `id` argument description in `--help` output mentions comma-separated IDs.
 
 ### Out of scope
