@@ -30,7 +30,9 @@ The `epic` field is already stored on each ticket's frontmatter and the `list_fi
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Filtering `apm next` by epic (separate command with its own flag)
+- Filtering `apm list` by epic slug or epic title (ID only)
+- A `--no-epic` flag to list tickets that belong to no epic
 
 ### Approach
 
