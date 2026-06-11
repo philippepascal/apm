@@ -16,7 +16,9 @@ updated_at = "2026-06-11T01:13:49.796268Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+`apm list` has no way to scope the output to a single epic. On a project with several epics in flight, running `apm list` shows every ticket regardless of which epic it belongs to. Users working on one epic must mentally filter the noise or grep through the output.
+
+The `epic` field is already stored on each ticket's frontmatter and the `list_filtered` function in `apm-core` is the natural place to add the predicate. The `apm start --epic` and `apm work --epic` flags follow the same pattern; `apm list` is conspicuously missing it.
 
 ### Acceptance criteria
 
@@ -33,13 +35,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
