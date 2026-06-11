@@ -30,7 +30,7 @@ Users need a machine-readable output mode so that `apm list` results can feed di
 - [x] `apm list --format json` prints a JSON array of objects, each containing the ticket's frontmatter fields
 - [x] `apm list --format json` with no matching tickets prints `[]`
 - [x] `apm list --format json` omits the stale-ticket footer, diverged-ticket warning, and recovery hint block
-- [ ] `apm list` without `--format` produces identical output to the current behaviour
+- [x] `apm list` without `--format` produces identical output to the current behaviour
 - [ ] `apm list --format <unknown>` exits non-zero with a message naming the supported values
 
 ### Out of scope
