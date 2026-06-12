@@ -231,7 +231,10 @@ Examples:
   apm list --actionable agent       # tickets an agent can act on now
   apm list --all                    # everything including closed
   apm list --mine                   # only your tickets
-  apm list --author alice           # only tickets by alice")]
+  apm list --author alice           # only tickets by alice
+  apm list --epic 57bce963          # only tickets in this epic
+  apm list --format ids             # comma-separated IDs for scripting
+  apm list --format json            # JSON array of ticket objects")]
     List {
         /// Filter by state (e.g. new, ready, in_progress, implemented, closed)
         #[arg(long)]
@@ -257,6 +260,12 @@ Examples:
         /// Show only tickets owned by USERNAME (owner field)
         #[arg(long, value_name = "USERNAME", conflicts_with = "mine")]
         owner: Option<String>,
+        /// Show only tickets in this epic (4–8 char hex prefix)
+        #[arg(long, value_name = "ID")]
+        epic: Option<String>,
+        /// Output format: ids (comma-separated IDs) or json (JSON array)
+        #[arg(long, value_name = "FORMAT")]
+        format: Option<String>,
     },
     /// Show a ticket
     #[command(long_about = "Show the full content of a ticket.
@@ -348,9 +357,10 @@ Examples:
   apm state 42 specd           # submit spec for supervisor review
   apm state 42 implemented     # mark implementation done (open PR first)
   apm state 42 new --force     # reset a stuck in_design ticket
-  apm state 42 ready --force   # reset a stuck in_progress ticket")]
+  apm state 42 ready --force   # reset a stuck in_progress ticket
+  apm state 42,43 ready        # transition multiple tickets at once")]
     State {
-        /// Ticket ID (8-char hex, 4+ char prefix, or plain integer)
+        /// Ticket ID or comma-separated list of IDs (8-char hex, 4+ char prefix, or plain integer)
         #[arg(value_name = "ID")]
         id: String,
         /// Target state (e.g. in_design, specd, ready, in_progress, implemented, closed)
@@ -1098,6 +1108,8 @@ fn main() -> Result<()> {
             mine,
             author,
             owner,
+            epic,
+            format,
         } => cmd::list::run(
             &root,
             state,
@@ -1108,6 +1120,8 @@ fn main() -> Result<()> {
             mine,
             author,
             owner,
+            epic,
+            format,
         ),
         Command::New {
             title,
