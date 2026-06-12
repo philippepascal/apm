@@ -24,7 +24,7 @@ A third, weaker signal: `apm list` prints "local ref behind origin — run `apm 
 
 ### Acceptance criteria
 
-- [ ] The Shell Discipline section in `apm.main-agent.md` no longer uses `apm sync` and `apm list` as the sequential example
+- [x] The Shell Discipline section in `apm.main-agent.md` no longer uses `apm sync` and `apm list` as the sequential example
 - [ ] The Shell Discipline section in `apm.spec-writer.md` no longer uses `apm sync` and `apm list` as the sequential example
 - [ ] The Shell Discipline section in `apm.coder.md` no longer uses `apm sync` and `apm list` as the sequential example
 - [ ] The startup sequence description of `apm sync` no longer says "refresh local cache" — it describes what sync actually does (fast-forward local branches to match remote)
