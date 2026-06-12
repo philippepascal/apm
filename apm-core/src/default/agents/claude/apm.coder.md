@@ -12,11 +12,11 @@ Keep each Bash call to a single operation.
 Do not chain commands:
 
   # Wrong — && chains defeat allow-list matching
-  apm sync && apm list --state ready
+  apm sync && apm next --json
 
   # Right — one call per operation
   apm sync
-  apm list --state ready
+  apm next --json
 
 Do not use $() subshells:
 

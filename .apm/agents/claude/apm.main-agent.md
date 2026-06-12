@@ -9,11 +9,11 @@ Keep each Bash call to a single operation.
 Do not chain commands:
 
   # Wrong — && chains defeat allow-list matching
-  apm sync && apm list --state ready
+  apm sync && apm next --json
 
   # Right — one call per operation
   apm sync
-  apm list --state ready
+  apm next --json
 
 Do not use $() subshells:
 
@@ -110,6 +110,6 @@ The supervisor can ask you to perform any supervisor-only transition explicitly;
 Run these four commands at the start of every session, in order:
 
 1. `apm instructions` — loads APM system knowledge (state machine, ticket format, session identity, and command reference) for this session
-2. `apm sync` — refresh local cache from all `ticket/*` branches
+2. `apm sync` — fast-forward local ticket branches to match remote
 3. `apm next --json` — find the highest-priority actionable ticket
 4. `apm list --state in_progress` — check for in-progress tickets that may need attention
