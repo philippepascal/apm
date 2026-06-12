@@ -1,7 +1,7 @@
 +++
 id = "29cac0d9"
 title = "apm state can take a comma separated list of ids"
-state = "implemented"
+state = "closed"
 priority = 5
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/29cac0d9-apm-state-can-take-a-comma-separated-lis"
 created_at = "2026-06-11T06:35:11.889410Z"
-updated_at = "2026-06-12T02:18:29.210991Z"
+updated_at = "2026-06-12T02:48:55.556797Z"
 +++
 
 ## Spec
@@ -115,3 +115,4 @@ Add one test `state_empty_id_noop`:
 | 2026-06-12T02:11Z | specd | ready | philippepascal |
 | 2026-06-12T02:11Z | ready | in_progress | philippepascal |
 | 2026-06-12T02:18Z | in_progress | implemented | claude |
+| 2026-06-12T02:48Z | implemented | closed | philippepascal(apm-sync) |
