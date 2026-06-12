@@ -22,12 +22,12 @@ The desired behaviour is that `apm list --all` also surfaces tickets whose file 
 
 ### Acceptance criteria
 
-- [ ] `apm list --all` shows a ticket whose `ticket/` branch has been deleted but whose `.md` file is present in `tickets/` on the default branch.
-- [ ] `apm list --all` continues to show tickets that have an active `ticket/` branch.
-- [ ] `apm list` (without `--all`) hides tickets from the default branch that are in a terminal state, consistent with the existing terminal-state hiding behaviour.
-- [ ] When the same ticket is found both on a `ticket/` branch and in `tickets/` on the default branch, it appears exactly once in the output.
-- [ ] `apm list --all` produces no error when the `tickets/` directory does not exist on the default branch.
-- [ ] Ticket files in `archive_dir` (when configured) are not included in `apm list --all`.
+- [x] `apm list --all` shows a ticket whose `ticket/` branch has been deleted but whose `.md` file is present in `tickets/` on the default branch.
+- [x] `apm list --all` continues to show tickets that have an active `ticket/` branch.
+- [x] `apm list` (without `--all`) hides tickets from the default branch that are in a terminal state, consistent with the existing terminal-state hiding behaviour.
+- [x] When the same ticket is found both on a `ticket/` branch and in `tickets/` on the default branch, it appears exactly once in the output.
+- [x] `apm list --all` produces no error when the `tickets/` directory does not exist on the default branch.
+- [x] Ticket files in `archive_dir` (when configured) are not included in `apm list --all`.
 
 ### Out of scope
 
