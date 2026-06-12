@@ -37,7 +37,25 @@ The first positional argument to `apm set` is already resolved through `resolve_
 
 ### Approach
 
-How the implementation will work.
+All changes are in `apm/src/cmd/set.rs`. No `apm-core` changes are needed — `ticket_fmt::resolve_id_in_slice` is already callable via `ticket::resolve_id_in_slice` (the same function used to resolve the ticket ID argument on line 9).
+
+In the `if field == "depends_on" && value != "-"` block (lines 12–31):
+
+1. After splitting `value` by comma into `ids`, resolve each entry by calling `ticket::resolve_id_in_slice(&tickets, dep_id)`. Collect the results into `resolved_ids: Vec<String>`, propagating any "no ticket matches" or "ambiguous prefix" error immediately.
+
+2. Reconstruct a canonical value string: `let resolved_value = resolved_ids.join(",");`.
+
+3. Pass `&resolved_ids` (not the original `ids`) to `check_depends_on_rules`.
+
+4. Replace the `value` variable (or shadow it) with `resolved_value` so that `set_field`, the commit message, and the stdout `println!` all use the resolved IDs.
+
+The `git::commit_to_branch` call and `println!` on lines 60–74 already reference `value` by reference; shadowing `value` with `resolved_value` before that block keeps the diff minimal.
+
+Add a unit test in `apm/tests/integration.rs` that:
+- Creates two tickets in a temp repo
+- Runs `apm set <id> depends_on <4-char-prefix>` where the prefix uniquely identifies the second ticket
+- Asserts the stored frontmatter contains the full 8-char ID
+- Runs the same with an ambiguous prefix and asserts a non-zero exit code with "ambiguous" in stderr
 
 ### Open questions
 
