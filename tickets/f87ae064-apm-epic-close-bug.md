@@ -30,7 +30,9 @@ When `apm epic list` shows "implemented" for an epic, every ticket has reached a
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changing behaviour for "in_progress" epics beyond what existing live-worker and unmerged-branch guards already enforce
+- Auto-closing non-terminal tickets as part of `apm epic close`
+- Adding the same guard to `apm epic submit`
 
 ### Approach
 
