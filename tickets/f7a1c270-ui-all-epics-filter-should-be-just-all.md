@@ -16,7 +16,9 @@ updated_at = "2026-06-12T08:13:10.880459Z"
 
 ### Problem
 
-and show the same list as apm list --all
+The epic filter dropdown in the board's toolbar shows "All epics" as its default (unfiltered) option. This label is inconsistent with the intent: selecting it shows every ticket regardless of epic, which corresponds to `apm list --all` semantics — all tickets including those in terminal (closed) states. However, the current implementation only shows non-closed tickets when the option is selected, requiring a separate "Show closed" checkbox to surface closed tickets. The board therefore diverges from `apm list --all` when the epic filter is in its default state.
+
+The fix has two parts: rename the option label to "All" (dropping the redundant "epics" qualifier), and ensure that selecting "All" includes closed tickets automatically, matching the full set `apm list --all` returns.
 
 ### Acceptance criteria
 
@@ -33,13 +35,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
