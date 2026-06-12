@@ -222,6 +222,35 @@ pub fn load_all_from_git_classified(root: &Path, tickets_dir_rel: &std::path::Pa
     Ok(tickets)
 }
 
+/// Load tickets from the `tickets/` directory on the default branch.
+///
+/// Returns tickets whose file is present in `tickets_dir_rel` on `default_branch`
+/// but may not have a corresponding `ticket/` branch. Errors from listing the
+/// directory (e.g. the path does not exist on that branch) are treated as an
+/// empty set and silently ignored.
+pub fn load_from_default_branch(
+    root: &Path,
+    tickets_dir_rel: &Path,
+    default_branch: &str,
+) -> Result<Vec<Ticket>> {
+    let dir_str = tickets_dir_rel.to_string_lossy();
+    let files = crate::git::list_files_on_branch(root, default_branch, &dir_str)
+        .unwrap_or_default();
+    let mut tickets = Vec::new();
+    for rel_path in files {
+        if !rel_path.ends_with(".md") {
+            continue;
+        }
+        if let Ok(content) = crate::git::read_from_branch(root, default_branch, &rel_path) {
+            let dummy_path = root.join(&rel_path);
+            if let Ok(t) = Ticket::parse(&dummy_path, &content) {
+                tickets.push(t);
+            }
+        }
+    }
+    Ok(tickets)
+}
+
 /// Read a ticket's state from a specific branch by relative path.
 pub fn state_from_branch(root: &Path, branch: &str, rel_path: &str) -> Option<String> {
     let content = crate::git::read_from_branch(root, branch, rel_path).ok()?;
@@ -1629,5 +1658,81 @@ terminal = true
         std::fs::write(apm_dir.join("local.toml"), "username = \"alice\"\n").unwrap();
         let t = make_ticket_with_owner_field("aaaa", "open", Some("alice"));
         assert!(check_owner(tmp.path(), &t).is_ok());
+    }
+
+    // ── load_from_default_branch ──────────────────────────────────────────
+
+    fn git_init_main(dir: &std::path::Path) {
+        use std::process::Command as Cmd;
+        Cmd::new("git").args(["init", "-q", "-b", "main"]).current_dir(dir).status().unwrap();
+        Cmd::new("git").args(["config", "user.email", "t@t.com"]).current_dir(dir).status().unwrap();
+        Cmd::new("git").args(["config", "user.name", "test"]).current_dir(dir).status().unwrap();
+    }
+
+    fn git_commit_file(dir: &std::path::Path, rel_path: &str, content: &str) {
+        use std::process::Command as Cmd;
+        let full = dir.join(rel_path);
+        if let Some(parent) = full.parent() {
+            std::fs::create_dir_all(parent).unwrap();
+        }
+        std::fs::write(&full, content).unwrap();
+        Cmd::new("git").args(["add", rel_path]).current_dir(dir).status().unwrap();
+        Cmd::new("git")
+            .args(["commit", "-m", "add ticket"])
+            .env("GIT_AUTHOR_NAME", "test")
+            .env("GIT_AUTHOR_EMAIL", "t@t.com")
+            .env("GIT_COMMITTER_NAME", "test")
+            .env("GIT_COMMITTER_EMAIL", "t@t.com")
+            .current_dir(dir)
+            .status()
+            .unwrap();
+    }
+
+    #[test]
+    fn load_from_default_branch_returns_ticket_on_main() {
+        let tmp = tempfile::tempdir().unwrap();
+        let p = tmp.path();
+        git_init_main(p);
+        let content = "+++\nid = \"abcd1234\"\ntitle = \"T\"\nstate = \"closed\"\n+++\n\nbody\n";
+        git_commit_file(p, "tickets/abcd1234-t.md", content);
+        let tickets = load_from_default_branch(p, Path::new("tickets"), "main").unwrap();
+        assert_eq!(tickets.len(), 1);
+        assert_eq!(tickets[0].frontmatter.id, "abcd1234");
+    }
+
+    #[test]
+    fn load_from_default_branch_empty_when_dir_missing() {
+        let tmp = tempfile::tempdir().unwrap();
+        let p = tmp.path();
+        git_init_main(p);
+        // Commit a file that is NOT in tickets/ so there are commits but no tickets dir
+        git_commit_file(p, "README.md", "hello");
+        let tickets = load_from_default_branch(p, Path::new("tickets"), "main").unwrap();
+        assert!(tickets.is_empty());
+    }
+
+    #[test]
+    fn load_from_default_branch_deduplication_in_ctx() {
+        // Verify that a ticket on both a ticket/ branch and main appears only once
+        // when both lists are merged the way CmdContext::load does it.
+        let tmp = tempfile::tempdir().unwrap();
+        let p = tmp.path();
+        git_init_main(p);
+        let content = "+++\nid = \"abcd1234\"\ntitle = \"T\"\nstate = \"closed\"\n+++\n\nbody\n";
+        git_commit_file(p, "tickets/abcd1234-t.md", content);
+
+        // Simulate what CmdContext::load does: branch tickets already contain this id
+        let t = Ticket::parse(Path::new("tickets/abcd1234-t.md"), content).unwrap();
+        let mut branch_tickets = vec![t];
+
+        let branchless = load_from_default_branch(p, Path::new("tickets"), "main").unwrap();
+        let seen: std::collections::HashSet<String> =
+            branch_tickets.iter().map(|t| t.frontmatter.id.clone()).collect();
+        for bt in branchless {
+            if !seen.contains(&bt.frontmatter.id) {
+                branch_tickets.push(bt);
+            }
+        }
+        assert_eq!(branch_tickets.len(), 1, "ticket should appear exactly once");
     }
 }
