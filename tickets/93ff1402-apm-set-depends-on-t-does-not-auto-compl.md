@@ -4,12 +4,12 @@ title = "apm set <> depends_on <t> does not auto complete <t> if the user puts 4
 state = "in_design"
 priority = 0
 effort = 2
-risk = 0
+risk = 1
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/93ff1402-apm-set-depends-on-t-does-not-auto-compl"
 created_at = "2026-06-11T05:28:47.866310Z"
-updated_at = "2026-06-12T08:20:21.388893Z"
+updated_at = "2026-06-12T08:20:25.575010Z"
 +++
 
 ## Spec
