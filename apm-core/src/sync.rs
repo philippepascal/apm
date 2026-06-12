@@ -161,9 +161,12 @@ pub fn detect(root: &Path, config: &Config) -> Result<Candidates> {
         let state = t.frontmatter.state.as_str();
         if eligible(&t) && !terminal.contains(state) {
             let id = &t.frontmatter.id;
+            let target = t.frontmatter.target_branch.as_deref()
+                .filter(|s| !s.is_empty())
+                .unwrap_or(default_branch);
             hints.push(format!(
                 "ticket #{id} is in `implemented` state but its branch was not detected as merged into \
-                 main. If it was already merged, close it manually: apm state {id} closed"
+                 {target}. If it was already merged, close it manually: apm state {id} closed"
             ));
         }
     }
