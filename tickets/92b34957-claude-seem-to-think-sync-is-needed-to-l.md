@@ -1,7 +1,7 @@
 +++
 id = "92b34957"
 title = "claude seem to think sync is needed to list tickets."
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/92b34957-claude-seem-to-think-sync-is-needed-to-l"
 created_at = "2026-06-09T21:59:01.000886Z"
-updated_at = "2026-06-12T22:52:57.306605Z"
+updated_at = "2026-06-12T23:12:33.772827Z"
 +++
 
 ## Spec
@@ -97,3 +97,4 @@ Run `cargo test --workspace` to confirm no regressions. No Rust source files cha
 | 2026-06-12T08:00Z | groomed | in_design | philippepascal |
 | 2026-06-12T08:08Z | in_design | specd | claude |
 | 2026-06-12T22:52Z | specd | ready | philippepascal |
+| 2026-06-12T23:12Z | ready | in_progress | philippepascal |
