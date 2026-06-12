@@ -36,7 +36,7 @@ The fix has two parts: rename the option label to "All" (dropping the redundant 
 
 ### Approach
 
-All changes are in `apm-ui/src/components/supervisor/SupervisorView.tsx` and `apm-ui/src/components/supervisor/PriorityQueuePanel.tsx`.
+All changes are in `apm-ui/src/components/supervisor/SupervisorView.tsx` and `apm-ui/src/components/PriorityQueuePanel.tsx`.
 
 1. **Derive `includeClosed`** — replace direct use of `showClosed` in the ticket query and visible-states memo with a derived boolean:
 
