@@ -204,6 +204,29 @@ pub fn run_close(root: &Path, id_arg: &str, force: bool) -> Result<()> {
                 "epic has active worker(s):\n{rows}\nUse --force to close unconditionally."
             );
         }
+
+        // Implemented-state guard.
+        let epic_tickets: Vec<_> = all_tickets.iter()
+            .filter(|t| t.frontmatter.epic.as_deref() == Some(epic_id))
+            .collect();
+        let state_configs: Vec<&apm_core::config::StateConfig> = epic_tickets
+            .iter()
+            .filter_map(|t| config.workflow.states.iter().find(|s| s.id == t.frontmatter.state))
+            .collect();
+        let derived = apm_core::epic::derive_epic_state(&state_configs);
+        if derived == "implemented" {
+            let terminal = config.terminal_state_ids();
+            let non_terminal: Vec<_> = epic_tickets.iter()
+                .filter(|t| !terminal.contains(&t.frontmatter.state))
+                .collect();
+            let rows = non_terminal.iter()
+                .map(|t| format!("  {} \u{2014} {} ({})", t.frontmatter.id, t.frontmatter.title, t.frontmatter.state))
+                .collect::<Vec<_>>()
+                .join("\n");
+            anyhow::bail!(
+                "epic is in state 'implemented'; close these tickets first:\n{rows}\nUse --force to close unconditionally."
+            );
+        }
     }
 
     // 3. Determine main ref (origin preferred).

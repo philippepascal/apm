@@ -9223,6 +9223,70 @@ fn epic_close_force_bypasses_live_worker() {
 }
 
 #[test]
+fn epic_close_blocks_on_implemented_state() {
+    let (dir, epic_id) = setup_epic_with_commit();
+    let p = dir.path();
+
+    // Create a ticket, then directly rewrite its branch content to set
+    // state = "implemented" and epic = "<epic_id>", bypassing the state
+    // machine (which would reject the transition without checked ACs).
+    let (_ticket_id, ticket_branch) = create_ticket(p, "guard-ticket");
+    let ticket_path = ticket_rel_path(&ticket_branch);
+    let content = branch_content(p, &ticket_branch, &ticket_path);
+    let content = content.replace(
+        "state = \"new\"",
+        &format!("state = \"implemented\"\nepic = \"{epic_id}\""),
+    );
+    git(p, &["checkout", &ticket_branch]);
+    std::fs::write(p.join(&ticket_path), &content).unwrap();
+    git(p, &["add", &ticket_path]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "force implemented state with epic"]);
+    git(p, &["checkout", "main"]);
+
+    // Without --force: should fail because the derived epic state is "implemented".
+    let result = apm::cmd::epic::run_close(p, &epic_id, false);
+    let err = result.unwrap_err();
+    let msg = err.to_string();
+    assert!(
+        msg.contains("implemented"),
+        "expected 'implemented' in error; got: {msg}"
+    );
+    assert!(
+        msg.contains("--force"),
+        "expected '--force' suggestion; got: {msg}"
+    );
+
+    // Epic branch must still exist after the failed close.
+    let epic_branch = format!("epic/{epic_id}-my-epic");
+    let branches = std::process::Command::new("git")
+        .args(["branch", "--list", &epic_branch])
+        .current_dir(p)
+        .output().unwrap();
+    assert!(
+        !String::from_utf8_lossy(&branches.stdout).trim().is_empty(),
+        "epic branch should still exist after failed close"
+    );
+
+    // With --force: should bypass the implemented-state guard and delete the branch.
+    let result = apm::cmd::epic::run_close(p, &epic_id, true);
+    if let Err(ref e) = result {
+        let msg = e.to_string();
+        assert!(
+            !msg.contains("implemented"),
+            "--force should bypass implemented-state check; got: {msg}"
+        );
+    }
+    let branches = std::process::Command::new("git")
+        .args(["branch", "--list", &epic_branch])
+        .current_dir(p)
+        .output().unwrap();
+    assert!(
+        String::from_utf8_lossy(&branches.stdout).trim().is_empty(),
+        "epic branch should be deleted after --force close"
+    );
+}
+
+#[test]
 fn epic_submit_merge_then_close() {
     // Tests the full submit-then-close lifecycle for a --merge submit.
     let (dir, epic_id) = setup_epic_with_commit();
