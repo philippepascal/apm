@@ -31,7 +31,9 @@ The first positional argument to `apm set` is already resolved through `resolve_
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- `apm new --depends-on <prefix>` has the same gap but is a separate ticket
+- Shell tab completion for ticket IDs (this ticket is about ID resolution, not shell autocompletion)
+- Prefix resolution for the `depends_on` field in other commands (e.g. `apm validate`, `apm start`)
 
 ### Approach
 
