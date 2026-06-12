@@ -36,7 +36,33 @@ When `apm epic list` shows "implemented" for an epic, every ticket has reached a
 
 ### Approach
 
-How the implementation will work.
+#### `apm/src/cmd/epic.rs` — `run_close`
+
+`run_close` has an `if !force { ... }` block that loads `all_tickets` for the live-worker check. Append a second guard at the end of that same block (before it closes):
+
+1. Filter `all_tickets` to tickets whose `epic` field equals `epic_id`.
+2. Look up each ticket's `StateConfig` by matching `t.frontmatter.state` against `config.workflow.states`.
+3. Call `apm_core::epic::derive_epic_state(&state_configs)` — this function is already public and handles the "implemented" / "done" / "in_progress" / "empty" distinction.
+4. If the result is `"implemented"`, collect non-terminal tickets (those not in `config.terminal_state_ids()`), format each as `"  <id> — <title> (<state>)"`, and bail:
+
+```
+epic is in state 'implemented'; close these tickets first:
+  <id> — <title> (<state>)
+  ...
+Use --force to close unconditionally.
+```
+
+No new `apm-core` function is required — `derive_epic_state` is already public and well-tested.
+
+#### `apm/tests/integration.rs` — new test `epic_close_blocks_on_implemented_state`
+
+1. `init_repo()` for an isolated temp repo.
+2. `run_apm(p, &["epic", "new", "close guard test"])` — parse `epic_branch` from stdout; derive `epic_id` via `apm_core::epic::epic_id_from_branch`.
+3. `create_ticket(p, "guard-ticket")` — get `(ticket_id, ticket_branch)`.
+4. Build `ticket_path` with `ticket_rel_path(&ticket_branch)`.
+5. Read ticket content via `branch_content`, replace `state = "new"` with `state = "implemented"` and append `epic = "<epic_id>"` on the next line, then commit the result directly to the ticket branch (`git checkout <ticket_branch>`, write, `git add`, `git commit`, `git checkout main`).
+6. Assert `apm epic close <epic_id>` exits non-zero and its stderr contains `"implemented"`.
+7. Assert `apm epic close <epic_id> --force` exits zero (bypasses all guards, including the merge-status check).
 
 ### Open questions
 
