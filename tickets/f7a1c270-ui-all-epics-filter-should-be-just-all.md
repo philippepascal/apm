@@ -90,7 +90,7 @@ No backend changes, no store changes, no new files.
 
 ### Amendment requests
 
-- [ ] A second, identical epic-filter dropdown exists at apm-ui/src/components/supervisor/PriorityQueuePanel.tsx:279 (<option value="">All epics</option>), which the current Approach neither renames nor scopes out. AC #1 ('the epic filter dropdown reads All') is phrased generally, so this label would remain and AC #1 could be judged unmet. Resolve it one of two ways: (a) extend the Approach to also rename PriorityQueuePanel.tsx:279 from 'All epics' to 'All' (same one-line label change, same intent), OR (b) explicitly add PriorityQueuePanel's dropdown to Out of scope and narrow AC #1 to the supervisor board's dropdown only. Pick (a) unless there's a reason the priority-queue panel should keep its own label.
+- [x] A second, identical epic-filter dropdown exists at apm-ui/src/components/supervisor/PriorityQueuePanel.tsx:279 (<option value="">All epics</option>), which the current Approach neither renames nor scopes out. AC #1 ('the epic filter dropdown reads All') is phrased generally, so this label would remain and AC #1 could be judged unmet. Resolve it one of two ways: (a) extend the Approach to also rename PriorityQueuePanel.tsx:279 from 'All epics' to 'All' (same one-line label change, same intent), OR (b) explicitly add PriorityQueuePanel's dropdown to Out of scope and narrow AC #1 to the supervisor board's dropdown only. Pick (a) unless there's a reason the priority-queue panel should keep its own label.
 
 ### Code review
 
