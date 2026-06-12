@@ -1,7 +1,7 @@
 +++
 id = "e22cea26"
 title = "apm list --all only shows tickets that have branches."
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/e22cea26-apm-list-all-only-shows-tickets-that-hav"
 created_at = "2026-06-10T02:49:43.077397Z"
-updated_at = "2026-06-12T23:25:26.183918Z"
+updated_at = "2026-06-12T23:30:34.445809Z"
 +++
 
 ## Spec
@@ -85,3 +85,4 @@ No other callers of `load_all_from_git` change — they do not go through `CmdCo
 | 2026-06-12T08:12Z | in_design | specd | claude |
 | 2026-06-12T22:52Z | specd | ready | philippepascal |
 | 2026-06-12T23:25Z | ready | in_progress | philippepascal |
+| 2026-06-12T23:30Z | in_progress | implemented | claude |
