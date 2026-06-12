@@ -9,13 +9,17 @@ pub fn run(root: &Path, id_arg: &str, field: String, value: String, no_aggressiv
     let id = ticket::resolve_id_in_slice(&ctx.tickets, id_arg)?;
     let mut tickets = ctx.tickets;
 
-    if field == "depends_on" && value != "-" {
+    let value = if field == "depends_on" && value != "-" {
         let ids: Vec<String> = value
             .split(',')
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty())
             .collect();
         if !ids.is_empty() {
+            let resolved_ids: Vec<String> = ids
+                .iter()
+                .map(|dep_id| ticket::resolve_id_in_slice(&tickets, dep_id))
+                .collect::<Result<_>>()?;
             let ticket = tickets.iter().find(|t| t.frontmatter.id == id)
                 .ok_or_else(|| anyhow::anyhow!("ticket {id:?} not found"))?;
             let strategy = apm_core::validate::active_completion_strategy(&ctx.config);
@@ -23,12 +27,17 @@ pub fn run(root: &Path, id_arg: &str, field: String, value: String, no_aggressiv
                 &strategy,
                 ticket.frontmatter.epic.as_deref(),
                 ticket.frontmatter.target_branch.as_deref(),
-                &ids,
+                &resolved_ids,
                 &tickets,
                 &ctx.config.project.default_branch,
             )?;
+            resolved_ids.join(",")
+        } else {
+            value
         }
-    }
+    } else {
+        value
+    };
 
     let Some(t) = tickets.iter_mut().find(|t| t.frontmatter.id == id) else {
         bail!("ticket {id:?} not found");

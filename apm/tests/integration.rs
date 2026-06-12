@@ -163,6 +163,24 @@ fn ticket_rel_path(branch: &str) -> String {
     format!("tickets/{suffix}.md")
 }
 
+/// Create a ticket branch with a caller-supplied 8-char hex ID.
+/// Returns the branch name. Does not switch HEAD away from its current branch.
+fn create_ticket_with_id(dir: &std::path::Path, id: &str, slug: &str) -> String {
+    let branch = format!("ticket/{id}-{slug}");
+    let rel_path = format!("tickets/{id}-{slug}.md");
+    let content = format!(
+        "+++\nid = \"{id}\"\ntitle = \"{slug}\"\nstate = \"new\"\nbranch = \"{branch}\"\n+++\n\n## Spec\n\n### Problem\n\nTest.\n\n",
+    );
+    // Create the branch from the current HEAD, write the ticket file, then restore.
+    git(dir, &["checkout", "-b", &branch]);
+    std::fs::create_dir_all(dir.join("tickets")).unwrap();
+    std::fs::write(dir.join(&rel_path), &content).unwrap();
+    git(dir, &["-c", "commit.gpgsign=false", "add", &rel_path]);
+    git(dir, &["-c", "commit.gpgsign=false", "commit", "-m", &format!("add ticket {id}")]);
+    git(dir, &["checkout", "-"]);
+    branch
+}
+
 /// Write a valid spec body to a ticket on its branch, without changing HEAD.
 fn write_valid_spec_to_branch(dir: &std::path::Path, branch: &str, path: &str) {
     let existing = branch_content(dir, branch, path);
@@ -975,6 +993,67 @@ fn set_depends_on_trims_whitespace() {
     let content = branch_content(dir.path(), &branch, &rel);
     assert!(content.contains(&format!("\"{dep_id1}\"")), "first dep id missing");
     assert!(content.contains(&format!("\"{dep_id2}\"")), "second dep id missing");
+}
+
+#[test]
+fn set_depends_on_prefix_resolves_to_full_id() {
+    let dir = setup_merge();
+    // Use a fixed dep ID so the 4-char prefix is deterministic and unambiguous.
+    create_ticket_with_id(dir.path(), "beef0001", "prefix-dep");
+    apm::cmd::new::run(dir.path(), "Prefix main".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let branch = find_ticket_branch(dir.path(), "prefix-main");
+    let id = find_ticket_id(dir.path(), "prefix-main");
+    let rel = ticket_rel_path(&branch);
+    apm::cmd::set::run(dir.path(), &id, "depends_on".into(), "beef".into(), true).unwrap();
+    let content = branch_content(dir.path(), &branch, &rel);
+    // The stored value must be the full 8-char ID, not the short prefix
+    assert!(content.contains("\"beef0001\""), "full dep id missing in content; got:\n{content}");
+}
+
+#[test]
+fn set_depends_on_ambiguous_prefix_fails() {
+    let dir = setup_merge();
+
+    // Use fixed IDs that share the prefix "cafe" to guarantee ambiguity.
+    create_ticket_with_id(dir.path(), "cafe0001", "ambig-dep-one");
+    create_ticket_with_id(dir.path(), "cafe0002", "ambig-dep-two");
+
+    apm::cmd::new::run(dir.path(), "Ambig main".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let id = find_ticket_id(dir.path(), "ambig-main");
+
+    let err = apm::cmd::set::run(dir.path(), &id, "depends_on".into(), "cafe".into(), true)
+        .unwrap_err()
+        .to_string();
+    assert!(err.contains("ambiguous"), "expected 'ambiguous' in error; got: {err}");
+}
+
+#[test]
+fn set_depends_on_unknown_prefix_fails() {
+    let dir = setup_merge();
+    apm::cmd::new::run(dir.path(), "Unknown dep main".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let id = find_ticket_id(dir.path(), "unknown-dep-main");
+
+    let err = apm::cmd::set::run(dir.path(), &id, "depends_on".into(), "dead0000".into(), true)
+        .unwrap_err()
+        .to_string();
+    assert!(err.contains("no ticket matches"), "expected 'no ticket matches' in error; got: {err}");
+}
+
+#[test]
+fn set_depends_on_prefix_multi_resolves_all() {
+    let dir = setup_merge();
+    // Use fixed IDs with distinct prefixes to avoid any ambiguity.
+    create_ticket_with_id(dir.path(), "fade0001", "multi-dep-one");
+    create_ticket_with_id(dir.path(), "b00b0001", "multi-dep-two");
+    apm::cmd::new::run(dir.path(), "Multi prefix main".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let branch = find_ticket_branch(dir.path(), "multi-prefix-main");
+    let id = find_ticket_id(dir.path(), "multi-prefix-main");
+    let rel = ticket_rel_path(&branch);
+    // Pass 4-char prefixes for both deps as a comma-separated value
+    apm::cmd::set::run(dir.path(), &id, "depends_on".into(), "fade,b00b".into(), true).unwrap();
+    let content = branch_content(dir.path(), &branch, &rel);
+    assert!(content.contains("\"fade0001\""), "first full dep id missing in content; got:\n{content}");
+    assert!(content.contains("\"b00b0001\""), "second full dep id missing in content; got:\n{content}");
 }
 
 // --- next ---
