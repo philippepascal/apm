@@ -4,12 +4,12 @@ title = "claude seem to think sync is needed to list tickets."
 state = "in_design"
 priority = 0
 effort = 2
-risk = 0
+risk = 1
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/92b34957-claude-seem-to-think-sync-is-needed-to-l"
 created_at = "2026-06-09T21:59:01.000886Z"
-updated_at = "2026-06-12T08:08:14.118018Z"
+updated_at = "2026-06-12T08:08:19.729713Z"
 +++
 
 ## Spec
