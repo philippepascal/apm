@@ -1159,6 +1159,66 @@ fn sync_closes_multiple_tickets_on_merged_branches() {
     assert!(beta.contains("state = \"closed\""), "beta should be closed on main: {beta}");
 }
 
+#[test]
+fn sync_hint_names_configured_default_branch() {
+    // An implemented ticket whose branch is not merged should produce a hint
+    // that names the project's configured default branch, not the literal "main".
+    let dir = setup_with_close_workflow();
+    let p = dir.path();
+
+    let (_id, branch) = write_ticket_to_branch(p, "implemented", "custom branch ticket");
+
+    // Patch config to use "trunk" as the default branch (without altering git state).
+    let config_path = p.join(".apm/config.toml");
+    let config_text = std::fs::read_to_string(&config_path).unwrap();
+    let patched = config_text.replace("default_branch = \"main\"", "default_branch = \"trunk\"");
+    std::fs::write(&config_path, patched).unwrap();
+
+    let config = apm_core::config::Config::load(p).unwrap();
+    assert_eq!(config.project.default_branch, "trunk");
+
+    let candidates = apm_core::sync::detect(p, &config).unwrap();
+    assert!(candidates.close.is_empty(), "ticket should not be auto-closed: it was never merged");
+    assert_eq!(candidates.hints.len(), 1, "expected exactly one hint for unmerged implemented ticket");
+    let hint = &candidates.hints[0];
+    assert!(hint.contains("trunk"), "hint should mention 'trunk', got: {hint}");
+    assert!(!hint.contains(" main"), "hint must not mention 'main', got: {hint}");
+    drop(branch);
+}
+
+#[test]
+fn sync_hint_names_target_branch_when_set() {
+    // An implemented ticket with a target_branch should have the hint name that
+    // target_branch rather than the project default branch.
+    let dir = setup_with_close_workflow();
+    let p = dir.path();
+
+    let (_id, branch) = write_ticket_to_branch(p, "implemented", "epic target ticket");
+
+    // Add target_branch to the ticket on its branch.
+    let rel_path = ticket_rel_path(&branch);
+    let content = branch_content(p, &branch, &rel_path);
+    // Insert target_branch = "..." into the frontmatter (before the closing +++).
+    let patched = content.replacen(
+        "\n+++\n",
+        "\ntarget_branch = \"epic/abc-feat\"\n+++\n",
+        1,
+    );
+    git(p, &["checkout", &branch]);
+    std::fs::write(p.join(&rel_path), &patched).unwrap();
+    git(p, &["-c", "commit.gpgsign=false", "add", &rel_path]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "set target_branch"]);
+    git(p, &["checkout", "main"]);
+
+    let config = apm_core::config::Config::load(p).unwrap();
+    let candidates = apm_core::sync::detect(p, &config).unwrap();
+    assert!(candidates.close.is_empty(), "ticket should not be auto-closed");
+    assert_eq!(candidates.hints.len(), 1, "expected exactly one hint");
+    let hint = &candidates.hints[0];
+    assert!(hint.contains("epic/abc-feat"), "hint should mention 'epic/abc-feat', got: {hint}");
+    assert!(!hint.contains(" main"), "hint must not mention 'main', got: {hint}");
+}
+
 // --- sync handler (server path) ---
 
 #[test]
