@@ -37,7 +37,36 @@ The fix is localised to the hint-generation block in `apm-core/src/sync.rs`.
 
 ### Approach
 
-How the implementation will work.
+**File:** `apm-core/src/sync.rs`, hint-generation loop (~line 149–168).
+
+**Change:** In the loop that builds unmerged-implemented hints, compute the effective target branch before formatting the string, then use it in place of the hardcoded `"main"`:
+
+```rust
+// Before
+hints.push(format!(
+    "ticket #{id} is in `implemented` state but its branch was not detected as merged into \
+     main. If it was already merged, close it manually: apm state {id} closed"
+));
+
+// After
+let target = t.frontmatter.target_branch.as_deref()
+    .filter(|s| !s.is_empty())
+    .unwrap_or(default_branch);
+hints.push(format!(
+    "ticket #{id} is in `implemented` state but its branch was not detected as merged into \
+     {target}. If it was already merged, close it manually: apm state {id} closed"
+));
+```
+
+`default_branch` is already bound earlier in `detect()` as `let default_branch = &config.project.default_branch;` and is in scope at the hint-generation loop.
+
+**Tests:** Add a unit test in `apm-core/src/sync.rs` (or `apm/tests/integration.rs`) that:
+1. Sets up a repo where `default_branch` is not `main` (e.g. `trunk`).
+2. Creates an implemented ticket with no `target_branch`.
+3. Calls `detect()` and asserts the resulting hint contains `trunk`, not `main`.
+4. Repeats with a ticket whose `target_branch` is `epic/abc-feat` and asserts the hint names `epic/abc-feat`.
+
+No other files change.
 
 ### Open questions
 
