@@ -23,7 +23,7 @@ When `apm epic list` shows "implemented" for an epic, every ticket has reached a
 ### Acceptance criteria
 
 - [x] `apm epic close <id>` fails when the derived epic state is "implemented", printing an error that lists each non-terminal ticket by id, title, and current state
-- [ ] The error message tells the user to close the listed tickets first and notes that `--force` bypasses the check
+- [x] The error message tells the user to close the listed tickets first and notes that `--force` bypasses the check
 - [ ] `apm epic close <id> --force` proceeds when the derived state is "implemented" (consistent with how `--force` bypasses the existing guards)
 - [ ] `apm epic close <id>` succeeds without the new error when the derived epic state is "done" (all tickets terminal)
 - [ ] `apm epic close <id>` succeeds without the new error when the derived epic state is "empty" (no tickets in the epic)
