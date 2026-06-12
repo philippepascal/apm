@@ -276,7 +276,7 @@ export default function PriorityQueuePanel() {
             value={epicFilter ?? ''}
             onChange={(e) => setEpicFilter(e.target.value || null)}
           >
-            <option value="">All epics</option>
+            <option value="">All</option>
             {availableEpics.map((id) => (
               <option key={id} value={id}>{id}</option>
             ))}

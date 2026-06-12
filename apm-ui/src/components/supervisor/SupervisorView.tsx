@@ -48,9 +48,11 @@ export default function SupervisorView({ onMinimize }: { onMinimize?: () => void
 
   const { data: epics = [] } = useQuery({ queryKey: ['epics'], queryFn: fetchEpics, refetchInterval: 10_000 })
 
+  const includeClosed = showClosed || epicFilter === null
+
   const { data } = useQuery({
-    queryKey: ['tickets', showClosed],
-    queryFn: () => fetchTickets(showClosed),
+    queryKey: ['tickets', includeClosed],
+    queryFn: () => fetchTickets(includeClosed),
     refetchInterval: 10_000,
   })
   const tickets = data?.tickets ?? []
@@ -87,9 +89,9 @@ export default function SupervisorView({ onMinimize }: { onMinimize?: () => void
   const visibleStates = useMemo(() => {
     if (stateFilter !== null) return [stateFilter]
     const base = [...supervisorStates]
-    if (showClosed) base.push('closed')
+    if (includeClosed) base.push('closed')
     return base
-  }, [stateFilter, showClosed, supervisorStates])
+  }, [stateFilter, includeClosed, epicFilter, supervisorStates])
 
   const dropdownStates = useMemo(() => {
     return [...supervisorStates, 'closed']
@@ -236,7 +238,7 @@ export default function SupervisorView({ onMinimize }: { onMinimize?: () => void
           onChange={(e) => setEpicFilter(e.target.value || null)}
           className="h-7 px-1.5 text-xs border border-gray-600 rounded bg-gray-800 text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-400"
         >
-          <option value="">All epics</option>
+          <option value="">All</option>
           <option value="__none__">No epic</option>
           {epics.map((ep) => (
             <option key={ep.id} value={ep.id}>{ep.id.slice(0, 8)}{ep.title ? ` · ${ep.title}` : ''}</option>
