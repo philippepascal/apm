@@ -3,13 +3,13 @@ id = "93ff1402"
 title = "apm set <> depends_on <t> does not auto complete <t> if the user puts 4 characters"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 2
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/93ff1402-apm-set-depends-on-t-does-not-auto-compl"
 created_at = "2026-06-11T05:28:47.866310Z"
-updated_at = "2026-06-12T08:17:16.464529Z"
+updated_at = "2026-06-12T08:20:21.388893Z"
 +++
 
 ## Spec
