@@ -4,12 +4,12 @@ title = "apm sync incorrectly mentions main instead of epic name in error messag
 state = "in_design"
 priority = 0
 effort = 1
-risk = 0
+risk = 1
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/ba6da9cb-apm-sync-incorrectly-mentions-main-inste"
 created_at = "2026-06-09T21:47:31.578694Z"
-updated_at = "2026-06-12T07:59:45.229821Z"
+updated_at = "2026-06-12T07:59:49.605530Z"
 +++
 
 ## Spec
