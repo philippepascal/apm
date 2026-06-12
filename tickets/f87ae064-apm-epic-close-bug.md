@@ -1,7 +1,7 @@
 +++
 id = "f87ae064"
 title = "apm epic close bug"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/f87ae064-apm-epic-close-bug"
 created_at = "2026-06-05T01:34:06.624276Z"
-updated_at = "2026-06-12T07:52:17.155989Z"
+updated_at = "2026-06-12T07:52:46.175471Z"
 +++
 
 ## Spec
@@ -45,3 +45,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-06-05T01:34Z | — | new | philippepascal |
 | 2026-06-12T07:52Z | new | groomed | philippepascal |
+| 2026-06-12T07:52Z | groomed | in_design | philippepascal |
