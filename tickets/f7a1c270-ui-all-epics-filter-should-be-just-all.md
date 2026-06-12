@@ -22,11 +22,11 @@ The fix has two parts: rename the option label to "All" (dropping the redundant 
 
 ### Acceptance criteria
 
-- [ ] The epic filter dropdown default option reads "All" (not "All epics")
-- [ ] When "All" is selected, the board fetches and displays closed/terminal tickets without requiring the "Show closed" checkbox to be checked
-- [ ] When a specific epic is selected, closed tickets are hidden unless "Show closed" is also checked
-- [ ] When "No epic" is selected, closed tickets are hidden unless "Show closed" is also checked
-- [ ] The "Show closed" checkbox remains visible and continues to function as a way to include closed tickets when a specific epic or "No epic" is active
+- [x] The epic filter dropdown default option reads "All" (not "All epics")
+- [x] When "All" is selected, the board fetches and displays closed/terminal tickets without requiring the "Show closed" checkbox to be checked
+- [x] When a specific epic is selected, closed tickets are hidden unless "Show closed" is also checked
+- [x] When "No epic" is selected, closed tickets are hidden unless "Show closed" is also checked
+- [x] The "Show closed" checkbox remains visible and continues to function as a way to include closed tickets when a specific epic or "No epic" is active
 
 ### Out of scope
 
