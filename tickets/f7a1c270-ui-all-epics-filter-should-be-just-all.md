@@ -30,7 +30,9 @@ The fix has two parts: rename the option label to "All" (dropping the redundant 
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Renaming other filter labels ("All states", "All owners", "All authors")
+- Changing server-side API endpoint behaviour
+- Any change to the "No epic" filter semantics beyond what is already specified
 
 ### Approach
 
