@@ -3,13 +3,13 @@ id = "f87ae064"
 title = "apm epic close bug"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 2
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/f87ae064-apm-epic-close-bug"
 created_at = "2026-06-05T01:34:06.624276Z"
-updated_at = "2026-06-12T07:52:46.175471Z"
+updated_at = "2026-06-12T07:57:40.363160Z"
 +++
 
 ## Spec
