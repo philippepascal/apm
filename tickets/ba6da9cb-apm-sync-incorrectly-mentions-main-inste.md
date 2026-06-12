@@ -24,7 +24,10 @@ The fix is localised to the hint-generation block in `apm-core/src/sync.rs`.
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] When a ticket has no `target_branch` and its branch is unmerged, the hint names the project's configured default branch (e.g. `develop`, `trunk`) rather than the literal string `main`.
+- [ ] When a ticket has a `target_branch` set (e.g. an epic branch like `epic/abc-user-auth`) and its branch is unmerged, the hint names that `target_branch` instead of `main`.
+- [ ] The hint message text is otherwise unchanged: it still includes the ticket id and the `apm state <id> closed` recovery command.
+- [ ] All existing `cargo test --workspace` tests continue to pass.
 
 ### Out of scope
 
