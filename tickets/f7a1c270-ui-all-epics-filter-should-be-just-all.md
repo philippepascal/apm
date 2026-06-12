@@ -1,7 +1,7 @@
 +++
 id = "f7a1c270"
 title = "UI: All Epics filter should be just All"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 1
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/f7a1c270-ui-all-epics-filter-should-be-just-all"
 created_at = "2026-06-10T02:50:51.566252Z"
-updated_at = "2026-06-12T22:33:09.989805Z"
+updated_at = "2026-06-12T22:33:54.337734Z"
 +++
 
 ## Spec
@@ -105,3 +105,4 @@ No backend changes, no store changes, no new files.
 | 2026-06-12T08:17Z | in_design | specd | claude |
 | 2026-06-12T22:32Z | specd | ammend | philippepascal |
 | 2026-06-12T22:33Z | ammend | in_design | philippepascal |
+| 2026-06-12T22:33Z | in_design | specd | claude |
