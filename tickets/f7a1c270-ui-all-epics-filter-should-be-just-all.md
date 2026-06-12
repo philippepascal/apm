@@ -36,7 +36,7 @@ The fix has two parts: rename the option label to "All" (dropping the redundant 
 
 ### Approach
 
-All changes are in `apm-ui/src/components/supervisor/SupervisorView.tsx`.
+All changes are in `apm-ui/src/components/supervisor/SupervisorView.tsx` and `apm-ui/src/components/supervisor/PriorityQueuePanel.tsx`.
 
 1. **Derive `includeClosed`** — replace direct use of `showClosed` in the ticket query and visible-states memo with a derived boolean:
 
@@ -61,7 +61,7 @@ All changes are in `apm-ui/src/components/supervisor/SupervisorView.tsx`.
 
    Also add `epicFilter` to the dependency array alongside `includeClosed`.
 
-4. **Rename the option label** — change line 239:
+4. **Rename the option label in SupervisorView.tsx** — change line 239:
 
    ```tsx
    <option value="">All epics</option>
@@ -71,7 +71,17 @@ All changes are in `apm-ui/src/components/supervisor/SupervisorView.tsx`.
    <option value="">All</option>
    ```
 
-5. **`hasActiveFilters`** — no change needed; `epicFilter !== null` already stays false when "All" is selected, and the closed state becoming visible is expected rather than an "active filter".
+5. **Rename the option label in PriorityQueuePanel.tsx** — change line 279:
+
+   ```tsx
+   <option value="">All epics</option>
+   ```
+   to:
+   ```tsx
+   <option value="">All</option>
+   ```
+
+6. **`hasActiveFilters`** — no change needed; `epicFilter !== null` already stays false when "All" is selected, and the closed state becoming visible is expected rather than an "active filter".
 
 No backend changes, no store changes, no new files.
 
