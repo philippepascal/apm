@@ -31,7 +31,9 @@ The fix is localised to the hint-generation block in `apm-core/src/sync.rs`.
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changing any other sync hint or error message that may also reference branch names.
+- Adding new hint messages for missing-merge scenarios beyond what already exists.
+- Changes to `sync_guidance.rs` constants (they use `<default>` placeholders and are not involved in this hint path).
 
 ### Approach
 
