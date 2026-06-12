@@ -22,7 +22,12 @@ The first positional argument to `apm set` is already resolved through `resolve_
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm set <id> depends_on <4-char-prefix>` succeeds and stores the full 8-char ID in the `depends_on` frontmatter field when the prefix uniquely matches an existing ticket
+- [ ] `apm set <id> depends_on <ambiguous-prefix>` fails with an "ambiguous prefix" error when the prefix matches more than one ticket
+- [ ] `apm set <id> depends_on <unknown-prefix>` fails with a "no ticket matches" error when the prefix matches no ticket
+- [ ] `apm set <id> depends_on <full-8-char-id>` continues to behave exactly as before
+- [ ] `apm set <id> depends_on <a>,<b>` resolves each comma-separated value independently; all must resolve successfully before any change is written
+- [ ] `apm set <id> depends_on -` (clear) is unaffected by the change
 
 ### Out of scope
 
