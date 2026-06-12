@@ -13,11 +13,26 @@ impl CmdContext {
         let config = Config::load(root)?;
         let aggressive = config.sync.aggressive && !no_aggressive;
         crate::util::fetch_if_aggressive(root, aggressive);
-        let tickets = if aggressive {
+        let mut tickets = if aggressive {
             apm_core::ticket::load_all_from_git_classified(root, &config.tickets.dir)?
         } else {
             apm_core::ticket::load_all_from_git(root, &config.tickets.dir)?
         };
+        let branchless = apm_core::ticket::load_from_default_branch(
+            root,
+            &config.tickets.dir,
+            &config.project.default_branch,
+        )?;
+        if !branchless.is_empty() {
+            let seen: std::collections::HashSet<String> =
+                tickets.iter().map(|t| t.frontmatter.id.clone()).collect();
+            for t in branchless {
+                if !seen.contains(&t.frontmatter.id) {
+                    tickets.push(t);
+                }
+            }
+            tickets.sort_by_key(|t| t.frontmatter.created_at);
+        }
         Ok(Self { config, tickets, aggressive })
     }
 
