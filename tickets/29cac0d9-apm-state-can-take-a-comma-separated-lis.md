@@ -28,7 +28,7 @@ The desired behaviour is that the ID argument accepts a comma-separated list (`a
 - [x] An empty or whitespace-only id argument is a no-op: the command prints nothing and exits 0.
 - [x] If one ticket in the list fails to transition, the command continues processing the remaining tickets.
 - [x] Each failed transition's error is printed to stderr immediately; after all tickets are processed, the command exits non-zero with a `{n} of {m} transitions failed` summary.
-- [ ] The `id` argument description in `--help` output mentions comma-separated IDs.
+- [x] The `id` argument description in `--help` output mentions comma-separated IDs.
 
 ### Out of scope
 
