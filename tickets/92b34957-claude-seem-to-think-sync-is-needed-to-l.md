@@ -33,7 +33,10 @@ A third, weaker signal: `apm list` prints "local ref behind origin — run `apm 
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changing how `apm list` reads data — it already reads git refs directly without requiring sync
+- Rewording the stale-ref suggestion in `apm list` output ("run `apm sync` to fast-forward") — it is conditional and advisory; the false dependency comes from the instructions, not from this message
+- Adding `apm list` or `apm sync` to the dynamic `apm instructions` command reference — supervisor commands are documented in role files, not in the dynamic output
+- Changing the startup sequence order or removing `apm sync` from it — sync is genuinely useful for freshness; the problem is the description and the Shell Discipline example, not sync's presence in the sequence
 
 ### Approach
 
