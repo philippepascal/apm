@@ -357,9 +357,10 @@ Examples:
   apm state 42 specd           # submit spec for supervisor review
   apm state 42 implemented     # mark implementation done (open PR first)
   apm state 42 new --force     # reset a stuck in_design ticket
-  apm state 42 ready --force   # reset a stuck in_progress ticket")]
+  apm state 42 ready --force   # reset a stuck in_progress ticket
+  apm state 42,43 ready        # transition multiple tickets at once")]
     State {
-        /// Ticket ID (8-char hex, 4+ char prefix, or plain integer)
+        /// Ticket ID or comma-separated list of IDs (8-char hex, 4+ char prefix, or plain integer)
         #[arg(value_name = "ID")]
         id: String,
         /// Target state (e.g. in_design, specd, ready, in_progress, implemented, closed)
