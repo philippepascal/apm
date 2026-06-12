@@ -16,7 +16,9 @@ updated_at = "2026-06-12T07:52:46.175471Z"
 
 ### Problem
 
-if apm epic list says "implemented" for an epic, apm epic close should fail: tickets in that epic should be closed first.
+`apm epic close` guards against two unsafe conditions: an active worker process on a ticket in the epic, and an epic branch whose commits have not yet landed in the default branch. It does not check whether the epic's tickets are still in a non-terminal state.
+
+When `apm epic list` shows "implemented" for an epic, every ticket has reached a state with `satisfies_deps = true` but one or more tickets have not yet transitioned to a terminal state (e.g. they remain in `implemented` rather than `closed`). Closing the epic in this condition deletes the branch while those tickets are left stranded in a non-terminal state — no pointer to the work remains, making them difficult to reason about or close afterwards.
 
 ### Acceptance criteria
 
