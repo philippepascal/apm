@@ -36,7 +36,44 @@ The fix has two parts: rename the option label to "All" (dropping the redundant 
 
 ### Approach
 
-How the implementation will work.
+All changes are in `apm-ui/src/components/supervisor/SupervisorView.tsx`.
+
+1. **Derive `includeClosed`** — replace direct use of `showClosed` in the ticket query and visible-states memo with a derived boolean:
+
+   ```ts
+   const includeClosed = showClosed || epicFilter === null
+   ```
+
+   `epicFilter === null` is the "All" state (no epic selected). `showClosed` retains its role for other filter selections.
+
+2. **Update the ticket query** — change `queryKey` and `queryFn` to use `includeClosed` instead of `showClosed`:
+
+   ```ts
+   queryKey: ['tickets', includeClosed],
+   queryFn: () => fetchTickets(includeClosed),
+   ```
+
+3. **Update `visibleStates`** — replace `showClosed` with `includeClosed` so the closed swimlane appears automatically in "All" mode:
+
+   ```ts
+   if (includeClosed) base.push('closed')
+   ```
+
+   Also add `epicFilter` to the dependency array alongside `includeClosed`.
+
+4. **Rename the option label** — change line 239:
+
+   ```tsx
+   <option value="">All epics</option>
+   ```
+   to:
+   ```tsx
+   <option value="">All</option>
+   ```
+
+5. **`hasActiveFilters`** — no change needed; `epicFilter !== null` already stays false when "All" is selected, and the closed state becoming visible is expected rather than an "active filter".
+
+No backend changes, no store changes, no new files.
 
 ### Open questions
 
