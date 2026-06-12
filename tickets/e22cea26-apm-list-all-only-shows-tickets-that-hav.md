@@ -4,12 +4,12 @@ title = "apm list --all only shows tickets that have branches."
 state = "in_design"
 priority = 0
 effort = 3
-risk = 0
+risk = 2
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/e22cea26-apm-list-all-only-shows-tickets-that-hav"
 created_at = "2026-06-10T02:49:43.077397Z"
-updated_at = "2026-06-12T08:12:49.671605Z"
+updated_at = "2026-06-12T08:12:54.276739Z"
 +++
 
 ## Spec
