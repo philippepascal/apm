@@ -31,7 +31,10 @@ The desired behaviour is that `apm list --all` also surfaces tickets whose file 
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Archived tickets (files in `archive_dir`) — they are intentionally excluded from `apm list`.
+- `apm show` finding tickets without branches — existing fallback in `state.rs` already handles this.
+- Visual indication in `apm list` output that a ticket has no live branch.
+- `apm next`, `apm start`, and other commands that call `load_all_from_git` — those callers do not need branchless tickets for their purposes.
 
 ### Approach
 
