@@ -1,7 +1,7 @@
 +++
 id = "e22cea26"
 title = "apm list --all only shows tickets that have branches."
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/e22cea26-apm-list-all-only-shows-tickets-that-hav"
 created_at = "2026-06-10T02:49:43.077397Z"
-updated_at = "2026-06-10T02:49:43.077397Z"
+updated_at = "2026-06-12T07:52:24.215643Z"
 +++
 
 ## Spec
@@ -47,3 +47,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-06-10T02:49Z | — | new | philippepascal |
+| 2026-06-12T07:52Z | new | groomed | philippepascal |
