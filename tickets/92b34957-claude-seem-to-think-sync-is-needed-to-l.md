@@ -40,7 +40,44 @@ A third, weaker signal: `apm list` prints "local ref behind origin — run `apm 
 
 ### Approach
 
-How the implementation will work.
+Three source files in `apm-core/src/default/agents/claude/` are the canonical source; their deployed copies in `.apm/agents/claude/` must be updated in the same commit.
+
+#### Shell Discipline example (all three role files)
+
+In `apm.main-agent.md`, `apm.spec-writer.md`, and `apm.coder.md`, replace the Shell Discipline "Wrong/Right" block that chains `apm sync && apm list --state ready`. The replacement should still demonstrate the no-chaining rule using commands that do not imply a sync→list dependency. A natural substitution is:
+
+```
+  # Wrong — && chains defeat allow-list matching
+  apm sync && apm next --json
+
+  # Right — one call per operation
+  apm sync
+  apm next --json
+```
+
+`apm next` is a supervisor command used immediately after sync in the actual startup sequence, making this a realistic and semantically coherent example that teaches the same shell discipline lesson without coupling sync to list.
+
+Apply the identical change to both the source copy (`apm-core/src/default/agents/claude/<file>.md`) and the deployed copy (`.apm/agents/claude/<file>.md`) for each of the three role files.
+
+#### Startup sequence description (main-agent only)
+
+In `apm.main-agent.md` (both source and deployed), change the startup sequence step 2 from:
+
+```
+2. `apm sync` — refresh local cache from all `ticket/*` branches
+```
+
+to:
+
+```
+2. `apm sync` — fast-forward local ticket branches to match remote
+```
+
+"Local cache" is factually wrong and is the primary source of the false dependency. The replacement is accurate: sync fetches and fast-forwards local refs; it does not populate any filesystem cache that list would then read.
+
+#### Verification
+
+Run `cargo test --workspace` to confirm no regressions. No Rust source files change, so compilation is fast; the test suite exercises instruction generation and should pass unchanged.
 
 ### Open questions
 
