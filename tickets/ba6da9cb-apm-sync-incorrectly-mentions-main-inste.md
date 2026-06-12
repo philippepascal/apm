@@ -1,7 +1,7 @@
 +++
 id = "ba6da9cb"
 title = "apm sync incorrectly mentions main instead of epic name in error message for missing merge"
-state = "ready"
+state = "in_progress"
 priority = 0
 effort = 1
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/ba6da9cb-apm-sync-incorrectly-mentions-main-inste"
 created_at = "2026-06-09T21:47:31.578694Z"
-updated_at = "2026-06-12T22:52:55.249872Z"
+updated_at = "2026-06-12T22:53:08.830534Z"
 +++
 
 ## Spec
@@ -86,3 +86,4 @@ No other files change.
 | 2026-06-12T07:58Z | groomed | in_design | philippepascal |
 | 2026-06-12T07:59Z | in_design | specd | claude |
 | 2026-06-12T22:52Z | specd | ready | philippepascal |
+| 2026-06-12T22:53Z | ready | in_progress | philippepascal |
