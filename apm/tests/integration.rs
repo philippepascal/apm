@@ -706,7 +706,7 @@ fn list_shows_all_tickets() {
     apm::cmd::new::run(dir.path(), "Beta".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
     let b2 = find_ticket_branch(dir.path(), "beta");
     sync_from_branch(dir.path(), &b2, &ticket_rel_path(&b2));
-    apm::cmd::list::run(dir.path(), None, false, false, None, false, true, None, None).unwrap();
+    apm::cmd::list::run(dir.path(), None, false, false, None, false, true, None, None, None, None).unwrap();
 }
 
 #[test]
@@ -724,7 +724,7 @@ fn list_state_filter() {
     apm::cmd::state::run(dir.path(), &alpha_id, "specd".into(), false, true).unwrap();
     // Sync the updated ticket from its branch so apm list can see the new state.
     sync_from_branch(dir.path(), &b1, &ticket_rel_path(&b1));
-    apm::cmd::list::run(dir.path(), Some("specd".into()), false, false, None, false, true, None, None).unwrap();
+    apm::cmd::list::run(dir.path(), Some("specd".into()), false, false, None, false, true, None, None, None, None).unwrap();
 }
 
 #[test]
@@ -750,7 +750,7 @@ fn list_mine_filter() {
     std::fs::write(apm_dir.join("local.toml"), "username = \"testuser\"\n").unwrap();
 
     // --mine should show only the first ticket.
-    apm::cmd::list::run(dir.path(), None, false, false, None, true, true, None, None).unwrap();
+    apm::cmd::list::run(dir.path(), None, false, false, None, true, true, None, None, None, None).unwrap();
 }
 
 // --- show ---
@@ -865,6 +865,37 @@ fn state_ammend_inserts_amendment_section() {
     apm::cmd::state::run(dir.path(), &id, "ammend".into(), false, true).unwrap();
     let content = branch_content(dir.path(), &branch, &rel);
     assert!(content.contains("### Amendment requests"));
+}
+
+#[test]
+fn state_batch_transition() {
+    let dir = setup();
+    apm::cmd::new::run(dir.path(), "Batch alpha".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let branch1 = find_ticket_branch(dir.path(), "batch-alpha");
+    let id1 = find_ticket_id(dir.path(), "batch-alpha");
+    let rel1 = ticket_rel_path(&branch1);
+    write_valid_spec_to_branch(dir.path(), &branch1, &rel1);
+
+    apm::cmd::new::run(dir.path(), "Batch beta".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let branch2 = find_ticket_branch(dir.path(), "batch-beta");
+    let id2 = find_ticket_id(dir.path(), "batch-beta");
+    let rel2 = ticket_rel_path(&branch2);
+    write_valid_spec_to_branch(dir.path(), &branch2, &rel2);
+
+    let ids = format!("{},{}", id1, id2);
+    apm::cmd::state::run(dir.path(), &ids, "specd".into(), false, true).unwrap();
+
+    let content1 = branch_content(dir.path(), &branch1, &rel1);
+    let content2 = branch_content(dir.path(), &branch2, &rel2);
+    assert!(content1.contains("state = \"specd\""), "ticket 1 not specd: {content1}");
+    assert!(content2.contains("state = \"specd\""), "ticket 2 not specd: {content2}");
+}
+
+#[test]
+fn state_empty_id_noop() {
+    let dir = setup();
+    let result = apm::cmd::state::run(dir.path(), "", "specd".into(), false, false);
+    assert!(result.is_ok(), "empty id should return Ok, got: {result:?}");
 }
 
 // --- set ---
@@ -1636,7 +1667,7 @@ fn aggressive_no_remote_does_not_abort_list() {
     let dir = setup_aggressive();
     let p = dir.path();
     apm::cmd::new::run(p, "Aggressive list".into(), true, false, None, None, false, vec![], vec![], None, vec![]).unwrap();
-    apm::cmd::list::run(p, None, false, false, None, false, false, None, None).unwrap();
+    apm::cmd::list::run(p, None, false, false, None, false, false, None, None, None, None).unwrap();
 }
 
 #[test]
