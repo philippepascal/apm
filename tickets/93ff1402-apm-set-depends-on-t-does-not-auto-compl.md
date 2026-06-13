@@ -1,7 +1,7 @@
 +++
 id = "93ff1402"
 title = "apm set <> depends_on <t> does not auto complete <t> if the user puts 4 characters"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/93ff1402-apm-set-depends-on-t-does-not-auto-compl"
 created_at = "2026-06-11T05:28:47.866310Z"
-updated_at = "2026-06-12T23:25:13.945176Z"
+updated_at = "2026-06-13T18:10:05.833373Z"
 +++
 
 ## Spec
@@ -77,3 +77,4 @@ Add a unit test in `apm/tests/integration.rs` that:
 | 2026-06-12T22:53Z | specd | ready | philippepascal |
 | 2026-06-12T23:16Z | ready | in_progress | philippepascal |
 | 2026-06-12T23:25Z | in_progress | implemented | claude |
+| 2026-06-13T18:10Z | implemented | closed | philippepascal(apm-sync) |
