@@ -1,7 +1,7 @@
 +++
 id = "f87ae064"
 title = "apm epic close bug"
-state = "implemented"
+state = "closed"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/f87ae064-apm-epic-close-bug"
 created_at = "2026-06-05T01:34:06.624276Z"
-updated_at = "2026-06-12T23:12:19.904874Z"
+updated_at = "2026-06-13T18:10:12.728813Z"
 +++
 
 ## Spec
@@ -84,3 +84,4 @@ No new `apm-core` function is required — `derive_epic_state` is already public
 | 2026-06-12T22:52Z | specd | ready | philippepascal |
 | 2026-06-12T23:03Z | ready | in_progress | philippepascal |
 | 2026-06-12T23:12Z | in_progress | implemented | claude |
+| 2026-06-13T18:10Z | implemented | closed | philippepascal(apm-sync) |
