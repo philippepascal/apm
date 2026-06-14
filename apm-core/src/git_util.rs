@@ -965,7 +965,14 @@ pub fn fetch_branch(root: &Path, branch: &str) -> anyhow::Result<()> {
 }
 
 pub fn push_branch(root: &Path, branch: &str) -> anyhow::Result<()> {
-    run(root, &["push", "origin", &format!("{branch}:{branch}")]).map(|_| ())
+    let status = std::process::Command::new("git")
+        .args(["push", "origin", &format!("{branch}:{branch}")])
+        .current_dir(root)
+        .status()?;
+    if !status.success() {
+        anyhow::bail!("git push failed with exit code {}", status.code().unwrap_or(-1));
+    }
+    Ok(())
 }
 
 pub fn push_branch_tracking(root: &Path, branch: &str) -> anyhow::Result<()> {
