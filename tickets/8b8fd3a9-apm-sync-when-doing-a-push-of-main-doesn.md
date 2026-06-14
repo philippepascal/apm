@@ -4,12 +4,12 @@ title = "apm sync, when doing a push of main, doesn't display push/hook outputs"
 state = "in_design"
 priority = 0
 effort = 1
-risk = 0
+risk = 1
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/8b8fd3a9-apm-sync-when-doing-a-push-of-main-doesn"
 created_at = "2026-06-13T18:33:03.661566Z"
-updated_at = "2026-06-14T06:01:10.792960Z"
+updated_at = "2026-06-14T06:01:16.212321Z"
 +++
 
 ## Spec
