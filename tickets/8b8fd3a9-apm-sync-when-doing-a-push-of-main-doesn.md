@@ -23,7 +23,7 @@ Users who have hooks installed on the remote see nothing — no confirmation the
 ### Acceptance criteria
 
 - [x] `apm sync` (when pushing the default branch) streams all git push output — including remote hook messages — to the terminal
-- [ ] `apm sync` (when pushing ahead ticket/epic branches) streams all git push output to the terminal
+- [x] `apm sync` (when pushing ahead ticket/epic branches) streams all git push output to the terminal
 - [ ] When a push fails, `apm sync` still prints a `warning: push failed` line and continues syncing other refs (current error-handling behaviour unchanged)
 - [ ] `apm sync --quiet` still suppresses the APM-added confirmation line ("pushed main to origin") but does not suppress git's own output, including hook messages
 
