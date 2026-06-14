@@ -29,7 +29,9 @@ Users who have hooks installed on the remote see nothing — no confirmation the
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- `push_branch_tracking` (used by `apm state` ticket transitions) — same root cause but a different call site and user flow; separate ticket if desired
+- Streaming output for `push_ticket_branches` (the `push_refs` path in `util.rs`) — it uses `run()` directly, not `push_branch`, and is a separate code path
+- Suppressing git push progress output under `--quiet` — hook output is not APM output and should always be visible
 
 ### Approach
 
