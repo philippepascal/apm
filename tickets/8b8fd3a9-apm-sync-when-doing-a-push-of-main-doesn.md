@@ -35,7 +35,34 @@ Users who have hooks installed on the remote see nothing — no confirmation the
 
 ### Approach
 
-How the implementation will work.
+**File:** `apm-core/src/git_util.rs`
+
+Replace the body of `push_branch` (line 967–969). Currently it delegates to `run()`, which calls `Command::output()` and discards all captured output on success. Change it to use `Command::status()` instead, which inherits the parent process's stdin/stdout/stderr and lets all git output (including remote hook stderr) flow directly to the terminal:
+
+```rust
+pub fn push_branch(root: &Path, branch: &str) -> anyhow::Result<()> {
+    let status = Command::new("git")
+        .args(["push", "origin", &format!("{branch}:{branch}")])
+        .current_dir(root)
+        .status()?;
+    if !status.success() {
+        anyhow::bail!("git push failed with exit code {}", status.code().unwrap_or(-1));
+    }
+    Ok(())
+}
+```
+
+**Error message note:** With `.status()`, stderr is no longer captured, so the error string can no longer echo git's output. This is fine — git has already printed the error to the terminal. The `warning: push failed: …` line in `sync.rs` still appears as a structured APM-level signal that the push failed.
+
+**All callers benefit automatically:**
+- `apm/src/cmd/sync.rs` line 75 — default branch push (the primary case)
+- `apm/src/cmd/sync.rs` line 92 — ticket/epic branch pushes
+- `apm-core/src/git_util.rs` line 1256 — merge-then-push inside `state implemented`
+- `apm-core/src/ticket/ticket_util.rs` line 365 — aggressive sync auto-close push
+
+No changes to `sync.rs` are needed. The existing `if let Err(e) = git::push_branch(...)` / `eprintln!("warning: push failed: {e:#}")` pattern still works correctly.
+
+No new tests are required — the change is a one-function substitution with no behavioural branches to cover. Existing tests do not mock git push and will continue to pass.
 
 ### Open questions
 
