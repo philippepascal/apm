@@ -21,7 +21,7 @@ name = "apm"
 path = "src/main.rs"
 
 [dependencies]
-apm-core = { path = "../apm-core", version = "0.1.53" }
+apm-core = { path = "../apm-core", version = "0.1.54" }
 clap = { workspace = true }
 anyhow = { workspace = true }
 chrono = { workspace = true }
