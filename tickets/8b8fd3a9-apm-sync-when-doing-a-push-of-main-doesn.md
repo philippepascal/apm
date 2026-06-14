@@ -1,7 +1,7 @@
 +++
 id = "8b8fd3a9"
 title = "apm sync, when doing a push of main, doesn't display push/hook outputs"
-state = "in_progress"
+state = "implemented"
 priority = 5
 effort = 1
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/8b8fd3a9-apm-sync-when-doing-a-push-of-main-doesn"
 created_at = "2026-06-13T18:33:03.661566Z"
-updated_at = "2026-06-14T06:21:18.991299Z"
+updated_at = "2026-06-14T06:24:02.219442Z"
 +++
 
 ## Spec
@@ -83,3 +83,4 @@ No new tests are required — the change is a one-function substitution with no 
 | 2026-06-14T06:01Z | in_design | specd | claude |
 | 2026-06-14T06:21Z | specd | ready | philippepascal |
 | 2026-06-14T06:21Z | ready | in_progress | philippepascal |
+| 2026-06-14T06:24Z | in_progress | implemented | claude |
