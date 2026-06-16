@@ -1,7 +1,7 @@
 +++
 id = "9695f5b8"
 title = "apm work, apm start, should ask confirmation if a ticket in their actionable list is in an epic that needs refresh"
-state = "implemented"
+state = "merge_failed"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/9695f5b8-apm-work-apm-start-should-ask-confirmati"
 created_at = "2026-06-16T18:08:19.018981Z"
-updated_at = "2026-06-16T20:54:23.637661Z"
+updated_at = "2026-06-16T20:54:25.901918Z"
 depends_on = ["ee5011b6"]
 +++
 
@@ -146,6 +146,10 @@ Render `staleWarning` as an amber warning `<span>` between the epic selector and
 ### Code review
 
 
+### Merge notes
+
+merge conflict — resolve manually and push: 
+
 ## History
 
 | When | From | To | By |
@@ -160,3 +164,4 @@ Render `staleWarning` as an amber warning `<span>` between the epic selector and
 | 2026-06-16T20:24Z | specd | ready | philippepascal |
 | 2026-06-16T20:40Z | ready | in_progress | philippepascal |
 | 2026-06-16T20:54Z | in_progress | implemented | claude |
+| 2026-06-16T20:54Z | implemented | merge_failed | claude |
