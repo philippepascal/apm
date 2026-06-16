@@ -1,7 +1,7 @@
 +++
 id = "9ff929d1"
 title = "apm new successfully creates a ticket but outputs Error:"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/9ff929d1-apm-new-successfully-creates-a-ticket-bu"
 created_at = "2026-06-16T18:19:39.121805Z"
-updated_at = "2026-06-16T18:27:22.775333Z"
+updated_at = "2026-06-16T20:24:16.970675Z"
 +++
 
 ## Spec
@@ -105,3 +105,4 @@ This is a targeted defensive fix: the common case (stderr has content) is unchan
 | 2026-06-16T18:20Z | new | groomed | philippepascal |
 | 2026-06-16T18:23Z | groomed | in_design | philippepascal |
 | 2026-06-16T18:27Z | in_design | specd | claude |
+| 2026-06-16T20:24Z | specd | ready | philippepascal |
