@@ -4,12 +4,12 @@ title = "add a space between epic number and down arrow to make the down arrow m
 state = "in_design"
 priority = 0
 effort = 1
-risk = 0
+risk = 1
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/35ecc9d0-add-a-space-between-epic-number-and-down"
 created_at = "2026-06-16T18:06:38.591826Z"
-updated_at = "2026-06-16T18:12:53.221728Z"
+updated_at = "2026-06-16T18:13:00.232685Z"
 +++
 
 ## Spec
