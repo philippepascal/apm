@@ -118,6 +118,7 @@ Render `staleWarning` as an amber warning `<span>` placed between the epic selec
 
 ### Amendment requests
 
+- [ ] Fix wrong return type in the Approach. It claims apm_core::start::run_next() returns StartOutput and proposes adding a stale_warning field to StartOutput. It actually returns RunNextOutput (apm-core/src/start.rs:294, returned at :586) — a distinct struct from StartOutput (:280). The CLI run_next (apm/src/cmd/start.rs:23) prints out.messages, so the surface for run_next is RunNextOutput.messages, not StartOutput. Also note: gating the prompt via a field set inside run() is too late — run() performs the state transition at start.rs:445, but AC1 requires prompting BEFORE the transition. Correct the struct name and drop the StartOutput.stale_warning idea.
 
 ### Code review
 
