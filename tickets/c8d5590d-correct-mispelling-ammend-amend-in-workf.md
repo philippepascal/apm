@@ -40,9 +40,9 @@ Because the state ID is a bare string used in comparisons, config files, TOML fi
 
 ### Approach
 
-This is a pure string-rename across all active source files. No logic changes. No migration needed — `grep -rn 'state = "ammend"' tickets/` returns nothing, so no live tickets are in this state.
+This is a pure string-rename across all active source files. No logic changes. However, `apm-core/src/state.rs` hardcodes the state id as a string literal to gate two runtime behaviours (see Rust source files → state.rs below); this makes the rename a **breaking change for downstream repos** that have not yet updated their `workflow.toml`. No migration is needed for this project — `grep -rni 'state = "ammend"' tickets/` returns nothing, so no live tickets are in this state.
 
-Run `grep -rn "ammend" . --include="*.rs" --include="*.toml" --include="*.md" | grep -v archive/ | grep -v ".git/"` after each step to confirm coverage.
+After each batch of changes, run the verification grep (see Verification) to confirm coverage before moving on.
 
 #### Workflow TOML files (define the canonical state ID)
 
@@ -51,11 +51,14 @@ Run `grep -rn "ammend" . --include="*.rs" --include="*.toml" --include="*.md" | 
 
 #### Rust source files
 
-- **`apm-core/src/state.rs`** — two string comparisons: `old_state == "ammend"` → `"amend"`, `new_state == "ammend"` → `"amend"`.
+- **`apm-core/src/state.rs`** — two string comparisons: `old_state == "ammend"` → `"amend"` (line 111), `new_state == "ammend"` → `"amend"` (line 166).
+
+  > **Breaking change for downstream repos.** Line 111 gates the "all amendment requests must be checked before resubmitting to specd" validation; line 166 gates `ensure_amendment_section()` insertion on transition. Both comparisons match the state id read at runtime from `workflow.toml`. Any external repo whose `workflow.toml` still names the state `ammend` after upgrading the binary will continue to transition correctly but will silently lose these two behaviours. See ticket 68829abb (migration-docs) for the documentation update that should accompany this rename.
+
 - **`apm-core/src/instructions.rs`** — two lines in `STATIC_STATE_MACHINE`: `"ammend"` → `"amend"` (both the state ID and the command example).
-- **`apm-core/src/config.rs`** — two test fixture literals: `to = "ammend"` → `"amend"`, `id = "ammend"` → `"amend"`, and `label = "Ammend"` → `"Amend"`.
-- **`apm-core/src/init.rs`** — three occurrences in `default_workflow_toml_is_valid` test: all `"ammend"` → `"amend"`.
-- **`apm-core/src/epic.rs`** — four occurrences: state string in test fixture data, test function name `epic_is_quiescent_ammend_with_impl_history_blocks` → `epic_is_quiescent_amend_with_impl_history_blocks`, and two assertion message strings.
+- **`apm-core/src/config.rs`** — test fixture literals: `to = "ammend"` → `"amend"`, `id = "ammend"` → `"amend"`, `label = "Ammend"` → `"Amend"`.
+- **`apm-core/src/init.rs`** — occurrences in `default_workflow_toml_is_valid` test: all `"ammend"` and `"Ammend"` → corrected spellings.
+- **`apm-core/src/epic.rs`** — eight occurrences across test fixtures and a test function; rely on the case-insensitive grep to locate all of them. Known locations: lines 591, 592, 613, 614 (`id`/`label` fixture pairs), 737 (function name `epic_is_quiescent_ammend_with_impl_history_blocks` → `epic_is_quiescent_amend_with_impl_history_blocks`), 747–748 (fixture state data), 753 (assertion message string).
 - **`apm/src/main.rs`** — one occurrence in help text: `--to ammend` → `--to amend`.
 - **`apm/src/cmd/review.rs`** — one string comparison: `Some("ammend")` → `Some("amend")`.
 - **`apm-server/src/workers.rs`** — one occurrence in an excluded-states array: `"ammend"` → `"amend"`.
@@ -63,15 +66,16 @@ Run `grep -rn "ammend" . --include="*.rs" --include="*.toml" --include="*.md" | 
 
 #### Test files
 
-- **`apm/tests/integration.rs`** — several occurrences across multiple tests: state strings in state arrays, TOML fixture literals, test function names (`state_ammend_inserts_amendment_section` → `state_amend_inserts_amendment_section`, `spawn_ammend_ticket_transitions_to_in_design` → `spawn_amend_ticket_transitions_to_in_design`, `review_ammend_normalises_plain_bullets_to_checkboxes` → `review_amend_normalises_plain_bullets_to_checkboxes`), and inline comments.
+- **`apm/tests/integration.rs`** — multiple occurrences: state strings in state arrays, TOML fixture literals, test function names (`state_ammend_inserts_amendment_section` → `state_amend_inserts_amendment_section`, `spawn_ammend_ticket_transitions_to_in_design` → `spawn_amend_ticket_transitions_to_in_design`, `review_ammend_normalises_plain_bullets_to_checkboxes` → `review_amend_normalises_plain_bullets_to_checkboxes`), and inline comments.
 - **`apm/tests/e2e.rs`** — one TOML fixture literal: `id = "ammend"` → `"amend"`.
 
 #### Agent instruction Markdown files
 
 - **`.apm/agents/claude/apm.main-agent.md`** — three occurrences in transition examples and the "amend a ticket" section.
 - **`.apm/agents/claude/apm.spec-writer.md`** — three occurrences in the handling-ammend section header and body.
-- **`apm-core/src/default/agents/claude/apm.main-agent.md`** — same three as above (this is the embedded copy).
-- **`apm-core/src/default/agents/claude/apm.spec-writer.md`** — same three as above (this is the embedded copy).
+- **`.apm/agents/pi/apm.spec-writer.md`** — one occurrence at line 156: `## Ammend tickets` → `## Amend tickets`.
+- **`apm-core/src/default/agents/claude/apm.main-agent.md`** — same three as the claude main-agent above (this is the embedded copy).
+- **`apm-core/src/default/agents/claude/apm.spec-writer.md`** — same three as the claude spec-writer above (this is the embedded copy).
 
 #### Documentation and README
 
@@ -82,7 +86,7 @@ Run `grep -rn "ammend" . --include="*.rs" --include="*.toml" --include="*.md" | 
 #### Verification
 
 After all changes, run:
-1. `grep -rn "ammend" . --include="*.rs" --include="*.toml" --include="*.md" | grep -v archive/ | grep -v ".git/"` — must return zero hits (only the ticket's own branch-name slug is exempt, and that doesn't appear in source files).
+1. `grep -rni "ammend" . --include="*.rs" --include="*.toml" --include="*.md" | grep -v archive/ | grep -v ".git/"` — must return zero hits. The `-i` flag catches both lowercase `ammend` and capitalized `Ammend`. (The ticket's own branch-name slug is exempt, but it does not appear in any source file.)
 2. `cargo test --workspace` — all tests must pass.
 
 ### Open questions
