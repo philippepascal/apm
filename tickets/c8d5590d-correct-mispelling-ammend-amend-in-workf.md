@@ -91,6 +91,7 @@ After all changes, run:
 ### Amendment requests
 
 - [ ] Acknowledge the downstream back-compat breakage. apm-core/src/state.rs:111 and :166 match the bare literal "ammend" to gate BEHAVIOUR, not just display — line 111 gates the 'all amendment requests must be checked before resubmitting to specd' validation; line 166 gates ensure_amendment_section() insertion. Because the state id is read from workflow.toml at runtime, any external repo whose workflow.toml still says 'ammend' will keep transitioning but SILENTLY lose these two behaviours after upgrading the binary. The spec frames this as a pure string rename with no migration; it must call this out as a known breaking change for downstream repos (reference the existing migration-docs ticket 68829abb).
+- [ ] Missed occurrence: .apm/agents/pi/apm.spec-writer.md:156 contains '## Ammend tickets' and is NOT in the spec's file list (which only enumerates the claude agent files). Left unchanged, it makes the spec's own 'grep returns zero hits' verification AC fail. Add this file to the rename list.
 
 ### Code review
 
