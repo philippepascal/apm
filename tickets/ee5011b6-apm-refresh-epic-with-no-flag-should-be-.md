@@ -22,14 +22,14 @@ The fix is to turn the no-flag path into an interactive prompt when stdout is a 
 
 ### Acceptance criteria
 
-- [ ] `apm refresh-epic <id>` with no flag, on a terminal, when the epic branch is ahead of the default branch, prints the status line and then displays a numbered menu of actions.
-- [ ] The menu offers at least three actions: merge locally, open / update PR, auto (merge if clean, fall back to PR).
-- [ ] The menu includes a "skip" option that exits without performing any action.
-- [ ] Choosing "merge locally" has the same outcome as passing `--merge`.
-- [ ] Choosing "open / update PR" has the same outcome as passing `--pr`.
-- [ ] Choosing "auto" has the same outcome as passing `--auto`.
-- [ ] When the epic branch is already up to date, `apm refresh-epic <id>` with no flag prints "epic branch is up to date" and exits — no menu is shown.
-- [ ] When stdout is not a terminal (pipe or headless), `apm refresh-epic <id>` with no flag retains the current behaviour: print status and exit without prompting.
+- [x] `apm refresh-epic <id>` with no flag, on a terminal, when the epic branch is ahead of the default branch, prints the status line and then displays a numbered menu of actions.
+- [x] The menu offers at least three actions: merge locally, open / update PR, auto (merge if clean, fall back to PR).
+- [x] The menu includes a "skip" option that exits without performing any action.
+- [x] Choosing "merge locally" has the same outcome as passing `--merge`.
+- [x] Choosing "open / update PR" has the same outcome as passing `--pr`.
+- [x] Choosing "auto" has the same outcome as passing `--auto`.
+- [x] When the epic branch is already up to date, `apm refresh-epic <id>` with no flag prints "epic branch is up to date" and exits — no menu is shown.
+- [x] When stdout is not a terminal (pipe or headless), `apm refresh-epic <id>` with no flag retains the current behaviour: print status and exit without prompting.
 
 ### Out of scope
 
