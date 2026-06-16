@@ -805,6 +805,12 @@ pub fn spawn_next_worker(
     let epic_id = candidate.frontmatter.epic.clone();
     let old_state = candidate.frontmatter.state.clone();
 
+    if let Some(ref eid) = epic_id {
+        if let Ok(Some(ahead)) = crate::epic::ticket_epic_staleness(root, eid) {
+            messages.push(format!("warning: epic {eid} is {ahead} commit(s) behind the default branch"));
+        }
+    }
+
     let triggering_transition_owned = config.workflow.states.iter()
         .find(|s| s.id == old_state)
         .and_then(|s| s.transitions.iter().find(|tr| tr.trigger == "command:start"))
@@ -924,6 +930,45 @@ pub fn spawn_next_worker(
     messages.push(format!("Agent name: {worker_name}"));
 
     Ok(Some((id, epic_id, managed, pid_path)))
+}
+
+/// Return the next candidate ticket's `(id, epic_id)` without performing any
+/// state transition.  Applies the same blocked-epic filter as `run_next`.
+pub fn peek_next_candidate(root: &Path) -> Result<Option<(String, Option<String>)>> {
+    let config = Config::load(root)?;
+    let p = &config.workflow.prioritization;
+    let startable: Vec<&str> = config.workflow.states.iter()
+        .filter(|s| s.transitions.iter().any(|tr| tr.trigger == "command:start"))
+        .map(|s| s.id.as_str())
+        .collect();
+    let actionable_owned = config.actionable_states_for("agent");
+    let actionable: Vec<&str> = actionable_owned.iter().map(|s| s.as_str()).collect();
+    let all_tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
+    let caller_name = crate::config::resolve_caller_name();
+    let current_user = crate::config::resolve_identity(root);
+
+    let active_epic_ids: Vec<Option<String>> = all_tickets.iter()
+        .filter(|t| {
+            let s = t.frontmatter.state.as_str();
+            actionable.contains(&s) && !startable.contains(&s)
+        })
+        .map(|t| t.frontmatter.epic.clone())
+        .collect();
+    let blocked = config.blocked_epics(&active_epic_ids);
+    let default_blocked = config.is_default_branch_blocked(&active_epic_ids);
+    let tickets: Vec<_> = all_tickets.into_iter()
+        .filter(|t| match t.frontmatter.epic.as_deref() {
+            Some(eid) => !blocked.iter().any(|b| b == eid),
+            None => !default_blocked,
+        })
+        .collect();
+
+    let candidate = ticket::pick_next(
+        &tickets, &actionable, &startable,
+        p.priority_weight, p.effort_weight, p.risk_weight,
+        &config, Some(&caller_name), Some(&current_user),
+    );
+    Ok(candidate.map(|c| (c.frontmatter.id.clone(), c.frontmatter.epic.clone())))
 }
 
 /// If the ticket has dependencies, prepend a dependency context bundle to the

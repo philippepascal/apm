@@ -13,6 +13,7 @@ type Epic = {
   id: string
   title: string
   branch: string
+  behind_count: number
 }
 
 async function fetchStatus(): Promise<StatusResponse> {
@@ -121,6 +122,21 @@ export default function WorkEngineControls() {
   const isEngineActive = status === 'running' || status === 'idle'
   const isPending = startMutation.isPending || stopMutation.isPending
 
+  const staleWarning = (() => {
+    if (selectedEpic) {
+      const ep = epics.find(e => e.id === selectedEpic)
+      if (ep && ep.behind_count > 0) {
+        return `Epic ${ep.id.slice(0, 8)} is ${ep.behind_count} commit(s) behind — run \`apm epic refresh ${ep.id}\` first.`
+      }
+    } else {
+      const staleEpics = epics.filter(e => e.behind_count > 0)
+      if (staleEpics.length > 0) {
+        return `${staleEpics.length} epic(s) need refresh — workers may start on stale branches.`
+      }
+    }
+    return null
+  })()
+
   function handleToggle() {
     if (isPending) return
     if (isEngineActive) {
@@ -165,6 +181,9 @@ export default function WorkEngineControls() {
             <option key={e.id} value={e.id}>{e.title}</option>
           ))}
         </select>
+      )}
+      {!isEngineActive && staleWarning && (
+        <span className="text-xs text-yellow-400">{staleWarning}</span>
       )}
       <button
         onClick={handleToggle}
