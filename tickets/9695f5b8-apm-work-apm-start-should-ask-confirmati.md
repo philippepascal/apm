@@ -1,7 +1,7 @@
 +++
 id = "9695f5b8"
 title = "apm work, apm start, should ask confirmation if a ticket in their actionable list is in an epic that needs refresh"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,14 +9,14 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/9695f5b8-apm-work-apm-start-should-ask-confirmati"
 created_at = "2026-06-16T18:08:19.018981Z"
-updated_at = "2026-06-16T18:08:19.018981Z"
+updated_at = "2026-06-16T18:09:25.257260Z"
 +++
 
 ## Spec
 
 ### Problem
 
-What is broken or missing, and why it matters.
+additionally something in the UI should make that situation very clear, maybe when pressing start button
 
 ### Acceptance criteria
 
@@ -47,3 +47,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-06-16T18:08Z | — | new | philippepascal |
+| 2026-06-16T18:09Z | new | groomed | philippepascal |
