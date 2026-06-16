@@ -214,6 +214,23 @@ pub fn find_epic_branch(root: &Path, short_id: &str) -> Option<String> {
     None
 }
 
+/// Check how many commits the default branch is ahead of the epic's branch.
+/// Returns `None` when the epic has no local or remote branch, or when it is up to date.
+/// Returns `Some(ahead)` when the epic is behind the default branch.
+pub fn ticket_epic_staleness(root: &Path, epic_id: &str) -> anyhow::Result<Option<usize>> {
+    let config = crate::config::Config::load(root)?;
+    let default_branch = &config.project.default_branch;
+    let Some(epic_branch) = find_epic_branch(root, epic_id) else {
+        return Ok(None);
+    };
+    let status = merge_tree_status(root, default_branch, &epic_branch)?;
+    if status.ahead == 0 {
+        Ok(None)
+    } else {
+        Ok(Some(status.ahead))
+    }
+}
+
 pub fn find_epic_branches(root: &Path, id_prefix: &str) -> Vec<String> {
     let mut seen = std::collections::HashSet::new();
     let mut result = Vec::new();
@@ -848,6 +865,46 @@ label = "Ready"
         let a = make_state(false, false);
         let b = make_state(true, false);
         assert_eq!(derive_epic_state(&[&a, &b]), "in_progress");
+    }
+
+    #[test]
+    fn ticket_epic_staleness_none_when_up_to_date() {
+        let tmp = setup_repo();
+        let p = tmp.path();
+        std::fs::create_dir_all(p.join(".apm")).unwrap();
+        std::fs::write(p.join(".apm/config.toml"), TOML_WITH_STATES).unwrap();
+        // Epic branch created from current main tip — zero commits behind.
+        git_cmd(p, &["checkout", "-b", "epic/ss000001-stale-test"]);
+        git_cmd(p, &["checkout", "main"]);
+        let result = super::ticket_epic_staleness(p, "ss000001").unwrap();
+        assert!(result.is_none(), "expected None when epic is up to date, got: {result:?}");
+    }
+
+    #[test]
+    fn ticket_epic_staleness_some_when_behind() {
+        let tmp = setup_repo();
+        let p = tmp.path();
+        std::fs::create_dir_all(p.join(".apm")).unwrap();
+        std::fs::write(p.join(".apm/config.toml"), TOML_WITH_STATES).unwrap();
+        // Create epic branch, then add a commit to main so epic is 1 behind.
+        git_cmd(p, &["checkout", "-b", "epic/ss000002-stale-test"]);
+        git_cmd(p, &["checkout", "main"]);
+        std::fs::write(p.join("after-epic.md"), "new\n").unwrap();
+        git_cmd(p, &["add", "after-epic.md"]);
+        git_cmd(p, &["commit", "-m", "add commit after epic branch point"]);
+        let result = super::ticket_epic_staleness(p, "ss000002").unwrap();
+        assert_eq!(result, Some(1), "expected Some(1) commit behind, got: {result:?}");
+    }
+
+    #[test]
+    fn ticket_epic_staleness_none_when_no_branch() {
+        let tmp = setup_repo();
+        let p = tmp.path();
+        std::fs::create_dir_all(p.join(".apm")).unwrap();
+        std::fs::write(p.join(".apm/config.toml"), TOML_WITH_STATES).unwrap();
+        // No epic branch with this id.
+        let result = super::ticket_epic_staleness(p, "deadbeef").unwrap();
+        assert!(result.is_none(), "expected None when no epic branch exists, got: {result:?}");
     }
 
     #[test]

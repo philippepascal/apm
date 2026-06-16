@@ -9552,6 +9552,29 @@ fn apm_new_no_edit_noop_editor_exits_zero() {
 
     let out = std::process::Command::new(bin)
         .args(["new", "--no-aggressive", "test noop editor"])
+// ── apm start: stale-epic warning ────────────────────────────────────────────
+
+#[test]
+fn start_emits_stderr_warning_and_proceeds_when_epic_is_stale_non_tty() {
+    let (dir, epic_id) = setup_with_epic();
+    let p = dir.path();
+
+    // Advance main 1 commit past the epic branch point so the epic is stale.
+    std::fs::write(p.join("main-only.txt"), "advance\n").unwrap();
+    git(p, &["-c", "commit.gpgsign=false", "add", "main-only.txt"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "advance main past epic"]);
+
+    // Configure a local identity so apm new can resolve an author.
+    std::fs::create_dir_all(p.join(".apm")).unwrap();
+    std::fs::write(p.join(".apm/local.toml"), "username = \"test-agent\"\n").unwrap();
+
+    // Create a ticket in ready state under the stale epic.
+    let (id, branch) = write_ticket_in_epic(p, "ready", "Stale Epic Child", "test-agent", &epic_id);
+
+    // Run apm start as a subprocess — stdout is piped, so stdout.is_terminal() == false,
+    // which triggers the non-interactive (stderr warning + proceed) path.
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
+        .args(["start", &id, "--no-aggressive"])
         .current_dir(p)
         .env("GIT_AUTHOR_NAME", "test")
         .env("GIT_AUTHOR_EMAIL", "test@test.com")
@@ -9576,5 +9599,25 @@ fn apm_new_no_edit_noop_editor_exits_zero() {
     assert!(
         stderr.is_empty(),
         "expected no stderr output; got: {stderr}"
+        .env("APM_AGENT_NAME", "test-agent")
+        .output()
+        .unwrap();
+
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(
+        out.status.success(),
+        "apm start should succeed on non-tty stale epic path\nstdout: {}\nstderr: {stderr}",
+        String::from_utf8_lossy(&out.stdout),
+    );
+    assert!(
+        stderr.contains("warning: epic"),
+        "expected staleness warning in stderr; got:\n{stderr}"
+    );
+
+    // Ticket must have transitioned to in_progress.
+    let content = branch_content(p, &branch, &ticket_rel_path(&branch));
+    assert!(
+        content.contains("state = \"in_progress\""),
+        "expected ticket to be in_progress after apm start:\n{content}"
     );
 }
