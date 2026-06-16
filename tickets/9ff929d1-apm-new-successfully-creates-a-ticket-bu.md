@@ -22,7 +22,10 @@ The user sees the ticket created successfully (`Created ticket ...`) and then im
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm new "title"` without `--no-edit`, when the user closes the editor without changes, prints `Created ticket ...` and exits 0 with no further output
+- [ ] `apm new "title"` without `--no-edit`, when the user edits and saves the ticket, prints `Created ticket ...` and exits 0 with no further output
+- [ ] When any `git` command invoked via `git_util::run` fails with empty stderr and non-empty stdout, the error message includes the stdout content rather than being blank
+- [ ] `apm new --no-edit "title"` is unaffected: still creates the ticket and exits 0 without opening an editor
 
 ### Out of scope
 
