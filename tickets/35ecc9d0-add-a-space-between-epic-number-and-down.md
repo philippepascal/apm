@@ -22,10 +22,9 @@ Adding a single space between the ID and the arrow (`a1b2 ↓`) makes the indica
 
 ### Acceptance criteria
 
-- [x] Running `make e2e-up` produces no lines containing `version` is obsolete` on stderr
-- [x] Running `make e2e` completes without any `WARN` line referencing `compose.yml` on stderr
-- [x] `make e2e-down` produces no lines containing `version` is obsolete` on stderr
-- [x] `docker compose -f syn-test/compose.yml config` exits 0 and outputs valid YAML with no warning
+- [x] `apm list` output for a ticket in a stale epic (epic branch ahead of default branch) shows a space before the down arrow in the base column: `<epic-id> ↓`
+- [x] `apm list` output for a ticket in a non-stale epic shows only the epic ID with no trailing space or arrow
+- [x] `apm list` output for a ticket with no epic (base column shows the default branch) is unchanged
 
 ### Out of scope
 
