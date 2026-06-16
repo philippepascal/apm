@@ -29,7 +29,9 @@ The user sees the ticket created successfully (`Created ticket ...`) and then im
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changing the default `--no-edit` behaviour; agents should still pass `--no-edit` explicitly
+- Fixing `apm show --edit` or `apm review`, which have their own editor flows
+- Adding retry logic for genuine commit failures (permission errors, locked index, etc.)
 
 ### Approach
 
