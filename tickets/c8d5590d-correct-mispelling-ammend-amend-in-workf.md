@@ -1,7 +1,7 @@
 +++
 id = "c8d5590d"
 title = "correct mispelling ammend->amend in workflow and anywhere else it might be"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/c8d5590d-correct-mispelling-ammend-amend-in-workf"
 created_at = "2026-06-16T18:18:48.186548Z"
-updated_at = "2026-06-16T18:22:54.222521Z"
+updated_at = "2026-06-16T18:22:58.928837Z"
 +++
 
 ## Spec
@@ -101,3 +101,4 @@ After all changes, run:
 | 2026-06-16T18:18Z | — | new | philippepascal |
 | 2026-06-16T18:19Z | new | groomed | philippepascal |
 | 2026-06-16T18:19Z | groomed | in_design | philippepascal |
+| 2026-06-16T18:22Z | in_design | specd | claude |
