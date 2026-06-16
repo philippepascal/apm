@@ -22,7 +22,9 @@ Adding a single space between the ID and the arrow (`a1b2 ↓`) makes the indica
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] `apm list` output for a ticket in a stale epic (epic branch ahead of default branch) shows a space before the down arrow in the base column: `<epic-id> ↓`
+- [ ] `apm list` output for a ticket in a non-stale epic shows only the epic ID with no trailing space or arrow
+- [ ] `apm list` output for a ticket with no epic (base column shows the default branch) is unchanged
 
 ### Out of scope
 
