@@ -3,13 +3,13 @@ id = "9ff929d1"
 title = "apm new successfully creates a ticket but outputs Error:"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 2
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/9ff929d1-apm-new-successfully-creates-a-ticket-bu"
 created_at = "2026-06-16T18:19:39.121805Z"
-updated_at = "2026-06-16T18:23:11.032066Z"
+updated_at = "2026-06-16T18:27:08.768464Z"
 +++
 
 ## Spec
