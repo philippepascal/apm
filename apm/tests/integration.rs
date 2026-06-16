@@ -238,7 +238,7 @@ fn init_generated_config_has_all_workflow_states() {
     apm_core::init::setup(p, None, None, None, None).unwrap();
 
     let toml = std::fs::read_to_string(p.join(".apm/workflow.toml")).unwrap();
-    for state in &["new", "groomed", "question", "specd", "ammend", "in_design", "ready", "in_progress", "implemented", "merge_failed", "closed"] {
+    for state in &["new", "groomed", "question", "specd", "amend", "in_design", "ready", "in_progress", "implemented", "merge_failed", "closed"] {
         assert!(toml.contains(&format!("\"{state}\"")), "missing state: {state}");
     }
     assert!(toml.contains("terminal"), "closed must be terminal");
@@ -874,14 +874,14 @@ fn state_transition_appends_history_row() {
 }
 
 #[test]
-fn state_ammend_inserts_amendment_section() {
+fn state_amend_inserts_amendment_section() {
     let dir = setup();
-    apm::cmd::new::run(dir.path(), "Ammend test".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
-    let branch = find_ticket_branch(dir.path(), "ammend-test");
-    let id = find_ticket_id(dir.path(), "ammend-test");
+    apm::cmd::new::run(dir.path(), "Amend test".into(), true, false, None, None, true, vec![], vec![], None, vec![]).unwrap();
+    let branch = find_ticket_branch(dir.path(), "amend-test");
+    let id = find_ticket_id(dir.path(), "amend-test");
     let rel = ticket_rel_path(&branch);
-    // new → ammend is not a valid transition in the production workflow; use force.
-    apm::cmd::state::run(dir.path(), &id, "ammend".into(), false, true).unwrap();
+    // new → amend is not a valid transition in the production workflow; use force.
+    apm::cmd::state::run(dir.path(), &id, "amend".into(), false, true).unwrap();
     let content = branch_content(dir.path(), &branch, &rel);
     assert!(content.contains("### Amendment requests"));
 }
@@ -1460,7 +1460,7 @@ fn write_ticket_with_amendment_requests(dir: &std::path::Path) -> (String, Strin
     run_apm(dir, &["spec", &id, "--section", "Approach", "--set", "Direct.", "--no-aggressive"]);
     run_apm(dir, &["state", &id, "specd", "--force", "--no-aggressive"]);
     run_apm(dir, &["spec", &id, "--section", "Amendment requests", "--set", "- [ ] Add error handling\n- [ ] Fix the bug", "--no-aggressive"]);
-    run_apm(dir, &["state", &id, "ammend", "--no-aggressive"]);
+    run_apm(dir, &["state", &id, "amend", "--no-aggressive"]);
     (id, branch)
 }
 
@@ -1521,7 +1521,7 @@ fn spec_mark_ambiguous_errors() {
     let branch = "ticket/0001-spec-test";
     let filename = "0001-spec-test.md";
     let path = format!("tickets/{filename}");
-    let content = "+++\nid = 1\ntitle = \"spec test\"\nstate = \"ammend\"\nbranch = \"ticket/0001-spec-test\"\ncreated_at = \"2026-01-01T00:00:00Z\"\nupdated_at = \"2026-01-01T00:00:00Z\"\n+++\n\n## Spec\n\n### Problem\n\nTest.\n\n### Acceptance criteria\n\n- [ ] one\n\n### Out of scope\n\nnothing\n\n### Approach\n\nDirect.\n\n### Amendment requests\n\n- [ ] Add error handling\n- [ ] Fix the error\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|";
+    let content = "+++\nid = 1\ntitle = \"spec test\"\nstate = \"amend\"\nbranch = \"ticket/0001-spec-test\"\ncreated_at = \"2026-01-01T00:00:00Z\"\nupdated_at = \"2026-01-01T00:00:00Z\"\n+++\n\n## Spec\n\n### Problem\n\nTest.\n\n### Acceptance criteria\n\n- [ ] one\n\n### Out of scope\n\nnothing\n\n### Approach\n\nDirect.\n\n### Amendment requests\n\n- [ ] Add error handling\n- [ ] Fix the error\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|";
     git(p, &["checkout", "-b", branch]);
     std::fs::create_dir_all(p.join("tickets")).unwrap();
     std::fs::write(p.join(&path), content).unwrap();
@@ -2253,11 +2253,11 @@ fn spawn_new_ticket_transitions_to_in_design() {
 }
 
 #[test]
-fn spawn_ammend_ticket_transitions_to_in_design() {
+fn spawn_amend_ticket_transitions_to_in_design() {
     let dir = setup_for_prompt_dispatch();
     let p = dir.path();
     std::fs::write(p.join(".apm/apm.spec-writer.md"), "SPEC WRITER PROMPT").unwrap();
-    let (id, branch) = write_ticket_to_branch(p, "ammend", "needs revision");
+    let (id, branch) = write_ticket_to_branch(p, "amend", "needs revision");
 
     std::env::set_var("APM_AGENT_NAME", "test-agent");
     let out = apm_core::start::run(p, &id, true, true, false, "test-agent").unwrap();
@@ -2265,7 +2265,7 @@ fn spawn_ammend_ticket_transitions_to_in_design() {
     wait_for_pid(pid);
 
     let content = branch_content(p, &branch, &ticket_rel_path(&branch));
-    assert!(content.contains("state = \"specd\""), "ammend ticket should transition through in_design to specd: {content}");
+    assert!(content.contains("state = \"specd\""), "amend ticket should transition through in_design to specd: {content}");
 }
 
 #[test]
@@ -3053,7 +3053,7 @@ fn test_fix_is_idempotent() {
 // --- review ---
 
 #[test]
-fn review_ammend_normalises_plain_bullets_to_checkboxes() {
+fn review_amend_normalises_plain_bullets_to_checkboxes() {
     let dir = setup();
     let p = dir.path();
 
@@ -3076,12 +3076,12 @@ fn review_ammend_normalises_plain_bullets_to_checkboxes() {
     git(p, &["checkout", "-"]);
 
     // Advance to specd first (new → specd not valid in production workflow; use force),
-    // so that ammend is a reachable transition for review.
+    // so that amend is a reachable transition for review.
     apm::cmd::state::run(p, &id, "specd".into(), false, true).unwrap();
 
     // Use a no-op editor so the spec is not modified interactively.
     std::env::set_var("EDITOR", "true");
-    apm::cmd::review::run(p, &id, Some("ammend".to_string()), true).unwrap();
+    apm::cmd::review::run(p, &id, Some("amend".to_string()), true).unwrap();
     std::env::remove_var("EDITOR");
 
     let committed = branch_content(p, &branch, &ticket_path);

@@ -253,7 +253,7 @@ mod tests {
         );
 
         // States that should be excluded
-        let excluded = ["ready", "groomed", "new", "question", "ammend", "blocked"];
+        let excluded = ["ready", "groomed", "new", "question", "amend", "blocked"];
         for state in excluded {
             assert!(
                 !worker_states.contains(state) && !ended_states.contains(state),

@@ -588,8 +588,8 @@ id    = "implemented"
 label = "Implemented"
 
 [[workflow.states]]
-id    = "ammend"
-label = "Ammend"
+id    = "amend"
+label = "Amend"
 
 [[workflow.states]]
 id    = "closed"
@@ -610,8 +610,8 @@ label = "Closed"
 terminal = true
 
 [[workflow.states]]
-id    = "ammend"
-label = "Ammend"
+id    = "amend"
+label = "Amend"
 
 [[workflow.states]]
 id    = "implemented"
@@ -734,7 +734,7 @@ label = "Ready"
     }
 
     #[test]
-    fn epic_is_quiescent_ammend_with_impl_history_blocks() {
+    fn epic_is_quiescent_amend_with_impl_history_blocks() {
         let tmp = setup_repo();
         let p = tmp.path();
         std::fs::create_dir_all(p.join(".apm")).unwrap();
@@ -744,13 +744,13 @@ label = "Ready"
         let config = crate::config::Config::load(p).unwrap();
 
         let content = make_ticket_content_with_history(
-            "ffff0006", "ammend", "epic0006",
-            &[("groomed", "in_progress"), ("in_progress", "ammend")],
+            "ffff0006", "amend", "epic0006",
+            &[("groomed", "in_progress"), ("in_progress", "amend")],
         );
         crate::git::commit_to_branch(p, "ticket/ffff0006-t6", "tickets/ffff0006-t6.md", &content, "add t6").unwrap();
 
         let blockers = epic_is_quiescent(p, "epic0006", &config, &[]).unwrap();
-        assert_eq!(blockers.len(), 1, "expected ammend ticket with impl history to block");
+        assert_eq!(blockers.len(), 1, "expected amend ticket with impl history to block");
         assert!(blockers[0].contains("ffff0006"));
     }
 

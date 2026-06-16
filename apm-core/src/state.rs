@@ -108,7 +108,7 @@ pub fn transition(root: &Path, id_arg: &str, new_state: String, no_aggressive: b
                     let msgs: Vec<String> = errors.iter().map(|e| format!("  - {e}")).collect();
                     bail!("spec validation failed:\n{}", msgs.join("\n"));
                 }
-                if old_state == "ammend" {
+                if old_state == "amend" {
                     let unchecked = doc.unchecked_tasks("Amendment requests");
                     if !unchecked.is_empty() {
                         bail!("not all amendment requests are checked — mark them [x] before resubmitting");
@@ -163,7 +163,7 @@ pub fn transition(root: &Path, id_arg: &str, new_state: String, no_aggressive: b
     let actor = crate::config::resolve_caller_name();
     t.frontmatter.state = new_state.clone();
     t.frontmatter.updated_at = Some(now);
-    if new_state == "ammend" {
+    if new_state == "amend" {
         review::ensure_amendment_section(&mut t.body);
     }
     append_history(&mut t.body, &old_state, &new_state, &now.format("%Y-%m-%dT%H:%MZ").to_string(), &actor);

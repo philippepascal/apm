@@ -566,7 +566,7 @@ the editor closes, prompts for a state transition unless --to is supplied.
 
 Common review flows:
   apm review 42 --to specd      # approve spec as-is
-  apm review 42 --to ammend     # request changes (fill in amendment boxes first)
+  apm review 42 --to amend      # request changes (fill in amendment boxes first)
   apm review 42 --to ready      # approve and queue for implementation
   apm review 42 --to implemented  # accept implementation
 

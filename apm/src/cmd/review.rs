@@ -64,8 +64,8 @@ pub fn run(root: &Path, id_arg: &str, to: Option<String>, no_aggressive: bool) -
         None => prompt_transition(&id, &current_state, &transitions)?,
     };
 
-    // Normalise plain bullets → checkboxes in the amendment section when transitioning to ammend.
-    if chosen_state.as_deref() == Some("ammend") {
+    // Normalise plain bullets → checkboxes in the amendment section when transitioning to amend.
+    if chosen_state.as_deref() == Some("amend") {
         new_spec = core_review::normalize_amendments(new_spec);
     }
 

@@ -553,7 +553,7 @@ pub(crate) mod tests {
         let supervisor_states = json["supervisor_states"].as_array().unwrap();
         assert!(supervisor_states.iter().any(|s| s == "new"), "new must be in supervisor_states");
         assert!(!supervisor_states.iter().any(|s| s == "closed"), "closed must not be in supervisor_states");
-        assert!(!supervisor_states.iter().any(|s| s == "ammend"), "ammend must not be in supervisor_states (agent-only)");
+        assert!(!supervisor_states.iter().any(|s| s == "amend"), "amend must not be in supervisor_states (agent-only)");
     }
 
     #[tokio::test]

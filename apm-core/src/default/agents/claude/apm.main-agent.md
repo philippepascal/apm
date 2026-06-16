@@ -92,8 +92,8 @@ The following state transitions require explicit supervisor action — you must 
   `apm set <id> priority <value>`  (1 = lowest, 10 = highest)
   Priority is the supervisor's business-value judgment; setting it here
   ensures `apm next` can rank the ticket correctly.
-- `specd → ready` or `specd → ammend`
-- `implemented → ready`, `implemented → ammend`, or `implemented → closed`
+- `specd → ready` or `specd → amend`
+- `implemented → ready`, `implemented → amend`, or `implemented → closed`
 - `blocked → ready`
 - `apm epic close <id>`
 
@@ -101,7 +101,7 @@ The supervisor can ask you to perform any supervisor-only transition explicitly;
 
 ## When asked to amend a ticket
 
-1. Transition the ticket: `apm state <id> ammend`
+1. Transition the ticket: `apm state <id> amend`
 2. Add amendment requests: `apm spec <id> --add-task "..."`
 3. Stop — do not pick up the ticket yourself; worker assignment happens via `apm start`
 

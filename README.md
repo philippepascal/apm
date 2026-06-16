@@ -56,7 +56,7 @@ Tickets are Markdown files with TOML frontmatter, stored on per-ticket branches.
 
 ```
 new → groomed → in_design → specd → ready → in_progress → implemented → closed
-                                 ↗ ammend ↗              ↗ blocked
+                                 ↗ amend ↗               ↗ blocked
                               question
 ```
 
@@ -67,7 +67,7 @@ Side paths handle amendments, open questions, and blocks. Supervisors control al
 1. **Supervisor creates a ticket** — `apm new "Add rate limiting to API"`. APM creates a branch `ticket/a1b2c3d4-add-rate-limiting-to-api` with a Markdown skeleton.
 2. **Supervisor grooms and assigns it** — adds context, sets priority, moves it to `groomed` with `apm review a1b2`, and assigns it with `apm assign a1b2 alice`. Tickets without an owner are never auto-dispatched.
 3. **Spec agent picks it up** — the dispatch loop (`apm work`) picks the highest-priority owned ticket. The agent writes the Problem, Acceptance criteria, Out of scope, and Approach sections, sets effort/risk estimates, and submits with `apm state a1b2 specd`.
-4. **Supervisor reviews the spec** — `apm review a1b2` opens the ticket and offers transitions: approve (moves to `ready`) or request amendments (moves to `ammend` with checkboxes). If amended, the agent addresses each item and resubmits.
+4. **Supervisor reviews the spec** — `apm review a1b2` opens the ticket and offers transitions: approve (moves to `ready`) or request amendments (moves to `amend` with checkboxes). If amended, the agent addresses each item and resubmits.
 5. **Implementation agent picks it up** — `apm start a1b2` claims the ticket, provisions a worktree, and merges the latest default branch in. The agent codes, tests, and commits inside the worktree.
 6. **Agent marks it done** — `apm state a1b2 implemented` triggers the completion strategy: opens a PR, merges into the target branch, or merges into the epic branch.
 7. **Supervisor reviews and closes** — `apm review a1b2` after the PR is merged (or the merge completes). Alternatively, `apm sync` auto-detects merged branches and transitions tickets to `closed`. `apm clean` removes the worktree and local branches.
@@ -336,7 +336,7 @@ apm set <id> risk 2
 apm state <id> specd
 ```
 
-The supervisor reviews with `apm review <id>`, which opens the spec and presents transition options: approve (moves to `ready`) or request amendments (moves to `ammend`). Specs have four required sections: Problem, Acceptance criteria, Out of scope, and Approach.
+The supervisor reviews with `apm review <id>`, which opens the spec and presents transition options: approve (moves to `ready`) or request amendments (moves to `amend`). Specs have four required sections: Problem, Acceptance criteria, Out of scope, and Approach.
 
 ### Implementation phase
 

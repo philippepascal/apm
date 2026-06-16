@@ -153,7 +153,7 @@ under `.apm/` other than your ticket via `apm spec`.
 
 ---
 
-## Ammend tickets
+## Amend tickets
 
 If `### Amendment requests` has unchecked items, the ticket is an amendment. You are already in `in_design` when dispatched.
 

@@ -79,8 +79,8 @@ id    = "specd"
 label = "Specd"
 
 [[workflow.states]]
-id    = "ammend"
-label = "Ammend"
+id    = "amend"
+label = "Amend"
 
 [[workflow.states]]
 id    = "ready"
