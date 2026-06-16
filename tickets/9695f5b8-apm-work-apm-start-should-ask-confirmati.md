@@ -4,12 +4,12 @@ title = "apm work, apm start, should ask confirmation if a ticket in their actio
 state = "in_design"
 priority = 0
 effort = 3
-risk = 0
+risk = 2
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/9695f5b8-apm-work-apm-start-should-ask-confirmati"
 created_at = "2026-06-16T18:08:19.018981Z"
-updated_at = "2026-06-16T18:19:10.426490Z"
+updated_at = "2026-06-16T18:19:16.691019Z"
 +++
 
 ## Spec
