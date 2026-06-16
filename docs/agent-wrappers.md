@@ -241,7 +241,7 @@ axes, no per-transition combinatorial explosion.
 A finer-grained `{transition: agent}` map would handle edge cases the
 two-tier model can't (e.g. "Aider for the final
 `in_progress → implemented` attempt but Claude for an earlier
-`in_progress → ammend` revision"). That's edge-case territory; if it
+`in_progress → amend` revision"). That's edge-case territory; if it
 materializes, add it later as a contract v2 extension.
 
 Use cases:
@@ -266,7 +266,7 @@ on_failure = "merge_failed"
 outcome    = "success"
 
 [[workflow.states.transitions]]
-to       = "ammend"
+to       = "amend"
 trigger  = "manual"
 outcome  = "rejected"
 

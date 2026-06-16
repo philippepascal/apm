@@ -479,11 +479,11 @@ The editor receives a temporary file that contains a comment header listing avai
 a sentinel separator, and then the editable spec body. Lines starting with `# ` in the header are
 stripped on save. The `## History` section is preserved automatically and is not shown in the editor.
 
-If `--to ammend` is chosen, plain-bullet amendment requests in the spec are automatically converted
+If `--to amend` is chosen, plain-bullet amendment requests in the spec are automatically converted
 to Markdown checkboxes.
 
     apm review 42 --to specd       # approve spec as-is
-    apm review 42 --to ammend      # request changes (add bullets in editor first)
+    apm review 42 --to amend       # request changes (add bullets in editor first)
     apm review 42 --to ready       # approve and queue for implementation
     apm review 42 --to implemented # accept implementation
 

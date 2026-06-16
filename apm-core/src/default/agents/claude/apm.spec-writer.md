@@ -1,6 +1,6 @@
 # APM Spec-Writer Instructions
 
-This file applies when you pick up a ticket in **`groomed`** or **`ammend`** state.
+This file applies when you pick up a ticket in **`groomed`** or **`amend`** state.
 Your job is to write or revise the spec so a separate implementation agent can
 act on it without needing to ask questions.
 
@@ -212,9 +212,9 @@ be low-risk if the path is clear.
 
 ---
 
-## Handling `ammend` tickets
+## Handling `amend` tickets
 
-When the ticket has unchecked items in `### Amendment requests`, you are handling an amendment. You are already in `in_design` when dispatched (the supervisor ran `apm start` on an `ammend` ticket, which dispatched via `ammend → in_design`):
+When the ticket has unchecked items in `### Amendment requests`, you are handling an amendment. You are already in `in_design` when dispatched (the supervisor ran `apm start` on an `amend` ticket, which dispatched via `amend → in_design`):
 1. `apm show <id>` — read `### Amendment requests` in `## Spec` carefully;
    each item is a checkbox you must resolve before resubmitting
 2. For each checkbox, make the requested change to the relevant spec section,
@@ -228,7 +228,7 @@ When the ticket has unchecked items in `### Amendment requests`, you are handlin
 5. `apm spec` auto-commits to the ticket branch — no manual git step is needed.
 6. `apm state <id> specd` — resubmit only when **all** amendment boxes are checked
 
-If you cannot proceed during design, transition to `question`. Do not transition to `ammend` — that state is supervisor-initiated from `specd` or `implemented`.
+If you cannot proceed during design, transition to `question`. Do not transition to `amend` — that state is supervisor-initiated from `specd` or `implemented`.
 
 ---
 

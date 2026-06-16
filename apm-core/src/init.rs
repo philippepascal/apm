@@ -1091,15 +1091,15 @@ mod tests {
         let ids: Vec<&str> = states.iter().map(|s| s.id.as_str()).collect();
         assert_eq!(
             ids,
-            ["new", "groomed", "question", "specd", "ammend", "in_design", "ready", "in_progress", "blocked", "implemented", "fix", "merge_failed", "closed"]
+            ["new", "groomed", "question", "specd", "amend", "in_design", "ready", "in_progress", "blocked", "implemented", "fix", "merge_failed", "closed"]
         );
 
-        for id in ["groomed", "ammend"] {
+        for id in ["groomed", "amend"] {
             let s = states.iter().find(|s| s.id == id).unwrap();
             assert!(s.dep_requires.is_some(), "state {id} should have dep_requires");
         }
 
-        for id in ["specd", "ammend", "ready", "in_progress", "implemented"] {
+        for id in ["specd", "amend", "ready", "in_progress", "implemented"] {
             let s = states.iter().find(|s| s.id == id).unwrap();
             assert_ne!(s.satisfies_deps, SatisfiesDeps::Bool(false), "state {id} should have satisfies_deps");
         }

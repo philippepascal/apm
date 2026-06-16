@@ -916,12 +916,12 @@ worker_profile = "claude/coder"
     #[test]
     fn resolve_outcome_explicit_override() {
         let t: TransitionConfig = toml::from_str(r#"
-to      = "ammend"
+to      = "amend"
 outcome = "rejected"
 "#).unwrap();
         let s: StateConfig = toml::from_str(r#"
-id    = "ammend"
-label = "Ammend"
+id    = "amend"
+label = "Amend"
 "#).unwrap();
         assert_eq!(super::resolve_outcome(&t, &s), "rejected");
     }

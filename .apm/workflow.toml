@@ -25,7 +25,7 @@ id    = "question"
 label = "Question"
 
   [[workflow.states.transitions]]
-  to      = "ammend"
+  to      = "amend"
   trigger = "manual"
   outcome = "needs_input"
 
@@ -41,13 +41,13 @@ worker_end     = true
   outcome = "needs_input"
 
   [[workflow.states.transitions]]
-  to      = "ammend"
+  to      = "amend"
   trigger = "manual"
   outcome = "needs_input"
 
 [[workflow.states]]
-id             = "ammend"
-label          = "Ammend"
+id             = "amend"
+label          = "Amend"
 dep_requires   = "spec"
 satisfies_deps = "spec"
 
