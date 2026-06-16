@@ -22,14 +22,14 @@ Because the state ID is a bare string used in comparisons, config files, TOML fi
 
 ### Acceptance criteria
 
-- [ ] `apm state <id> amend` transitions a ticket to the `amend` state
-- [ ] `apm review <id> --to amend` transitions a ticket to the `amend` state
-- [ ] `apm instructions` output contains `amend` (not `ammend`) in the state machine table
-- [ ] `apm list` and `apm show` display `amend` for tickets in that state
-- [ ] `cargo test --workspace` passes with no references to `ammend` remaining in source
-- [ ] The default `workflow.toml` embedded in `apm-core` defines the state id as `amend`
-- [ ] The project's `.apm/workflow.toml` defines the state id as `amend`
-- [ ] Agent instruction files (`.apm/agents/` and `apm-core/src/default/agents/`) reference `amend` only
+- [x] `apm state <id> amend` transitions a ticket to the `amend` state
+- [x] `apm review <id> --to amend` transitions a ticket to the `amend` state
+- [x] `apm instructions` output contains `amend` (not `ammend`) in the state machine table
+- [x] `apm list` and `apm show` display `amend` for tickets in that state
+- [x] `cargo test --workspace` passes with no references to `ammend` remaining in source
+- [x] The default `workflow.toml` embedded in `apm-core` defines the state id as `amend`
+- [x] The project's `.apm/workflow.toml` defines the state id as `amend`
+- [x] Agent instruction files (`.apm/agents/` and `apm-core/src/default/agents/`) reference `amend` only
 
 ### Out of scope
 
