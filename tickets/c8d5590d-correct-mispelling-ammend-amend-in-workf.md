@@ -90,6 +90,7 @@ After all changes, run:
 
 ### Amendment requests
 
+- [ ] Acknowledge the downstream back-compat breakage. apm-core/src/state.rs:111 and :166 match the bare literal "ammend" to gate BEHAVIOUR, not just display — line 111 gates the 'all amendment requests must be checked before resubmitting to specd' validation; line 166 gates ensure_amendment_section() insertion. Because the state id is read from workflow.toml at runtime, any external repo whose workflow.toml still says 'ammend' will keep transitioning but SILENTLY lose these two behaviours after upgrading the binary. The spec frames this as a pure string rename with no migration; it must call this out as a known breaking change for downstream repos (reference the existing migration-docs ticket 68829abb).
 
 ### Code review
 
