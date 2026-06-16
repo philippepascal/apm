@@ -4,12 +4,12 @@ title = "correct mispelling ammend->amend in workflow and anywhere else it might
 state = "in_design"
 priority = 0
 effort = 3
-risk = 0
+risk = 2
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/c8d5590d-correct-mispelling-ammend-amend-in-workf"
 created_at = "2026-06-16T18:18:48.186548Z"
-updated_at = "2026-06-16T18:22:48.924061Z"
+updated_at = "2026-06-16T18:22:54.222521Z"
 +++
 
 ## Spec
