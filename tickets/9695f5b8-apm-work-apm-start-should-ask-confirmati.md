@@ -1,7 +1,7 @@
 +++
 id = "9695f5b8"
 title = "apm work, apm start, should ask confirmation if a ticket in their actionable list is in an epic that needs refresh"
-state = "merge_failed"
+state = "implemented"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/9695f5b8-apm-work-apm-start-should-ask-confirmati"
 created_at = "2026-06-16T18:08:19.018981Z"
-updated_at = "2026-06-16T20:54:25.901918Z"
+updated_at = "2026-06-16T22:33:53.428446Z"
 depends_on = ["ee5011b6"]
 +++
 
@@ -165,3 +165,4 @@ merge conflict — resolve manually and push:
 | 2026-06-16T20:40Z | ready | in_progress | philippepascal |
 | 2026-06-16T20:54Z | in_progress | implemented | claude |
 | 2026-06-16T20:54Z | implemented | merge_failed | claude |
+| 2026-06-16T22:33Z | merge_failed | implemented | philippepascal |
