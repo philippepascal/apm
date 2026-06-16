@@ -33,7 +33,10 @@ The fix is to turn the no-flag path into an interactive prompt when stdout is a 
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- The push-after-merge prompt (`Push refreshed epic to origin? [Y/n]`) is unchanged by this ticket.
+- No new flags are added; the existing `--merge`, `--pr`, `--auto`, `--push`, `--no-push` flags are unchanged.
+- No changes to non-interactive (headless / piped) behaviour.
+- No changes to `apm epic submit` or any other subcommand.
 
 ### Approach
 
