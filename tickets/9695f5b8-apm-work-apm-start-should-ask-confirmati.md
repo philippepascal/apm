@@ -23,16 +23,16 @@ The same gap exists in the web UI. `WorkEngineControls` shows an epic dropdown a
 
 ### Acceptance criteria
 
-- [ ] `apm start <id>` prints a warning and prompts for confirmation (default yes) when the ticket's epic has `behind_count > 0` and stdout is a terminal; the ticket is NOT started if the user answers "n".
-- [ ] `apm start <id>` writes a warning to stderr and proceeds without prompting when stdout is not a terminal and the ticket's epic is stale.
-- [ ] `apm start <id>` proceeds normally without any warning when the ticket has no epic, or the epic is up to date.
-- [ ] `apm start --next` prints a warning and prompts for confirmation (default yes) when the selected ticket's epic has `behind_count > 0` and stdout is a terminal; the ticket is NOT started if the user answers "n".
-- [ ] `apm start --next` writes a warning to stderr and proceeds without prompting when stdout is not a terminal and the selected ticket's epic is stale.
-- [ ] `apm work` (non-daemon) logs a warning line to stdout when it dispatches a ticket whose epic has `behind_count > 0`, before printing the "Worker spawned" line.
-- [ ] `apm work --daemon` logs the same warning line when dispatching from a stale epic.
-- [ ] The web UI `WorkEngineControls` shows a visible warning near the "Start" button when the selected epic has `behind_count > 0`.
-- [ ] The web UI `WorkEngineControls` shows a visible warning near the "Start" button when "All" is selected and at least one epic has `behind_count > 0`.
-- [ ] The warning message in all contexts includes the epic ID and the number of commits it is behind.
+- [x] `apm start <id>` prints a warning and prompts for confirmation (default yes) when the ticket's epic has `behind_count > 0` and stdout is a terminal; the ticket is NOT started if the user answers "n".
+- [x] `apm start <id>` writes a warning to stderr and proceeds without prompting when stdout is not a terminal and the ticket's epic is stale.
+- [x] `apm start <id>` proceeds normally without any warning when the ticket has no epic, or the epic is up to date.
+- [x] `apm start --next` prints a warning and prompts for confirmation (default yes) when the selected ticket's epic has `behind_count > 0` and stdout is a terminal; the ticket is NOT started if the user answers "n".
+- [x] `apm start --next` writes a warning to stderr and proceeds without prompting when stdout is not a terminal and the selected ticket's epic is stale.
+- [x] `apm work` (non-daemon) logs a warning line to stdout when it dispatches a ticket whose epic has `behind_count > 0`, before printing the "Worker spawned" line.
+- [x] `apm work --daemon` logs the same warning line when dispatching from a stale epic.
+- [x] The web UI `WorkEngineControls` shows a visible warning near the "Start" button when the selected epic has `behind_count > 0`.
+- [x] The web UI `WorkEngineControls` shows a visible warning near the "Start" button when "All" is selected and at least one epic has `behind_count > 0`.
+- [x] The warning message in all contexts includes the epic ID and the number of commits it is behind.
 
 ### Out of scope
 
