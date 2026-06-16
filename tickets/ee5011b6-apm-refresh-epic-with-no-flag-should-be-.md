@@ -40,7 +40,61 @@ The fix is to turn the no-flag path into an interactive prompt when stdout is a 
 
 ### Approach
 
-How the implementation will work.
+All changes are in `apm/src/cmd/epic.rs`, `run_refresh_epic`. No new files; no changes to `apm-core`.
+
+#### Make action flags mutable
+
+Shadow the incoming `merge`, `pr`, and `auto_mode` parameters as mutable locals at the top of the function:
+
+```rust
+let mut merge = merge;
+let mut pr = pr;
+let mut auto_mode = auto_mode;
+```
+
+#### Replace the early-return block with conditional interactive prompt
+
+The current block:
+
+```rust
+let acting = merge || pr || auto_mode;
+if !acting {
+    // print status
+    return Ok(());
+}
+```
+
+Replace with logic that, when `!acting && std::io::stdout().is_terminal()` and `status.ahead > 0`, shows a menu and reads a choice instead of returning. The revised flow:
+
+1. If `status.ahead == 0`: print "up to date" and `return Ok(())` (same as now, regardless of terminal).
+2. Otherwise print the status line (same text as now).
+3. If NOT terminal: `return Ok(())` (non-interactive exit, same as now).
+4. If terminal: display the menu, read a single line from stdin, and map the choice:
+   - `1` → `merge = true`
+   - `2` → `pr = true`
+   - `3` → `auto_mode = true`
+   - `4` or anything else / empty → `return Ok(())` (skip)
+
+No helper function is needed; the prompt is a single `print!` + `flush` + `read_line` in-lined directly, matching the pattern already used in `run_refresh_epic` for the push prompt.
+
+#### Menu text
+
+```
+What would you like to do?
+  [1] Merge locally
+  [2] Open / update PR
+  [3] Auto (merge if clean, fall back to PR)
+  [4] Skip
+Choice [1-4]: 
+```
+
+After this block, fall through into the existing quiescence check and merge/PR logic unchanged — `merge`, `pr`, and `auto_mode` are now set correctly.
+
+#### Tests
+
+Add one integration test in `apm/tests/integration.rs` (or an existing `refresh_epic` test module if present) covering the non-terminal path: confirm that with no flags and no terminal, the command prints the status line and exits 0 without attempting a merge.
+
+Interactive-terminal coverage is manual; the non-terminal path is the automatable regression guard.
 
 ### Open questions
 
