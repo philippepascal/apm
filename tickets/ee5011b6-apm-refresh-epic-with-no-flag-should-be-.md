@@ -4,12 +4,12 @@ title = "apm refresh-epic with no flag should be interactive and propose several
 state = "in_design"
 priority = 0
 effort = 2
-risk = 0
+risk = 2
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/ee5011b6-apm-refresh-epic-with-no-flag-should-be-"
 created_at = "2026-06-16T18:06:05.166190Z"
-updated_at = "2026-06-16T18:11:22.864614Z"
+updated_at = "2026-06-16T18:11:28.125061Z"
 +++
 
 ## Spec
