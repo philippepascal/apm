@@ -699,7 +699,8 @@ fn new_editor_flow_does_not_change_head() {
     let branch_after = String::from_utf8(after.stdout).unwrap().trim().to_string();
     assert_eq!(branch_after, "main", "HEAD moved during editor session");
 
-    // A ticket/ branch with a 'write spec' commit must exist.
+    // When the editor is a no-op (content unchanged), no 'write spec' commit
+    // should be added — only the initial 'create' commit must be present.
     let ticket_branch = find_ticket_branch(p, "my-ticket");
     let log = std::process::Command::new("git")
         .args(["log", "--pretty=%s", &ticket_branch])
@@ -708,8 +709,8 @@ fn new_editor_flow_does_not_change_head() {
         .unwrap();
     let log_text = String::from_utf8(log.stdout).unwrap();
     assert!(
-        log_text.lines().any(|l| l == "write spec"),
-        "expected a 'write spec' commit on {ticket_branch}:\n{log_text}",
+        !log_text.lines().any(|l| l == "write spec"),
+        "unexpected 'write spec' commit on {ticket_branch} when editor made no changes:\n{log_text}",
     );
 }
 
@@ -9492,5 +9493,44 @@ fn sync_empty_epic_behind_main_not_in_close_hints() {
         candidates.epic_submit_hints.iter().all(|(id, _)| id != epic_id),
         "epic {epic_id} with no own commits should NOT appear in epic_submit_hints; got: {:?}",
         candidates.epic_submit_hints
+    );
+}
+
+#[test]
+fn apm_new_no_edit_noop_editor_exits_zero() {
+    // When the user closes the editor without making changes, `apm new` must
+    // succeed (exit 0) with no error output.  We simulate a no-op editor by
+    // setting EDITOR to `true` (the shell built-in that exits 0 without
+    // touching the file).
+    let dir = setup();
+    let p = dir.path();
+    let bin = env!("CARGO_BIN_EXE_apm");
+
+    let out = std::process::Command::new(bin)
+        .args(["new", "--no-aggressive", "test noop editor"])
+        .current_dir(p)
+        .env("GIT_AUTHOR_NAME", "test")
+        .env("GIT_AUTHOR_EMAIL", "test@test.com")
+        .env("GIT_COMMITTER_NAME", "test")
+        .env("GIT_COMMITTER_EMAIL", "test@test.com")
+        .env("VISUAL", "")
+        .env("EDITOR", "true")
+        .output()
+        .unwrap();
+
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let stderr = String::from_utf8_lossy(&out.stderr);
+
+    assert!(
+        out.status.success(),
+        "apm new with no-op editor must exit 0;\nstdout: {stdout}\nstderr: {stderr}"
+    );
+    assert!(
+        stdout.contains("Created ticket"),
+        "expected 'Created ticket' in stdout; got: {stdout}"
+    );
+    assert!(
+        stderr.is_empty(),
+        "expected no stderr output; got: {stderr}"
     );
 }

@@ -108,10 +108,11 @@ fn open_editor(root: &Path, branch: &str, rel_path: &str) -> Result<()> {
     crate::editor::open(&tmp_path)?;
 
     let new_content = std::fs::read_to_string(&tmp_path)?;
-
-    apm_core::git_util::commit_to_branch(root, branch, rel_path, &new_content, "write spec")?;
-
     let _ = std::fs::remove_file(&tmp_path);
+
+    if new_content != content {
+        apm_core::git_util::commit_to_branch(root, branch, rel_path, &new_content, "write spec")?;
+    }
 
     Ok(())
 }
