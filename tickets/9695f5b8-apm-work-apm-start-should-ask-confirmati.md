@@ -1,7 +1,7 @@
 +++
 id = "9695f5b8"
 title = "apm work, apm start, should ask confirmation if a ticket in their actionable list is in an epic that needs refresh"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 3
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/9695f5b8-apm-work-apm-start-should-ask-confirmati"
 created_at = "2026-06-16T18:08:19.018981Z"
-updated_at = "2026-06-16T18:19:16.691019Z"
+updated_at = "2026-06-16T18:19:21.086449Z"
 +++
 
 ## Spec
@@ -129,3 +129,4 @@ Render `staleWarning` as an amber warning `<span>` placed between the epic selec
 | 2026-06-16T18:08Z | — | new | philippepascal |
 | 2026-06-16T18:09Z | new | groomed | philippepascal |
 | 2026-06-16T18:13Z | groomed | in_design | philippepascal |
+| 2026-06-16T18:19Z | in_design | specd | claude |
