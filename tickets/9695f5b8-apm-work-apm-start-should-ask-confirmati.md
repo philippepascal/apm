@@ -119,6 +119,7 @@ Render `staleWarning` as an amber warning `<span>` placed between the epic selec
 ### Amendment requests
 
 - [ ] Fix wrong return type in the Approach. It claims apm_core::start::run_next() returns StartOutput and proposes adding a stale_warning field to StartOutput. It actually returns RunNextOutput (apm-core/src/start.rs:294, returned at :586) — a distinct struct from StartOutput (:280). The CLI run_next (apm/src/cmd/start.rs:23) prints out.messages, so the surface for run_next is RunNextOutput.messages, not StartOutput. Also note: gating the prompt via a field set inside run() is too late — run() performs the state transition at start.rs:445, but AC1 requires prompting BEFORE the transition. Correct the struct name and drop the StartOutput.stale_warning idea.
+- [ ] Resolve the self-contradictory Approach. The start.rs section reverses itself three times ('Add stale_warning to StartOutput' -> 'keep it simpler' -> 'Actually this creates a timing issue: keep the pre-flight call in the CLI layer'), leaving no final design. Collapse to one coherent design an implementer can follow: for 'apm start', do the pre-flight ticket_epic_staleness() check and prompt in the CLI layer (apm/src/cmd/start.rs::run) BEFORE calling apm_core::start::run(), so the transition is gated; for the dispatch paths (apm work, --daemon), push the warning into the existing messages: &mut Vec<String> in spawn_next_worker. Delete the abandoned StartOutput.stale_warning branch entirely.
 
 ### Code review
 
