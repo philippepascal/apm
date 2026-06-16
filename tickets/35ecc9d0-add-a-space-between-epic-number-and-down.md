@@ -35,7 +35,18 @@ Adding a single space between the ID and the arrow (`a1b2 ↓`) makes the indica
 
 ### Approach
 
-How the implementation will work.
+**File:** `apm/src/cmd/list.rs`, line 78.
+
+Change:
+```rust
+format!("{}↓", id)
+```
+to:
+```rust
+format!("{} ↓", id)
+```
+
+That is the only change. No logic, no data structures, no other files are affected. The base column is already padded with `{:<12}` in the `println!` on line 91, so the extra character is absorbed by the field width without breaking column alignment for typical epic ID lengths.
 
 ### Open questions
 
