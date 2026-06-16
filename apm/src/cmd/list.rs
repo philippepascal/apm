@@ -75,7 +75,7 @@ pub fn run(root: &Path, state_filter: Option<String>, unassigned: bool, all: boo
             Some(branch) if branch.starts_with("epic/") => {
                 let id = apm_core::epic::epic_id_from_branch(branch);
                 if stale_epic_ids.contains(id) {
-                    format!("{}↓", id)
+                    format!("{} ↓", id)
                 } else {
                     id.to_owned()
                 }
