@@ -16,7 +16,9 @@ updated_at = "2026-06-16T18:11:42.499624Z"
 
 ### Problem
 
-apm list output doesn't clearly indicate that an epic needs refresh
+When `apm list` displays a ticket whose epic branch is ahead of the default branch (i.e., the epic needs a rebase), it appends a down-arrow indicator to the epic ID in the base column — for example `a1b2↓`. Because there is no space between the ID and the arrow, the indicator blends visually with the hex digits and is easy to miss at a glance.
+
+Adding a single space between the ID and the arrow (`a1b2 ↓`) makes the indicator stand out without changing its meaning or layout significantly.
 
 ### Acceptance criteria
 
@@ -33,13 +35,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
