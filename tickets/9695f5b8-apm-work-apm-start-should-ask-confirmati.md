@@ -1,7 +1,7 @@
 +++
 id = "9695f5b8"
 title = "apm work, apm start, should ask confirmation if a ticket in their actionable list is in an epic that needs refresh"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/9695f5b8-apm-work-apm-start-should-ask-confirmati"
 created_at = "2026-06-16T18:08:19.018981Z"
-updated_at = "2026-06-16T18:09:25.257260Z"
+updated_at = "2026-06-16T18:13:21.075624Z"
 +++
 
 ## Spec
@@ -48,3 +48,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-06-16T18:08Z | — | new | philippepascal |
 | 2026-06-16T18:09Z | new | groomed | philippepascal |
+| 2026-06-16T18:13Z | groomed | in_design | philippepascal |
