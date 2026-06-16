@@ -16,7 +16,9 @@ updated_at = "2026-06-16T18:09:33.758773Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+When `apm refresh-epic <id>` is run with no action flag (`--merge`, `--pr`, or `--auto`), the command prints a one-line status message and exits without doing anything. On an interactive terminal this is unhelpful: the user already knows there are commits to pull in, and now must re-type the command with the right flag to act on that information.
+
+The fix is to turn the no-flag path into an interactive prompt when stdout is a terminal. The command should show the same status it already computes, then offer a numbered menu of the same actions the flags expose, read the user's choice, and execute it. Non-interactive callers (pipes, headless agents) keep the current print-and-exit behaviour so no scripted usage breaks.
 
 ### Acceptance criteria
 
@@ -33,13 +35,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
