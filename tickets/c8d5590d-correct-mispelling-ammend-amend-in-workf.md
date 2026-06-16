@@ -33,7 +33,10 @@ Because the state ID is a bare string used in comparisons, config files, TOML fi
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Archive ticket files under `archive/` — historical records, not live data
+- Ticket branch names that happen to contain the word `ammend` in their slug (branch names are load-bearing and cannot be renamed)
+- The title of this ticket itself (slug is frozen in the branch name)
+- Any occurrences in `tickets/` Markdown files currently in states other than `amend` (none presently in that state, so no migration is needed)
 
 ### Approach
 
