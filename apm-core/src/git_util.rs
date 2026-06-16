@@ -11,7 +11,12 @@ pub(crate) fn run(dir: &Path, args: &[&str]) -> Result<String> {
         .output()
         .context("git not found")?;
     if !out.status.success() {
-        anyhow::bail!("{}", String::from_utf8_lossy(&out.stderr).trim());
+        let stderr = String::from_utf8_lossy(&out.stderr);
+        let stderr = stderr.trim();
+        let stdout = String::from_utf8_lossy(&out.stdout);
+        let stdout = stdout.trim();
+        let msg = if stderr.is_empty() { stdout } else { stderr };
+        anyhow::bail!("{}", msg);
     }
     Ok(String::from_utf8(out.stdout)?.trim().to_string())
 }
@@ -2754,5 +2759,24 @@ mod tests {
         let out = result.expect("empty slice should return Ok");
         assert!(out.deleted.is_empty(), "no branches should be deleted");
         assert!(out.failed.is_empty(), "no failures expected");
+    }
+
+    #[test]
+    fn run_error_uses_stdout_when_stderr_empty() {
+        // `git commit` on a clean tree exits non-zero and writes its message to
+        // stdout, not stderr. Verify that the error includes the stdout text.
+        let dir = git_init();
+        make_commit(dir.path(), "f.txt", "hello");
+        // Index is now clean — `git commit` will fail with "nothing to commit".
+        let err = run(dir.path(), &["commit", "-m", "empty"]).unwrap_err();
+        let msg = format!("{err}");
+        assert!(
+            !msg.is_empty(),
+            "error message must be non-empty when stderr is empty"
+        );
+        assert!(
+            msg.contains("nothing to commit") || msg.contains("nothing added"),
+            "expected 'nothing to commit' in error message; got: {msg:?}"
+        );
     }
 }
