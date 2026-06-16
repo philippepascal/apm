@@ -33,7 +33,11 @@ The same gap exists in the web UI. `WorkEngineControls` shows an epic dropdown a
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Blocking (hard-erroring) `apm start` when an epic is stale — this ticket only adds a warning and a confirmable prompt.
+- Automatically running `apm epic refresh` before starting — the user must refresh manually.
+- Checking freshness for tickets that have no epic (i.e., tickets on the default branch).
+- Any changes to `apm work --daemon` interactive prompting — daemon mode is inherently non-interactive; it logs a warning and continues.
+- Filtering which epics trigger the warning based on whether they have actionable tickets — any stale epic triggers the warning.
 
 ### Approach
 
