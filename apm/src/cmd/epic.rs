@@ -1,5 +1,5 @@
 use anyhow::Result;
-use std::io::IsTerminal;
+use std::io::{BufRead, IsTerminal, Write};
 use std::path::Path;
 use crate::ctx::CmdContext;
 use apm_core::epic::{branch_to_title, epic_id_from_branch, MergeStatus};
@@ -296,6 +296,9 @@ pub fn run_close(root: &Path, id_arg: &str, force: bool) -> Result<()> {
 }
 
 pub fn run_refresh_epic(root: &Path, id_arg: &str, merge: bool, pr: bool, auto_mode: bool, push: bool, no_push: bool) -> Result<()> {
+    let mut merge = merge;
+    let mut pr = pr;
+    let mut auto_mode = auto_mode;
     let config = CmdContext::load_config_only(root)?;
 
     let matches = apm_core::epic::find_epic_branches(root, id_arg);
@@ -319,11 +322,23 @@ pub fn run_refresh_epic(root: &Path, id_arg: &str, merge: bool, pr: bool, auto_m
     if !acting {
         if status.ahead == 0 {
             println!("epic branch is up to date with {default_branch}");
-        } else {
-            let cleanliness = if status.clean { "clean" } else { "conflicted" };
-            println!("{} commit(s) ahead on {default_branch}; merge would be {cleanliness}", status.ahead);
+            return Ok(());
         }
-        return Ok(());
+        let cleanliness = if status.clean { "clean" } else { "conflicted" };
+        println!("{} commit(s) ahead on {default_branch}; merge would be {cleanliness}", status.ahead);
+        if !std::io::stdout().is_terminal() {
+            return Ok(());
+        }
+        print!("\nWhat would you like to do?\n  [1] Merge locally\n  [2] Open / update PR\n  [3] Auto (merge if clean, fall back to PR)\n  [4] Skip\nChoice [1-4]: ");
+        std::io::stdout().flush()?;
+        let mut choice = String::new();
+        std::io::stdin().lock().read_line(&mut choice)?;
+        match choice.trim() {
+            "1" => merge = true,
+            "2" => pr = true,
+            "3" => auto_mode = true,
+            _ => return Ok(()),
+        }
     }
 
     let worktrees = apm_core::worktree::list_ticket_worktrees(root)?;

@@ -9044,6 +9044,50 @@ fn refresh_epic_merge_noninteractive_skips_push() {
     );
 }
 
+// --- refresh-epic no-flag non-interactive path ---
+
+/// When run non-interactively (stdout is not a tty) with no action flag and the
+/// epic branch is ahead of the default branch, `apm refresh-epic <id>` must
+/// print the status line and exit 0 without performing a merge.
+#[test]
+fn refresh_epic_no_flag_noninteractive_prints_status_and_exits() {
+    let (bare, local) = setup_refresh_epic_for_push("aa11bb22", "no-flag-test");
+    let p = local.path();
+
+    // Record origin tip before the command — it must not change.
+    let origin_before = rev_parse(bare.path(), "epic/aa11bb22-no-flag-test");
+
+    let bin = env!("CARGO_BIN_EXE_apm");
+    let out = std::process::Command::new(bin)
+        .args(["refresh-epic", "aa11bb22"])
+        .current_dir(p)
+        .env("GIT_AUTHOR_NAME", "test")
+        .env("GIT_AUTHOR_EMAIL", "test@test.com")
+        .env("GIT_COMMITTER_NAME", "test")
+        .env("GIT_COMMITTER_EMAIL", "test@test.com")
+        .output()
+        .unwrap();
+
+    assert!(
+        out.status.success(),
+        "apm refresh-epic (no flag) should exit 0; stderr: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(
+        stdout.contains("commit") && stdout.contains("ahead"),
+        "stdout should contain the status line; got:\n{stdout}"
+    );
+
+    // No merge should have happened — origin tip is unchanged.
+    let origin_after = rev_parse(bare.path(), "epic/aa11bb22-no-flag-test");
+    assert_eq!(
+        origin_before, origin_after,
+        "origin epic branch must not advance when no action flag is passed in non-interactive mode"
+    );
+}
+
 // ── Implicit close: no explicit transition required ───────────────────────────
 
 /// Closing a non-terminal ticket succeeds without any explicit `to = "closed"`
