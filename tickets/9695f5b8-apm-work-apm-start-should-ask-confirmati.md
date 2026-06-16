@@ -44,54 +44,71 @@ The same gap exists in the web UI. `WorkEngineControls` shows an epic dropdown a
 
 ### Approach
 
-#### New helper: `apm-core/src/epic.rs`
+#### Helper: `apm-core/src/epic.rs` — `ticket_epic_staleness`
 
-Add `ticket_epic_staleness(root, ticket_id) -> Result<Option<(String, usize)>>`:
-- Loads config and all tickets from git.
-- Resolves `ticket_id` to a full ID, finds the ticket, reads `frontmatter.epic`.
-- Returns `None` if the ticket has no epic.
-- Calls `epic_branches(root)` to find the branch matching `epic/{epic_id}-*`.
-- Calls `merge_tree_status(root, &config.project.default_branch, &epic_branch)`.
-- Returns `None` if `ahead == 0`; otherwise `Some((epic_id, ahead))`.
+Add:
 
-This function is pure (no side effects, no git mutations) and cheap to call before committing.
+```rust
+pub fn ticket_epic_staleness(root: &Path, epic_id: &str) -> Result<Option<usize>>
+```
 
-#### `apm/src/cmd/start.rs` — `run()` function
+- Loads config to get `default_branch`.
+- Calls `find_epic_branch(root, epic_id)`. Returns `None` if the epic has no local or remote branch.
+- Calls `merge_tree_status(root, &default_branch, &epic_branch)`.
+- Returns `None` if `ahead == 0`; otherwise `Some(ahead)`.
 
-Before calling `apm_core::start::run()`, call `ticket_epic_staleness()`:
-- If it returns `Some((epic_id, ahead))`:
-  - If `std::io::stdout().is_terminal()`: call `prompt_yes_no_default_yes()` with message `"Warning: epic {epic_id} is {ahead} commit(s) behind {default_branch}. Run \`apm epic refresh {epic_id}\` first. Start anyway? [Y/n] "`. Return `Ok(())` if user answers "n".
-  - If not a terminal: `eprintln!("warning: epic {epic_id} is {ahead} commit(s) behind the default branch")` and proceed.
-- `run_next()` gets the same treatment: after resolving which ticket `run_next` would pick, call the check. `run_next()` internally calls `apm_core::start::run_next()` which returns a `StartOutput`; the staleness check needs the ticket id, which can be surfaced by reading `StartOutput` fields. Alternatively, add a helper `next_ticket_id(root) -> Result<Option<String>>` to resolve the ID before starting. (Simpler: do the check inside `apm_core::start::run_next()` and add a `stale_warning: Option<String>` to `RunNextOutput`; CLI layer prints it.)
+Callers supply the `epic_id` string directly (read from `frontmatter.epic`), so there is no ticket loading inside this function.
 
-Actually, keep it simpler: for `run_next()` in the CLI, add `stale_warning` to `StartOutput` in `apm-core` and surface it in the CLI's output rather than doing a pre-flight call. This avoids loading tickets twice.
+#### `apm/src/cmd/start.rs` — `run()` (`apm start <id>`)
 
-#### `apm-core/src/start.rs` — `StartOutput` struct and `run()`
+Before calling `apm_core::start::run()`:
 
-- Add `pub stale_warning: Option<String>` to `StartOutput`.
-- After loading the ticket and before the state transition, call `ticket_epic_staleness()`. If stale, store `Some("epic {id} is {ahead} commit(s) behind {default_branch}")` in a local; set it on `StartOutput` at the end.
-- The CLI (`apm/src/cmd/start.rs`) then checks `out.stale_warning`: if terminal, it should have already confirmed before calling (see above for `start`). For `run_next` / `spawn_next_worker`, it logs the warning.
+1. Load config and all tickets; resolve `id_arg` to `id`; read `frontmatter.epic`.
+2. If the ticket has `Some(epic_id)`, call `ticket_epic_staleness(root, &epic_id)`.
+3. If `Some(ahead)`:
+   - If `std::io::stdout().is_terminal()`: print `"Warning: epic {epic_id} is {ahead} commit(s) behind {default_branch}. Run \`apm epic refresh {epic_id}\` first. Start anyway? [Y/n] "`, flush stdout, read a line. Return `Ok(())` without calling `run()` if the user answers `"n"` or `"N"`.
+   - Otherwise: `eprintln!("warning: epic {epic_id} is {ahead} commit(s) behind the default branch")` and fall through.
+4. Call `apm_core::start::run()`. The state transition happens inside this call.
 
-Actually this creates a timing issue: for `apm start`, we want to prompt BEFORE the state transition. So for `apm start` specifically, keep the pre-flight call in the CLI layer. For `run_next` / `spawn_next_worker`, add `stale_warning` to `StartOutput` / messages and log post-hoc.
+Loading tickets twice (once here for the pre-flight check, once inside `apm_core::start::run`) is acceptable.
 
-#### `apm-core/src/start.rs` — `spawn_next_worker()`
+#### `apm-core/src/start.rs` — `peek_next_candidate` (new public fn) and `run_next()`
 
-After picking `candidate` at line 800 and before calling `run()` at line 819:
-- Call `ticket_epic_staleness(root, &id)`.
-- If `Some((epic_id, ahead))`, push `format!("warning: epic {epic_id} is {ahead} commit(s) behind the default branch")` to `messages`.
-- Proceed with `run()` unconditionally (no prompt; `spawn_next_worker` is inherently non-interactive).
+Add:
 
-The `apm work` loop in `apm/src/cmd/work.rs` already prints all `messages` via `spawn_next_worker` wrapper, so the warning surfaces automatically.
+```rust
+pub fn peek_next_candidate(root: &Path) -> Result<Option<(String, Option<String>)>>
+```
+
+This function reuses the ticket-picking logic from `run_next` (load config, load all tickets, apply blocked-epic filter, call `ticket::pick_next`) but performs no state transition. It returns `(ticket_id, epic_id)`.
+
+#### `apm/src/cmd/start.rs` — `run_next()` (`apm start --next`)
+
+Before calling `apm_core::start::run_next()`:
+
+1. Call `apm_core::start::peek_next_candidate(root)`.
+2. If `Some((_, Some(epic_id)))`, call `ticket_epic_staleness(root, &epic_id)`.
+3. If stale: same tty / non-tty handling as `run()` above (prompt on tty, `eprintln!` on non-tty). Return `Ok(())` without calling `run_next()` if the user answers `"n"`.
+4. Otherwise call `apm_core::start::run_next()`.
+
+There is a small TOCTOU window between `peek_next_candidate` and `run_next` re-picking the same candidate; this is acceptable.
+
+#### `apm-core/src/start.rs` — `spawn_next_worker()` (`apm work` / `apm work --daemon`)
+
+After selecting `candidate` (line 804) and before calling `run()` (line 819):
+
+1. If `candidate.frontmatter.epic` is `Some(ref epic_id)`, call `ticket_epic_staleness(root, epic_id)`.
+2. If `Some(ahead)`: push `format!("warning: epic {epic_id} is {ahead} commit(s) behind the default branch")` onto `messages`.
+3. Proceed with `run()` unconditionally — no prompting in daemon/work mode.
+
+The warning appears in `messages` before the state-transition line (which is pushed at line 825), so it prints before "Worker spawned". No new fields on `RunNextOutput` or `StartOutput` are needed.
 
 #### `apm-ui/src/components/WorkEngineControls.tsx`
 
-Update the local `Epic` type:
-```ts
-type Epic = { id: string; title: string; branch: string; behind_count: number; conflicts: boolean }
-```
-The `/api/epics` endpoint already returns these fields (see `EpicSummary` in `apm-server/src/models.rs`).
+Update the local `Epic` type to include `behind_count: number`. The `/api/epics` endpoint already returns this field via `EpicSummary`.
 
-Add staleness logic before the "Start" button (in the JSX):
+Add staleness logic before the "Start" button:
+
 ```tsx
 const staleWarning = (() => {
   if (selectedEpic) {
@@ -109,12 +126,12 @@ const staleWarning = (() => {
 })()
 ```
 
-Render `staleWarning` as an amber warning `<span>` placed between the epic selector and the "Start" button. Do not disable the button — it is a warning, not a blocker.
+Render `staleWarning` as an amber warning `<span>` between the epic selector and the "Start" button. Do not disable the button — this is a warning, not a blocker.
 
 #### Tests
 
-- Unit test in `apm-core/src/epic.rs` for `ticket_epic_staleness()`: create a temp git repo with an epic branch, ticket with the epic ID, and verify the function returns the correct `ahead` count.
-- Integration test in `apm/tests/integration.rs`: run `apm start <id>` with a pipe (non-tty) pointing at a ticket with a stale epic; verify stderr contains the warning and the ticket transitions normally.
+- Unit test in `apm-core/src/epic.rs` for `ticket_epic_staleness`: create a temp git repo with an epic branch that is behind `main`, call the function with the epic ID, assert the returned `ahead` count matches.
+- Integration test in `apm/tests/integration.rs`: run `apm start <id>` with stdout piped (non-tty), pointing at a ticket whose epic is behind the default branch; assert stderr contains `"warning: epic"` and the ticket transitions to `in_progress`.
 
 ### Open questions
 
