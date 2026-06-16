@@ -1,7 +1,7 @@
 +++
 id = "ee5011b6"
 title = "apm refresh-epic with no flag should be interactive and propose several merge action"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 2
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/ee5011b6-apm-refresh-epic-with-no-flag-should-be-"
 created_at = "2026-06-16T18:06:05.166190Z"
-updated_at = "2026-06-16T18:11:28.125061Z"
+updated_at = "2026-06-16T18:11:31.896012Z"
 +++
 
 ## Spec
@@ -112,3 +112,4 @@ Interactive-terminal coverage is manual; the non-terminal path is the automatabl
 | 2026-06-16T18:06Z | — | new | philippepascal |
 | 2026-06-16T18:09Z | new | groomed | philippepascal |
 | 2026-06-16T18:09Z | groomed | in_design | philippepascal |
+| 2026-06-16T18:11Z | in_design | specd | claude |
