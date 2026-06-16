@@ -28,7 +28,10 @@ Adding a single space between the ID and the arrow (`a1b2 ↓`) makes the indica
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changing the down-arrow character itself
+- Adding stale indicators to any column other than the base column in `apm list`
+- Changing the stale-detection logic (`merge_tree_status` / `ahead > 0`)
+- Updating `apm show` or any other subcommand
 
 ### Approach
 
