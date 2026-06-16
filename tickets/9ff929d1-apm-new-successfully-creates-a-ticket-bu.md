@@ -35,7 +35,58 @@ The user sees the ticket created successfully (`Created ticket ...`) and then im
 
 ### Approach
 
-How the implementation will work.
+Two changes, each independently verifiable.
+
+#### Fix 1 — `apm/src/cmd/new.rs`: skip commit when content is unchanged
+
+In `open_editor`, capture the original content returned by `read_from_branch`, then compare it to `new_content` after the editor closes. Only call `commit_to_branch` when they differ:
+
+```rust
+fn open_editor(root: &Path, branch: &str, rel_path: &str) -> Result<()> {
+    let content = apm_core::git_util::read_from_branch(root, branch, rel_path)?;
+    // ... write tmp_path, open editor ...
+    let new_content = std::fs::read_to_string(&tmp_path)?;
+    let _ = std::fs::remove_file(&tmp_path);
+
+    if new_content != content {
+        apm_core::git_util::commit_to_branch(root, branch, rel_path, &new_content, "write spec")?;
+    }
+    Ok(())
+}
+```
+
+`content` is already bound at the top of `open_editor`, so this requires no structural change — just add the `if new_content != content` guard before the `commit_to_branch` call and move the `remove_file` call before the guard (order doesn't matter for correctness).
+
+#### Fix 2 — `apm-core/src/git_util.rs`: include stdout in error when stderr is empty
+
+In the `run` helper, when a git command exits non-zero and stderr is empty after trimming, fall back to stdout for the error message:
+
+```rust
+pub(crate) fn run(dir: &Path, args: &[&str]) -> Result<String> {
+    let out = Command::new("git")
+        .current_dir(dir)
+        .args(args)
+        .output()
+        .context("git not found")?;
+    if !out.status.success() {
+        let stderr = String::from_utf8_lossy(&out.stderr);
+        let stderr = stderr.trim();
+        let stdout = String::from_utf8_lossy(&out.stdout);
+        let stdout = stdout.trim();
+        let msg = if stderr.is_empty() { stdout } else { stderr };
+        anyhow::bail!("{}", msg);
+    }
+    Ok(String::from_utf8(out.stdout)?.trim().to_string())
+}
+```
+
+This is a targeted defensive fix: the common case (stderr has content) is unchanged; only the empty-stderr branch changes.
+
+#### Tests
+
+- Unit test in `apm-core/src/git_util.rs` (or inline in the module): run a git command that fails with nothing on stderr (e.g. `git commit` on a clean tree) and assert the error message is non-empty.
+- Integration test in `apm/tests/integration.rs`: call `ticket::create` then simulate the `open_editor` path (write same content, call `commit_to_branch`) and assert it returns `Ok(())` after Fix 1, or assert the error message is non-empty after Fix 2.
+- Both are straightforward with the existing temp-git-repo test harness.
 
 ### Open questions
 
