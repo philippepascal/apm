@@ -1,7 +1,7 @@
 +++
 id = "35ecc9d0"
 title = "add a space between epic number and down arrow to make the down arrow more noticeable"
-state = "in_progress"
+state = "implemented"
 priority = 0
 effort = 1
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/35ecc9d0-add-a-space-between-epic-number-and-down"
 created_at = "2026-06-16T18:06:38.591826Z"
-updated_at = "2026-06-16T20:24:22.004430Z"
+updated_at = "2026-06-16T20:27:19.975340Z"
 +++
 
 ## Spec
@@ -67,3 +67,4 @@ That is the only change. No logic, no data structures, no other files are affect
 | 2026-06-16T18:13Z | in_design | specd | claude |
 | 2026-06-16T20:24Z | specd | ready | philippepascal |
 | 2026-06-16T20:24Z | ready | in_progress | philippepascal |
+| 2026-06-16T20:27Z | in_progress | implemented | claude |
