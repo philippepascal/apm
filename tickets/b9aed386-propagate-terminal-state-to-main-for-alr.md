@@ -1,7 +1,7 @@
 +++
 id = "b9aed386"
 title = "Propagate terminal state to main for already-merged epic tickets"
-state = "in_design"
+state = "specd"
 priority = 0
 effort = 4
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/b9aed386-propagate-terminal-state-to-main-for-alr"
 created_at = "2026-06-17T00:19:57.975332Z"
-updated_at = "2026-06-17T00:31:16.614155Z"
+updated_at = "2026-06-17T00:31:23.568792Z"
 +++
 
 ## Spec
@@ -135,3 +135,4 @@ The existing `close_epic_scoped_writes_to_epic_not_main` test (unmerged epic) mu
 | 2026-06-17T00:19Z | — | new | philippepascal |
 | 2026-06-17T00:21Z | new | groomed | philippepascal |
 | 2026-06-17T00:21Z | groomed | in_design | philippepascal |
+| 2026-06-17T00:31Z | in_design | specd | claude |
