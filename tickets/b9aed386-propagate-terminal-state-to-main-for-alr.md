@@ -3,13 +3,13 @@ id = "b9aed386"
 title = "Propagate terminal state to main for already-merged epic tickets"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 4
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/b9aed386-propagate-terminal-state-to-main-for-alr"
 created_at = "2026-06-17T00:19:57.975332Z"
-updated_at = "2026-06-17T00:21:15.770181Z"
+updated_at = "2026-06-17T00:31:09.960489Z"
 +++
 
 ## Spec
