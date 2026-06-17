@@ -46,7 +46,78 @@ Acceptance should include an integration test proving that closing an epic ticke
 
 ### Approach
 
-How the implementation will work.
+At the two call sites that perform the secondary write (to `target_branch` or the default branch), replace the naive `target_branch.unwrap_or(default_branch)` resolution with a merged-epic check. When the resolved `target_branch` is detected as already merged to the default branch, route the write to the default branch instead and skip the write to the epic branch.
+
+#### Merged-epic detection
+
+Two functions are needed in combination because they cover complementary cases:
+
+- `git::is_branch_content_merged(root, default_branch, target_branch)` — catches the case where the epic tip has **no trailing ticket-state commits after the merge** (epic tip is a git ancestor of main; `is_ancestor` returns true immediately)
+- `git::content_merged_into_main(root, main_ref, target_branch, tickets_dir)` — catches both regular-merge and squash-merge cases where the epic branch has **trailing ticket-state commits added after the code was merged** (epic tip is no longer an ancestor of main, but the last non-ticket commit on the epic IS in main)
+
+Neither function alone covers all combinations of (regular/squash merge) × (with/without trailing state commits). Use them OR'd; short-circuit on the first true result.
+
+Compute `main_ref` preferring `origin/<default_branch>` when available, matching the pattern used in `sync::detect`:
+
+```rust
+let remote_ref = format!("refs/remotes/origin/{default}");
+let main_ref = if crate::git::run(root, &["rev-parse", "--verify", &remote_ref]).is_ok() {
+    format!("origin/{default}")
+} else {
+    default.to_string()
+};
+```
+
+The secondary write is **replaced, not supplemented**: when the epic is merged, write only to the default branch. There is no value in also writing to an epic branch that is about to be deleted by `apm epic close`, and doing so creates a spurious commit on a dead ref.
+
+#### `apm-core/src/ticket/ticket_util.rs` — `close()` (lines 358–362)
+
+Declare `default`, `tickets_dir`, and `main_ref` before the existing target computation, then replace the two-liner with:
+
+```rust
+let effective_target: String = match t.frontmatter.target_branch.as_deref() {
+    Some(tb) => {
+        let already_merged =
+            crate::git::is_branch_content_merged(root, default, tb).unwrap_or(false)
+            || crate::git::content_merged_into_main(root, &main_ref, tb, &tickets_dir)
+                .unwrap_or(false);
+        if already_merged { default.to_string() } else { tb.to_string() }
+    }
+    None => default.to_string(),
+};
+if let Err(e) = crate::git::commit_to_branch(root, &effective_target, &rel_path, &content,
+    &format!("ticket({id}): close"))
+{
+    output.push(format!("warning: commit closed state to {effective_target} failed: {e:#}"));
+}
+```
+
+`default` is `config.project.default_branch.as_str()` (borrow it first); `tickets_dir` is `config.tickets.dir.to_string_lossy().into_owned()`.
+
+#### `apm-core/src/state.rs` — `transition()` (lines 187–193)
+
+Apply the same replacement inside the `if target_is_terminal { … }` block. All required variables (`root`, `config`, `t`) are in scope. Do not extract a shared helper function — the duplication is six lines in two files within the same crate and is clear in context.
+
+#### Integration tests in `apm/tests/integration.rs`
+
+Add three tests near the existing `close_epic_scoped_writes_to_epic_not_main` test, using the existing `init_repo()`, `setup_with_epic()`, `git()`, `branch_content()`, `ticket_rel_path()`, and `apm_core::git::commit_to_branch` helpers. Each test sets up an epic ticket manually via `commit_to_branch` (same pattern as `close_epic_scoped_writes_to_epic_not_main`) to avoid the CLI dependency.
+
+**`close_merged_epic_writes_to_main`**
+1. `setup_with_epic()` — creates `epic/<id>-my-epic` branch with one commit
+2. Write a ticket file with `target_branch = epic/...` to both the ticket branch and the epic branch via `commit_to_branch`
+3. `git merge --no-ff epic/...` — regular merge to main (no trailing commits on epic)
+4. `apm_core::ticket::close(p, &config, ticket_id, None, "test", false)`
+5. Assert `branch_content(p, "main", &rel)` contains `state = "closed"`
+6. Assert `branch_content(p, epic_branch, &rel)` does NOT contain `state = "closed"` (the write was redirected; no double-write to the epic branch)
+7. Assert `apm::cmd::epic::run_close(p, &epic_id, false)` succeeds (covers AC 4)
+
+**`close_merged_epic_trailing_commits_writes_to_main`**
+Same setup as above, but after the `--no-ff` merge add a ticket-state-only commit to the epic branch (e.g., commit a dummy `tickets/other.md` to the epic branch to simulate a prior state write). Then call `ticket::close` on the original ticket and assert default branch has `state = "closed"`. This exercises the `content_merged_into_main` detection path.
+
+**`state_transition_closed_merged_epic_writes_to_main`**
+Same setup as the first test (merge epic to main, no trailing commits), but call `apm_core::state::transition(p, &ticket_id, "closed".into(), true, false)` instead of `ticket::close`, and assert default branch has `state = "closed"`.
+
+The existing `close_epic_scoped_writes_to_epic_not_main` test (unmerged epic) must continue to pass unchanged.
 
 ### Open questions
 
