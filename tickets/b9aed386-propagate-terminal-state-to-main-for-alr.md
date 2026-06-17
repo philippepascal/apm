@@ -38,7 +38,11 @@ Acceptance should include an integration test proving that closing an epic ticke
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changing `apm epic submit`
+- Changing `apm archive` or the order-dependent reconciliation it provides
+- Changing `apm sync`'s detection logic for finding close candidates (Cases 1–4 in `sync::detect`)
+- Changing `apm clean-branches` behavior
+- Adding auto-archiving or any other reconciliation beyond the secondary write
 
 ### Approach
 
