@@ -355,10 +355,26 @@ pub fn close(
     crate::git::commit_to_branch(root, &branch, &rel_path, &content, &format!("ticket({id}): close"))?;
     crate::logger::log("state_transition", &format!("{id:?} {prev} -> closed"));
 
-    let target = t.frontmatter.target_branch.as_deref()
-        .unwrap_or(config.project.default_branch.as_str());
-    if let Err(e) = crate::git::commit_to_branch(root, target, &rel_path, &content, &format!("ticket({id}): close")) {
-        output.push(format!("warning: commit closed state to {target} failed: {e:#}"));
+    let default = config.project.default_branch.as_str();
+    let tickets_dir = config.tickets.dir.to_string_lossy().into_owned();
+    let remote_ref = format!("refs/remotes/origin/{default}");
+    let main_ref = if crate::git::run(root, &["rev-parse", "--verify", &remote_ref]).is_ok() {
+        format!("origin/{default}")
+    } else {
+        default.to_string()
+    };
+    let effective_target: String = match t.frontmatter.target_branch.as_deref() {
+        Some(tb) => {
+            let already_merged =
+                crate::git::is_branch_content_merged(root, default, tb).unwrap_or(false)
+                || crate::git::content_merged_into_main(root, &main_ref, tb, &tickets_dir)
+                    .unwrap_or(false);
+            if already_merged { default.to_string() } else { tb.to_string() }
+        }
+        None => default.to_string(),
+    };
+    if let Err(e) = crate::git::commit_to_branch(root, &effective_target, &rel_path, &content, &format!("ticket({id}): close")) {
+        output.push(format!("warning: commit closed state to {effective_target} failed: {e:#}"));
     }
 
     if aggressive {
