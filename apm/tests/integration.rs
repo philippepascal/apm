@@ -8565,6 +8565,131 @@ fn close_epic_scoped_writes_to_epic_not_main() {
     );
 }
 
+/// Closing an epic-scoped ticket where the epic is already merged to main (no
+/// trailing commits after the merge) writes state=closed to the default branch,
+/// not to the epic branch. Also verifies apm epic close succeeds without --force.
+#[test]
+fn close_merged_epic_writes_to_main() {
+    let (dir, epic_id) = setup_with_epic();
+    let p = dir.path();
+
+    let epic_branch = format!("epic/{epic_id}-my-epic");
+    let ticket_id = "cc333333";
+    let ticket_slug = format!("{ticket_id}-merged-epic");
+    let ticket_branch = format!("ticket/{ticket_slug}");
+    let rel = format!("tickets/{ticket_slug}.md");
+    let content = format!(
+        "+++\nid = \"{ticket_id}\"\ntitle = \"merged epic\"\nstate = \"implemented\"\n\
+         branch = \"{ticket_branch}\"\ntarget_branch = \"{epic_branch}\"\n\
+         epic = \"{epic_id}\"\n\
+         created_at = \"2026-01-01T00:00:00Z\"\nupdated_at = \"2026-01-01T00:00:00Z\"\n+++\n\n\
+         ## Spec\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|"
+    );
+
+    apm_core::git::commit_to_branch(p, &ticket_branch, &rel, &content, "add ticket").unwrap();
+    apm_core::git::commit_to_branch(p, &epic_branch, &rel, &content, "merge ticket to epic").unwrap();
+
+    // Regular --no-ff merge so the epic tip becomes an ancestor of main.
+    git(p, &["-c", "commit.gpgsign=false", "merge", "--no-ff", &epic_branch, "--no-edit"]);
+
+    let config = apm_core::config::Config::load(p).unwrap();
+    apm_core::ticket::close(p, &config, ticket_id, None, "test", false).unwrap();
+
+    // Main must show state=closed (write was redirected from the merged epic branch).
+    let on_main = branch_content(p, "main", &rel);
+    assert!(on_main.contains("state = \"closed\""), "main must show closed: {on_main}");
+
+    // Epic branch must NOT have received the closed-state commit.
+    let on_epic = branch_content(p, &epic_branch, &rel);
+    assert!(!on_epic.contains("state = \"closed\""), "epic branch must not show closed: {on_epic}");
+
+    // apm epic close must succeed without --force: is_branch_content_merged passes
+    // and the ticket is now closed (terminal), so no non-terminal-ticket guard fires.
+    apm::cmd::epic::run_close(p, &epic_id, false).unwrap();
+}
+
+/// Same as close_merged_epic_writes_to_main but with trailing ticket-state commits
+/// added to the epic branch after the merge. Exercises the content_merged_into_main
+/// detection path (is_branch_content_merged alone would return false here).
+#[test]
+fn close_merged_epic_trailing_commits_writes_to_main() {
+    let (dir, epic_id) = setup_with_epic();
+    let p = dir.path();
+
+    let epic_branch = format!("epic/{epic_id}-my-epic");
+    let ticket_id = "dd444444";
+    let ticket_slug = format!("{ticket_id}-trailing");
+    let ticket_branch = format!("ticket/{ticket_slug}");
+    let rel = format!("tickets/{ticket_slug}.md");
+    let content = format!(
+        "+++\nid = \"{ticket_id}\"\ntitle = \"trailing\"\nstate = \"implemented\"\n\
+         branch = \"{ticket_branch}\"\ntarget_branch = \"{epic_branch}\"\n\
+         epic = \"{epic_id}\"\n\
+         created_at = \"2026-01-01T00:00:00Z\"\nupdated_at = \"2026-01-01T00:00:00Z\"\n+++\n\n\
+         ## Spec\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|"
+    );
+
+    apm_core::git::commit_to_branch(p, &ticket_branch, &rel, &content, "add ticket").unwrap();
+    apm_core::git::commit_to_branch(p, &epic_branch, &rel, &content, "merge ticket to epic").unwrap();
+
+    // Regular --no-ff merge.
+    git(p, &["-c", "commit.gpgsign=false", "merge", "--no-ff", &epic_branch, "--no-edit"]);
+
+    // Add a ticket-state-only commit to the epic branch after the merge, so the
+    // epic tip is no longer an ancestor of main.
+    apm_core::git::commit_to_branch(
+        p,
+        &epic_branch,
+        "tickets/other-state.md",
+        "+++\nid = \"ff666666\"\ntitle = \"other\"\nstate = \"closed\"\n+++\n",
+        "ticket(ff666666): state write",
+    ).unwrap();
+
+    let config = apm_core::config::Config::load(p).unwrap();
+    apm_core::ticket::close(p, &config, ticket_id, None, "test", false).unwrap();
+
+    // Main must show state=closed even though the epic tip is no longer an ancestor.
+    let on_main = branch_content(p, "main", &rel);
+    assert!(on_main.contains("state = \"closed\""), "main must show closed: {on_main}");
+}
+
+/// state::transition to "closed" on a ticket whose epic is already merged
+/// routes the terminal-state write to the default branch, not the epic branch.
+#[test]
+fn state_transition_closed_merged_epic_writes_to_main() {
+    let (dir, epic_id) = setup_with_epic();
+    let p = dir.path();
+
+    let epic_branch = format!("epic/{epic_id}-my-epic");
+    let ticket_id = "ee555555";
+    let ticket_slug = format!("{ticket_id}-transition");
+    let ticket_branch = format!("ticket/{ticket_slug}");
+    let rel = format!("tickets/{ticket_slug}.md");
+    let content = format!(
+        "+++\nid = \"{ticket_id}\"\ntitle = \"transition\"\nstate = \"implemented\"\n\
+         branch = \"{ticket_branch}\"\ntarget_branch = \"{epic_branch}\"\n\
+         epic = \"{epic_id}\"\n\
+         created_at = \"2026-01-01T00:00:00Z\"\nupdated_at = \"2026-01-01T00:00:00Z\"\n+++\n\n\
+         ## Spec\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|"
+    );
+
+    apm_core::git::commit_to_branch(p, &ticket_branch, &rel, &content, "add ticket").unwrap();
+    apm_core::git::commit_to_branch(p, &epic_branch, &rel, &content, "merge ticket to epic").unwrap();
+
+    // Regular --no-ff merge so the epic tip becomes an ancestor of main.
+    git(p, &["-c", "commit.gpgsign=false", "merge", "--no-ff", &epic_branch, "--no-edit"]);
+
+    let out = apm_core::state::transition(p, &ticket_id, "closed".into(), true, false).unwrap();
+    assert!(
+        out.warnings.iter().all(|w| !w.contains("error")),
+        "unexpected errors: {:?}", out.warnings
+    );
+
+    // Main must show state=closed.
+    let on_main = branch_content(p, "main", &rel);
+    assert!(on_main.contains("state = \"closed\""), "main must show closed: {on_main}");
+}
+
 /// state::transition to "closed" writes state=closed to both the ticket branch
 /// and the effective target branch (same resolution used by ticket::close).
 #[test]
@@ -9552,6 +9677,33 @@ fn apm_new_no_edit_noop_editor_exits_zero() {
 
     let out = std::process::Command::new(bin)
         .args(["new", "--no-aggressive", "test noop editor"])
+        .current_dir(p)
+        .env("GIT_AUTHOR_NAME", "test")
+        .env("GIT_AUTHOR_EMAIL", "test@test.com")
+        .env("GIT_COMMITTER_NAME", "test")
+        .env("GIT_COMMITTER_EMAIL", "test@test.com")
+        .env("VISUAL", "")
+        .env("EDITOR", "true")
+        .output()
+        .unwrap();
+
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let stderr = String::from_utf8_lossy(&out.stderr);
+
+    assert!(
+        out.status.success(),
+        "apm new with no-op editor must exit 0;\nstdout: {stdout}\nstderr: {stderr}"
+    );
+    assert!(
+        stdout.contains("Created ticket"),
+        "expected 'Created ticket' in stdout; got: {stdout}"
+    );
+    assert!(
+        stderr.is_empty(),
+        "expected no stderr output; got: {stderr}"
+    );
+}
+
 // ── apm start: stale-epic warning ────────────────────────────────────────────
 
 #[test]
@@ -9580,25 +9732,6 @@ fn start_emits_stderr_warning_and_proceeds_when_epic_is_stale_non_tty() {
         .env("GIT_AUTHOR_EMAIL", "test@test.com")
         .env("GIT_COMMITTER_NAME", "test")
         .env("GIT_COMMITTER_EMAIL", "test@test.com")
-        .env("VISUAL", "")
-        .env("EDITOR", "true")
-        .output()
-        .unwrap();
-
-    let stdout = String::from_utf8_lossy(&out.stdout);
-    let stderr = String::from_utf8_lossy(&out.stderr);
-
-    assert!(
-        out.status.success(),
-        "apm new with no-op editor must exit 0;\nstdout: {stdout}\nstderr: {stderr}"
-    );
-    assert!(
-        stdout.contains("Created ticket"),
-        "expected 'Created ticket' in stdout; got: {stdout}"
-    );
-    assert!(
-        stderr.is_empty(),
-        "expected no stderr output; got: {stderr}"
         .env("APM_AGENT_NAME", "test-agent")
         .output()
         .unwrap();
