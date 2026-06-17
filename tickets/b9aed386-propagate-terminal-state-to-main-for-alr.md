@@ -1,7 +1,7 @@
 +++
 id = "b9aed386"
 title = "Propagate terminal state to main for already-merged epic tickets"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/b9aed386-propagate-terminal-state-to-main-for-alr"
 created_at = "2026-06-17T00:19:57.975332Z"
-updated_at = "2026-06-17T00:19:57.975332Z"
+updated_at = "2026-06-17T00:21:11.601680Z"
 +++
 
 ## Spec
@@ -52,3 +52,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-06-17T00:19Z | — | new | philippepascal |
+| 2026-06-17T00:21Z | new | groomed | philippepascal |
