@@ -28,13 +28,13 @@ Acceptance should include an integration test proving that closing an epic ticke
 
 ### Acceptance criteria
 
-- [ ] `apm state <id> closed` on a ticket whose `target_branch` is an epic branch already merged to the default branch writes `state = "closed"` to the default branch, not to the epic branch
-- [ ] `apm close <id>` on the same ticket also writes `state = "closed"` to the default branch
-- [ ] When the ticket's `target_branch` epic branch has not yet been merged, both commands continue to commit the terminal state to `target_branch` (existing behavior unchanged)
-- [ ] `apm epic close <epic-id>` succeeds without `--force` for a merged, fully-closed epic whose tickets were closed via the new routing (no regression in the `is_branch_content_merged` guard or the non-terminal-tickets check)
-- [ ] An integration test covers the no-trailing-commits case: create epic ticket → regular merge (--no-ff) epic branch to main → `ticket::close` → assert default branch has `state = "closed"`
-- [ ] An integration test covers the trailing-commits case: same setup, then add a ticket-state-only commit to the epic branch after the merge → `ticket::close` → assert default branch has `state = "closed"`
-- [ ] `cargo test --workspace` passes with no regressions
+- [x] `apm state <id> closed` on a ticket whose `target_branch` is an epic branch already merged to the default branch writes `state = "closed"` to the default branch, not to the epic branch
+- [x] `apm close <id>` on the same ticket also writes `state = "closed"` to the default branch
+- [x] When the ticket's `target_branch` epic branch has not yet been merged, both commands continue to commit the terminal state to `target_branch` (existing behavior unchanged)
+- [x] `apm epic close <epic-id>` succeeds without `--force` for a merged, fully-closed epic whose tickets were closed via the new routing (no regression in the `is_branch_content_merged` guard or the non-terminal-tickets check)
+- [x] An integration test covers the no-trailing-commits case: create epic ticket → regular merge (--no-ff) epic branch to main → `ticket::close` → assert default branch has `state = "closed"`
+- [x] An integration test covers the trailing-commits case: same setup, then add a ticket-state-only commit to the epic branch after the merge → `ticket::close` → assert default branch has `state = "closed"`
+- [x] `cargo test --workspace` passes with no regressions
 
 ### Out of scope
 
