@@ -31,7 +31,11 @@ The correct order is: detect merge candidates, apply closures, then push. With t
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changes to fetch behavior or the fast-forward logic in `sync_non_checked_out_refs`
+- Changes to worktree reconciliation (`sync_checked_out_worktrees`)
+- Push behavior for `apm state` transitions (those push immediately at transition time)
+- The `--auto-close` flag semantics or the close-candidate detection logic
+- Offline mode (`--offline`), which skips all network I/O including the push step
 
 ### Approach
 
