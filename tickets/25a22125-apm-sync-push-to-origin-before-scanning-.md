@@ -86,6 +86,7 @@ Add an integration test in `apm/tests/integration.rs` alongside the existing `sy
 
 ### Amendment requests
 
+- [ ] Handle the offline/non-offline boundary in the reorder. detect+apply currently run OUTSIDE the 'if !offline' block (apm/src/cmd/sync.rs:132+) and must keep running in offline mode (auto-close + hints, no push). The Approach's linear 9-step list hides this. Specify: hoist ahead_refs/default_is_ahead out of the offline block, run detect+apply unconditionally, then push inside a second 'if !offline' block that consumes both ahead_refs and apply_out.closed_branches.
 
 ### Code review
 
