@@ -2360,6 +2360,48 @@ fn sync_closes_implemented_ticket_with_merged_branch_in_one_run() {
     assert!(content.contains("state = \"closed\""), "ticket should be closed in one sync run: {content}");
 }
 
+#[test]
+fn sync_pushes_closed_branch_to_origin_in_same_run() {
+    // When a ticket branch is Equal to origin at the start of sync, then apply
+    // writes a close commit, the resulting ahead branch must be pushed to origin
+    // in the same sync invocation (not deferred to the next run).
+    let bare = tempfile::tempdir().unwrap();
+    let bp = bare.path();
+    git(bp, &["init", "--bare", "-q"]);
+
+    let dir = setup_with_close_workflow();
+    let p = dir.path();
+
+    // Wire up the bare repo as origin and push the initial main.
+    git(p, &["remote", "add", "origin", &bp.to_string_lossy()]);
+    git(p, &["push", "origin", "main"]);
+
+    // Create a ticket in `implemented` state (--force skips push/PR machinery).
+    let (_id, branch) = write_ticket_to_branch(p, "implemented", "push-after-close ticket");
+
+    // Push the ticket branch to origin so it is Equal (not ahead) at sync start.
+    git(p, &["push", "origin", &branch]);
+
+    // Simulate a PR merge at origin: merge the ticket into local main, push main
+    // to origin, then reset local main so the ticket branch stays Equal to origin.
+    git(p, &["-c", "commit.gpgsign=false", "merge", "--no-ff", &branch, "--no-edit"]);
+    git(p, &["push", "origin", "main"]);
+    git(p, &["reset", "--hard", "HEAD^1"]);
+
+    // Run non-offline sync with push_refs=true and auto_close=true.
+    // sync should: detect the merged ticket, close it (ticket branch becomes Ahead),
+    // then push the ticket branch (including the close commit) to origin.
+    apm::cmd::sync::run(p, false, true, true, true, false, true).unwrap();
+
+    // Confirm the close commit reached origin in this same sync run.
+    let rel = ticket_rel_path(&branch);
+    let content = branch_content(p, &format!("origin/{branch}"), &rel);
+    assert!(
+        content.contains("state = \"closed\""),
+        "close commit should be pushed to origin in the same sync run: {content}"
+    );
+}
+
 // --- context-section ---
 
 #[test]

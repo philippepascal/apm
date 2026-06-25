@@ -17,6 +17,7 @@ pub struct Candidates {
 
 pub struct ApplyOutput {
     pub closed: Vec<String>,
+    pub closed_branches: Vec<String>,
     pub failed: Vec<(String, String)>,
     pub messages: Vec<String>,
 }
@@ -215,13 +216,18 @@ pub fn detect(root: &Path, config: &Config) -> Result<Candidates> {
 
 pub fn apply(root: &Path, config: &Config, candidates: &Candidates, author: &str, aggressive: bool) -> Result<ApplyOutput> {
     let mut closed = Vec::new();
+    let mut closed_branches = Vec::new();
     let mut failed = Vec::new();
     let mut messages = Vec::new();
     for c in &candidates.close {
         let id = c.ticket.frontmatter.id.clone();
         match crate::ticket::close(root, config, &id, None, author, aggressive) {
             Ok(msgs) => {
+                let branch = c.ticket.frontmatter.branch.clone()
+                    .or_else(|| crate::ticket_fmt::branch_name_from_path(&c.ticket.path))
+                    .unwrap_or_else(|| format!("ticket/{}", c.ticket.frontmatter.id));
                 closed.push(id);
+                closed_branches.push(branch);
                 messages.extend(msgs);
             }
             Err(e) => {
@@ -229,5 +235,5 @@ pub fn apply(root: &Path, config: &Config, candidates: &Candidates, author: &str
             }
         }
     }
-    Ok(ApplyOutput { closed, failed, messages })
+    Ok(ApplyOutput { closed, closed_branches, failed, messages })
 }
