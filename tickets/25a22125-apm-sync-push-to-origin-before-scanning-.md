@@ -39,7 +39,47 @@ The correct order is: detect merge candidates, apply closures, then push. With t
 
 ### Approach
 
-How the implementation will work.
+Two files change.
+
+#### `apm-core/src/sync.rs` — expose closed branches from apply
+
+Add `closed_branches: Vec<String>` to `ApplyOutput`. In `apply`, after each successful `ticket::close` call, extract the branch from `c.ticket.frontmatter.branch` (with the same fallback logic `ticket::close` itself uses: `branch_name_from_path` → `ticket/{id}`) and push it to `closed_branches`. This gives the caller visibility into which branches received a close commit.
+
+#### `apm/src/cmd/sync.rs` — move push block to after detect+apply
+
+Current execution order in `run`:
+1. Fetch
+2. `sync_non_checked_out_refs` → `ahead_refs`
+3. `sync_default_branch` → `default_is_ahead`
+4. `sync_checked_out_worktrees`
+5. **Push default branch** (if `default_is_ahead`)
+6. **Push `ahead_refs`**
+7. `sync::detect` → `candidates`
+8. `sync::apply` → `apply_out`
+
+New order:
+1. Fetch
+2. `sync_non_checked_out_refs` → `ahead_refs`
+3. `sync_default_branch` → `default_is_ahead`
+4. `sync_checked_out_worktrees`
+5. `sync::detect` → `candidates`
+6. `sync::apply` → `apply_out`
+7. Merge `apply_out.closed_branches` into `ahead_refs` (dedup via `HashSet<String>`)
+8. **Push default branch** (if `default_is_ahead`)
+9. **Push `ahead_refs`** (now includes branches that became ahead due to step 6)
+
+Steps 8–9 are the existing push blocks relocated after step 6, with one extra dedup step (7) before them. No changes to prompt wording, `--push-refs` flag handling, or `--quiet` behaviour; `sync_warnings` collection and the worktree summary print stay in place.
+
+#### Test
+
+Add an integration test in `apm/tests/integration.rs` alongside the existing `sync_closes_*` tests:
+
+1. Set up a bare origin repo and clone it into a working tree.
+2. Create a ticket branch at origin with the ticket in `implemented` state, and fast-forward the local ref so the branch is Equal (not ahead).
+3. Merge the ticket branch into `main` at origin (simulating a merged PR).
+4. Fetch origin so local sees the merge.
+5. Call `apm::cmd::sync::run(root, offline=false, quiet=true, no_aggressive=true, auto_close=true, push_default=false, push_refs=true)`.
+6. Assert that `git log origin/<ticket-branch>` includes a commit whose message contains `"close"` — confirming the close commit written by `apply` was pushed to origin within the same sync run.
 
 ### Open questions
 
