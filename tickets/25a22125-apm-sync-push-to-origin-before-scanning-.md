@@ -1,7 +1,7 @@
 +++
 id = "25a22125"
 title = "apm sync push to origin before scanning tickets. it might make more sense to push after the states have been changed."
-state = "amend"
+state = "in_design"
 priority = 0
 effort = 2
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/25a22125-apm-sync-push-to-origin-before-scanning-"
 created_at = "2026-06-25T00:47:40.559751Z"
-updated_at = "2026-06-25T06:55:00.347063Z"
+updated_at = "2026-06-25T06:55:44.399389Z"
 +++
 
 ## Spec
@@ -103,3 +103,4 @@ Add an integration test in `apm/tests/integration.rs` alongside the existing `sy
 | 2026-06-25T06:41Z | groomed | in_design | philippepascal |
 | 2026-06-25T06:48Z | in_design | specd | claude |
 | 2026-06-25T06:55Z | specd | amend | philippepascal |
+| 2026-06-25T06:55Z | amend | in_design | philippepascal |
