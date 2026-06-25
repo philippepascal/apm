@@ -44,39 +44,53 @@ Two files change.
 
 #### `apm-core/src/sync.rs` — expose closed branches from apply
 
-Add `closed_branches: Vec<String>` to `ApplyOutput`. In `apply`, after each successful `ticket::close` call, extract the branch from `c.ticket.frontmatter.branch` (with the same fallback logic `ticket::close` itself uses: `branch_name_from_path` → `ticket/{id}`) and push it to `closed_branches`. This gives the caller visibility into which branches received a close commit.
+Add `closed_branches: Vec<String>` to `ApplyOutput`. In `apply`, after each successful `ticket::close` call, derive the branch using the same three-line fallback pattern that `ticket::close` uses internally (at `ticket_util.rs:351–353`):
 
-#### `apm/src/cmd/sync.rs` — move push block to after detect+apply
+```rust
+let branch = c.ticket.frontmatter.branch.clone()
+    .or_else(|| crate::ticket_fmt::branch_name_from_path(&c.ticket.path))
+    .unwrap_or_else(|| format!("ticket/{}", c.ticket.frontmatter.id));
+```
 
-Current execution order in `run`:
-1. Fetch
-2. `sync_non_checked_out_refs` → `ahead_refs`
-3. `sync_default_branch` → `default_is_ahead`
-4. `sync_checked_out_worktrees`
-5. **Push default branch** (if `default_is_ahead`)
-6. **Push `ahead_refs`**
-7. `sync::detect` → `candidates`
-8. `sync::apply` → `apply_out`
+Push `branch` to `closed_branches`. Re-deriving here (rather than changing `ticket::close`'s return type from `Result<Vec<String>>`) keeps the public API stable and avoids a ripple change through all callers.
 
-New order:
-1. Fetch
-2. `sync_non_checked_out_refs` → `ahead_refs`
-3. `sync_default_branch` → `default_is_ahead`
-4. `sync_checked_out_worktrees`
-5. `sync::detect` → `candidates`
-6. `sync::apply` → `apply_out`
-7. Merge `apply_out.closed_branches` into `ahead_refs` (dedup via `HashSet<String>`)
-8. **Push default branch** (if `default_is_ahead`)
-9. **Push `ahead_refs`** (now includes branches that became ahead due to step 6)
+#### `apm/src/cmd/sync.rs` — restructure `run` into three sequential blocks
 
-Steps 8–9 are the existing push blocks relocated after step 6, with one extra dedup step (7) before them. No changes to prompt wording, `--push-refs` flag handling, or `--quiet` behaviour; `sync_warnings` collection and the worktree summary print stay in place.
+Hoist `ahead_refs: Vec<String>`, `default_is_ahead: bool`, `sync_warnings: Vec<String>`, and `wt_result` as `let mut` bindings above the first `if !offline` block, with empty/false defaults. Then restructure `run` as:
+
+**Block 1 — network I/O and ref reconciliation** (`if !offline`):
+Fetch, `sync_non_checked_out_refs` → populate `ahead_refs`, `sync_default_branch` → populate `default_is_ahead`, `sync_checked_out_worktrees` → populate `wt_result`, collect worktree warnings into `sync_warnings`. No push in this block.
+
+**Block 2 — detect and apply** (unconditional, runs in offline mode too — exactly as today):
+`sync::detect` → `candidates`, print ticket branch count, print hints, prompt/auto-close, `sync::apply` → `apply_out`, merge `apply_out.closed_branches` into `ahead_refs` (iterate `closed_branches`, push each entry not already in `ahead_refs`), print apply messages, print epic hints.
+
+**Block 3 — push and output** (`if !offline`):
+1. If `default_is_ahead`: prompt or auto-push. On push: call `sync_warnings.retain(|w| !w.contains(&config.project.default_branch) || !w.contains("ahead"))` to drop the MAIN_AHEAD warning, then push and print confirmation.
+2. If `!ahead_refs.is_empty()`: prompt or auto-push (`--push-refs`). Push each branch in `ahead_refs` (which now includes branches that became ahead during block 2). Print confirmation.
+3. Print `sync_warnings` (MAIN_AHEAD already removed if push happened in step 1).
+4. Print worktree summary.
+
+Moving the warnings print and worktree summary from their current position (inside the original `if !offline` block, before detect+apply) to block 3 (after push) ensures the `retain` call takes effect before warnings are emitted. The contradictory "stay in place" instruction from the previous Approach is removed.
+
+#### Output ordering change
+
+After the reorder, a typical sync run produces output in this sequence:
+
+1. Worktree fast-forward lines (block 1)
+2. `sync: N ticket branches visible` (block 2)
+3. Close messages and hints (block 2)
+4. Epic hints (block 2)
+5. Push prompts / push confirmations (block 3)
+6. Warnings and worktree summary (block 3)
+
+This is intentional. Previously, push prompts appeared between fast-forward lines and the ticket count. The new order is strictly more useful: the push covers the full set of ahead branches including those just closed.
 
 #### Test
 
 Add an integration test in `apm/tests/integration.rs` alongside the existing `sync_closes_*` tests:
 
 1. Set up a bare origin repo and clone it into a working tree.
-2. Create a ticket branch at origin with the ticket in `implemented` state, and fast-forward the local ref so the branch is Equal (not ahead).
+2. Create a ticket branch at origin with the ticket in `implemented` state; fast-forward the local ref so the branch is Equal (not ahead).
 3. Merge the ticket branch into `main` at origin (simulating a merged PR).
 4. Fetch origin so local sees the merge.
 5. Call `apm::cmd::sync::run(root, offline=false, quiet=true, no_aggressive=true, auto_close=true, push_default=false, push_refs=true)`.
