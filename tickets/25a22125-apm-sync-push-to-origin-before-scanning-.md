@@ -22,13 +22,13 @@ The correct order is: detect merge candidates, apply closures, then push. With t
 
 ### Acceptance criteria
 
-- [ ] `apm sync` (non-offline) runs `sync::detect` and `sync::apply` before prompting to push ahead branches to origin
-- [ ] When `sync::apply` closes a ticket whose branch was Equal to origin at the start of the run, the resulting ahead branch is included in the push prompt in the same sync invocation
-- [ ] `apm sync --push-refs` (non-interactive push) pushes all ahead branches after auto-close, including branches that only became ahead due to the closure
-- [ ] The default-branch push prompt appears after the auto-close step, not before
-- [ ] Push confirmation ("pushed N ahead branches") appears in the terminal after the auto-close messages and ticket branch count line, not before them
-- [ ] Quiet mode (`--quiet`) suppresses push output the same as before
-- [ ] `cargo test --workspace` passes with no regressions
+- [x] `apm sync` (non-offline) runs `sync::detect` and `sync::apply` before prompting to push ahead branches to origin
+- [x] When `sync::apply` closes a ticket whose branch was Equal to origin at the start of the run, the resulting ahead branch is included in the push prompt in the same sync invocation
+- [x] `apm sync --push-refs` (non-interactive push) pushes all ahead branches after auto-close, including branches that only became ahead due to the closure
+- [x] The default-branch push prompt appears after the auto-close step, not before
+- [x] Push confirmation ("pushed N ahead branches") appears in the terminal after the auto-close messages and ticket branch count line, not before them
+- [x] Quiet mode (`--quiet`) suppresses push output the same as before
+- [x] `cargo test --workspace` passes with no regressions
 
 ### Out of scope
 
