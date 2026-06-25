@@ -16,7 +16,9 @@ updated_at = "2026-06-25T06:41:56.823223Z"
 
 ### Problem
 
-investigate the consequences of changing order. if valid, spec and inplement.
+`apm sync` currently pushes locally-ahead ticket and epic branches to origin **before** it scans for tickets to auto-close. This means any close commits written by `sync::apply` (via `ticket::close`) are left sitting on local branches — they are not published to origin within the same sync run and only reach origin on the next `apm sync` invocation.
+
+The correct order is: detect merge candidates, apply closures, then push. With that ordering, the push prompt covers every pending local commit in one shot — including close-state commits just written by the auto-close step — so origin stays current after a single `apm sync`. The reordering also applies to the default-branch push, which belongs at the end for the same reason.
 
 ### Acceptance criteria
 
@@ -33,13 +35,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
