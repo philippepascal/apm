@@ -87,6 +87,7 @@ Add an integration test in `apm/tests/integration.rs` alongside the existing `sy
 ### Amendment requests
 
 - [ ] Handle the offline/non-offline boundary in the reorder. detect+apply currently run OUTSIDE the 'if !offline' block (apm/src/cmd/sync.rs:132+) and must keep running in offline mode (auto-close + hints, no push). The Approach's linear 9-step list hides this. Specify: hoist ahead_refs/default_is_ahead out of the offline block, run detect+apply unconditionally, then push inside a second 'if !offline' block that consumes both ahead_refs and apply_out.closed_branches.
+- [ ] Fix the sync_warnings print-ordering conflict. The default-branch push calls sync_warnings.retain(...) at sync.rs:74 to drop the MAIN_AHEAD warning BEFORE warnings print at :102. Moving push below detect+apply while keeping the warnings print and worktree summary 'in place' (as the current Approach states) would print MAIN_AHEAD even when the user chose to push — a regression. The warnings print and worktree summary must move below the relocated push (or the retain logic restructured). Remove the contradictory 'stay in place' instruction from the Approach.
 
 ### Code review
 
