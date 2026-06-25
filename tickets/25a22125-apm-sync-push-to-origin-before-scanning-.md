@@ -3,13 +3,13 @@ id = "25a22125"
 title = "apm sync push to origin before scanning tickets. it might make more sense to push after the states have been changed."
 state = "in_design"
 priority = 0
-effort = 0
+effort = 2
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/25a22125-apm-sync-push-to-origin-before-scanning-"
 created_at = "2026-06-25T00:47:40.559751Z"
-updated_at = "2026-06-25T06:41:56.823223Z"
+updated_at = "2026-06-25T06:48:18.980625Z"
 +++
 
 ## Spec
