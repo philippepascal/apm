@@ -1,7 +1,7 @@
 +++
 id = "25a22125"
 title = "apm sync push to origin before scanning tickets. it might make more sense to push after the states have been changed."
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,14 +9,14 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/25a22125-apm-sync-push-to-origin-before-scanning-"
 created_at = "2026-06-25T00:47:40.559751Z"
-updated_at = "2026-06-25T00:47:40.559751Z"
+updated_at = "2026-06-25T06:41:47.142094Z"
 +++
 
 ## Spec
 
 ### Problem
 
-What is broken or missing, and why it matters.
+investigate the consequences of changing order. if valid, spec and inplement.
 
 ### Acceptance criteria
 
@@ -47,3 +47,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-06-25T00:47Z | — | new | philippepascal |
+| 2026-06-25T06:41Z | new | groomed | philippepascal |
