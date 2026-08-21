@@ -22,13 +22,13 @@ This is a rough edge for anyone evaluating apm for the first time (checking `apm
 
 ### Acceptance criteria
 
-- [ ] `apm version` run from a directory outside any git repository prints the version line and exits 0
-- [ ] `apm help` (no topic) run from a directory outside any git repository prints the topic overview and exits 0
-- [ ] `apm help commands` run from a directory outside any git repository prints the full command reference and exits 0
-- [ ] `apm help config`, `apm help workflow`, and `apm help ticket` each run successfully (exit 0, non-empty output) from outside any git repository
-- [ ] `apm help badtopic` run from outside any git repository still fails with the "unknown help topic" error and a non-zero exit code — it fails for that reason, not because a repository is missing
-- [ ] `apm version` and `apm help [topic]` behave exactly as before when run from inside a git repository, whether or not apm is initialized there
-- [ ] Every other subcommand (e.g. `apm list`, `apm show`, `apm init`) still fails with the existing "not inside a git repository" error when run outside a repository — this ticket does not widen that exemption
+- [x] `apm version` run from a directory outside any git repository prints the version line and exits 0
+- [x] `apm help` (no topic) run from a directory outside any git repository prints the topic overview and exits 0
+- [x] `apm help commands` run from a directory outside any git repository prints the full command reference and exits 0
+- [x] `apm help config`, `apm help workflow`, and `apm help ticket` each run successfully (exit 0, non-empty output) from outside any git repository
+- [x] `apm help badtopic` run from outside any git repository still fails with the "unknown help topic" error and a non-zero exit code — it fails for that reason, not because a repository is missing
+- [x] `apm version` and `apm help [topic]` behave exactly as before when run from inside a git repository, whether or not apm is initialized there
+- [x] Every other subcommand (e.g. `apm list`, `apm show`, `apm init`) still fails with the existing "not inside a git repository" error when run outside a repository — this ticket does not widen that exemption
 
 ### Out of scope
 
