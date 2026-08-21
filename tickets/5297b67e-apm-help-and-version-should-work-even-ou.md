@@ -32,7 +32,10 @@ This is a rough edge for anyone evaluating apm for the first time (checking `apm
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- `apm init` still requires being inside a git repository — it writes `.apm/` under `root` and cannot function without one; this ticket does not change that
+- Top-level `apm --version`, `apm -V`, `apm --help`, `apm -h` — these already work outside a repo via clap's built-in flag handling; no change needed
+- `apm <subcommand> --help` (e.g. `apm list --help`) — already handled by clap during argument parsing, before any subcommand dispatch; unaffected by this ticket
+- Reworking or skipping the logging setup and hash-trip config-validation logic for `version`/`help` in any general way — they are simply never reached for these two commands, the same way they are already never reached for `path-guard`
 
 ### Approach
 
