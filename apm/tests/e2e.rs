@@ -34,14 +34,18 @@ impl Env {
         std::fs::copy(
             concat!(env!("CARGO_MANIFEST_DIR"), "/../testdata/src/parser.rs"),
             src_dir.join("parser.rs"),
-        ).unwrap();
+        )
+        .unwrap();
         std::fs::copy(
             concat!(env!("CARGO_MANIFEST_DIR"), "/../testdata/src/main.rs"),
             src_dir.join("main.rs"),
-        ).unwrap();
+        )
+        .unwrap();
 
         // Write apm.toml before init so worktrees dir stays inside the tempdir.
-        std::fs::write(p.join("apm.toml"), r#"[project]
+        std::fs::write(
+            p.join("apm.toml"),
+            r#"[project]
 name = "test-repo"
 
 [tickets]
@@ -102,11 +106,22 @@ label = "Accepted"
 id       = "closed"
 label    = "Closed"
 terminal = true
-"#).unwrap();
+"#,
+        )
+        .unwrap();
 
         // Commit source files and apm.toml to main before apm init.
         git_ok(p, &["add", "src/", "apm.toml"]);
-        git_ok(p, &["-c", "commit.gpgsign=false", "commit", "-m", "Add source files"]);
+        git_ok(
+            p,
+            &[
+                "-c",
+                "commit.gpgsign=false",
+                "commit",
+                "-m",
+                "Add source files",
+            ],
+        );
 
         // apm init (--no-claude skips the interactive settings.json prompt).
         let out = apm(p, "apm", &["init", "--no-claude"]);
@@ -178,9 +193,12 @@ terminal = true
 
     /// Return true if a local branch exists.
     fn branch_exists(&self, branch: &str) -> bool {
-        git(self.root(), &["rev-parse", "--verify", &format!("refs/heads/{branch}")])
-            .status
-            .success()
+        git(
+            self.root(),
+            &["rev-parse", "--verify", &format!("refs/heads/{branch}")],
+        )
+        .status
+        .success()
     }
 
     /// Return commits on `branch` that are not on `base`, most-recent first.
@@ -248,19 +266,30 @@ fn git(dir: &Path, args: &[&str]) -> Output {
 
 fn git_ok(dir: &Path, args: &[&str]) {
     let out = git(dir, args);
-    assert!(out.status.success(), "git {:?} failed:\n{}", args, stderr(&out));
+    assert!(
+        out.status.success(),
+        "git {:?} failed:\n{}",
+        args,
+        stderr(&out)
+    );
 }
 
 /// Check out ticket branch, write a valid spec body, commit, return to main.
 fn write_valid_spec_for_test(dir: &Path, branch: &str, ticket_path: &str) {
     git_ok(dir, &["checkout", branch]);
     let existing = std::fs::read_to_string(dir.join(ticket_path)).unwrap();
-    let fm_end = existing.find("\n+++\n").expect("frontmatter close not found") + 5;
+    let fm_end = existing
+        .find("\n+++\n")
+        .expect("frontmatter close not found")
+        + 5;
     let frontmatter = &existing[..fm_end];
     let body = "\n## Spec\n\n### Problem\n\nTest problem.\n\n### Acceptance criteria\n\n- [ ] One criterion\n\n### Out of scope\n\nNothing.\n\n### Approach\n\nDirect approach.\n\n## History\n\n| When | From | To | By |\n|------|------|----|-----|\n| 2026-01-01T00:00Z | — | new | test-agent |\n";
     std::fs::write(dir.join(ticket_path), format!("{frontmatter}{body}")).unwrap();
     git_ok(dir, &["-c", "commit.gpgsign=false", "add", ticket_path]);
-    git_ok(dir, &["-c", "commit.gpgsign=false", "commit", "-m", "write spec"]);
+    git_ok(
+        dir,
+        &["-c", "commit.gpgsign=false", "commit", "-m", "write spec"],
+    );
     git_ok(dir, &["checkout", "main"]);
 }
 
@@ -291,7 +320,10 @@ fn parse_new_ticket_branch(out: &Output) -> String {
     s.lines()
         .find(|l| l.starts_with("Created ticket "))
         .and_then(|l| l.split("(branch: ").nth(1))
-        .and_then(|s| s.strip_suffix(')').or_else(|| s.trim_end_matches('\n').strip_suffix(')')))
+        .and_then(|s| {
+            s.strip_suffix(')')
+                .or_else(|| s.trim_end_matches('\n').strip_suffix(')'))
+        })
         .map(|s| s.trim().to_string())
         .unwrap_or_else(|| panic!("could not parse branch from: {s}"))
 }
@@ -309,14 +341,32 @@ fn full_ticket_lifecycle() {
     // setup() already ran init. Verify the expected files are in place.
 
     assert!(env.root().join("CLAUDE.md").exists(), "CLAUDE.md missing");
-    assert!(!env.root().join(".apm/agents/default/agents.md").exists(), ".apm/agents/default/agents.md should not exist after init");
-    assert!(env.root().join(".apm/config.toml").exists(), ".apm/config.toml missing");
-    assert!(!env.root().join(".git/hooks/pre-push").exists(), "pre-push hook should not be installed");
-    assert!(!env.root().join(".git/hooks/post-merge").exists(), "post-merge hook should not be installed");
+    assert!(
+        !env.root().join(".apm/agents/default/agents.md").exists(),
+        ".apm/agents/default/agents.md should not exist after init"
+    );
+    assert!(
+        env.root().join(".apm/config.toml").exists(),
+        ".apm/config.toml missing"
+    );
+    assert!(
+        !env.root().join(".git/hooks/pre-push").exists(),
+        "pre-push hook should not be installed"
+    );
+    assert!(
+        !env.root().join(".git/hooks/post-merge").exists(),
+        "post-merge hook should not be installed"
+    );
 
     let claude = env.read("CLAUDE.md");
-    assert!(claude.contains("@.apm/project.md"), "CLAUDE.md missing @.apm/project.md import");
-    assert!(claude.contains("@.apm/agents/claude/apm.main-agent.md"), "CLAUDE.md missing @.apm/agents/claude/apm.main-agent.md import");
+    assert!(
+        claude.contains("@.apm/project.md"),
+        "CLAUDE.md missing @.apm/project.md import"
+    );
+    assert!(
+        claude.contains("@.apm/agents/claude/apm.main-agent.md"),
+        "CLAUDE.md missing @.apm/agents/claude/apm.main-agent.md import"
+    );
 
     // ── Step 2: create a ticket ─────────────────────────────────────────────
     // Agent creates a ticket for the parse_count bug.
@@ -326,8 +376,14 @@ fn full_ticket_lifecycle() {
     let out = env.apm_as("test-agent", &["new", "Fix parse_count off-by-one"]);
     assert!(out.status.success(), "apm new failed:\n{}", stderr(&out));
     let out_text = stdout(&out);
-    assert!(out_text.contains("Created ticket "), "unexpected output: {out_text}");
-    assert!(out_text.contains("fix-parse-count-off-by-one"), "slug missing: {out_text}");
+    assert!(
+        out_text.contains("Created ticket "),
+        "unexpected output: {out_text}"
+    );
+    assert!(
+        out_text.contains("fix-parse-count-off-by-one"),
+        "slug missing: {out_text}"
+    );
 
     let ticket_id = parse_new_ticket_id(&out);
     let branch = parse_new_ticket_branch(&out);
@@ -340,20 +396,35 @@ fn full_ticket_lifecycle() {
     // Frontmatter is correct — read from the branch, not the working tree.
     let ticket = env.branch_content(&branch, &ticket_path);
     // id is now an 8-char hex string
-    assert!(ticket.contains(&format!("id = \"{ticket_id}\"")), "wrong id in frontmatter");
+    assert!(
+        ticket.contains(&format!("id = \"{ticket_id}\"")),
+        "wrong id in frontmatter"
+    );
     assert!(ticket.contains("state = \"new\""), "wrong state");
     assert!(ticket.contains("author = \"test-agent\""), "author not set");
-    assert!(ticket.contains(&format!("branch = \"{branch}\"")), "branch not set");
+    assert!(
+        ticket.contains(&format!("branch = \"{branch}\"")),
+        "branch not set"
+    );
     assert!(ticket.contains("created_at"), "created_at missing");
     assert!(ticket.contains("updated_at"), "updated_at missing");
 
     // Body scaffold includes all four required sections and history.
     assert!(ticket.contains("### Problem"), "missing ### Problem");
-    assert!(ticket.contains("### Acceptance criteria"), "missing ### Acceptance criteria");
-    assert!(ticket.contains("### Out of scope"), "missing ### Out of scope");
+    assert!(
+        ticket.contains("### Acceptance criteria"),
+        "missing ### Acceptance criteria"
+    );
+    assert!(
+        ticket.contains("### Out of scope"),
+        "missing ### Out of scope"
+    );
     assert!(ticket.contains("### Approach"), "missing ### Approach");
     assert!(ticket.contains("## History"), "missing ## History");
-    assert!(ticket.contains("| — | new | test-agent |"), "missing creation history row");
+    assert!(
+        ticket.contains("| — | new | test-agent |"),
+        "missing creation history row"
+    );
 
     // ── Step 3: agent writes the spec ───────────────────────────────────────
     // Simulate: git checkout <branch>, edit ticket, commit, checkout main.
@@ -363,7 +434,10 @@ fn full_ticket_lifecycle() {
 
     // Preserve the frontmatter written by apm new; replace only the body.
     let existing = env.read(&ticket_path);
-    let fm_end = existing.find("\n+++\n").expect("frontmatter close not found") + 5;
+    let fm_end = existing
+        .find("\n+++\n")
+        .expect("frontmatter close not found")
+        + 5;
     let frontmatter = &existing[..fm_end];
 
     let new_body = r#"
@@ -400,8 +474,20 @@ immediately. Update the existing tests to cover the single-item case.
 "#;
 
     env.write(&ticket_path, &format!("{frontmatter}{new_body}"));
-    git_ok(env.root(), &["-c", "commit.gpgsign=false", "add", &ticket_path]);
-    git_ok(env.root(), &["-c", "commit.gpgsign=false", "commit", "-m", &format!("ticket({ticket_id}): write spec")]);
+    git_ok(
+        env.root(),
+        &["-c", "commit.gpgsign=false", "add", &ticket_path],
+    );
+    git_ok(
+        env.root(),
+        &[
+            "-c",
+            "commit.gpgsign=false",
+            "commit",
+            "-m",
+            &format!("ticket({ticket_id}): write spec"),
+        ],
+    );
     git_ok(env.root(), &["checkout", "main"]);
     assert_eq!(env.current_branch(), "main");
 
@@ -416,26 +502,51 @@ immediately. Update the existing tests to cover the single-item case.
     // The workflow requires this path; direct new→specd is not a valid transition.
 
     let out = env.apm_as("philippe", &["state", &ticket_id, "groomed"]);
-    assert!(out.status.success(), "apm state groomed failed:\n{}", stderr(&out));
+    assert!(
+        out.status.success(),
+        "apm state groomed failed:\n{}",
+        stderr(&out)
+    );
 
     let out = env.apm_as("test-agent", &["state", &ticket_id, "in_design"]);
-    assert!(out.status.success(), "apm state in_design failed:\n{}", stderr(&out));
+    assert!(
+        out.status.success(),
+        "apm state in_design failed:\n{}",
+        stderr(&out)
+    );
 
     let out = env.apm_as("test-agent", &["state", &ticket_id, "specd"]);
-    assert!(out.status.success(), "apm state specd failed:\n{}", stderr(&out));
+    assert!(
+        out.status.success(),
+        "apm state specd failed:\n{}",
+        stderr(&out)
+    );
 
     let ticket = env.branch_content(&branch, &ticket_path);
-    assert!(ticket.contains("state = \"specd\""), "state not updated to specd");
-    assert!(ticket.contains("| in_design | specd |"), "history row missing");
+    assert!(
+        ticket.contains("state = \"specd\""),
+        "state not updated to specd"
+    );
+    assert!(
+        ticket.contains("| in_design | specd |"),
+        "history row missing"
+    );
     assert!(ticket.contains("updated_at"), "updated_at not refreshed");
 
     // ── Step 5: supervisor approves — apm state specd → ready ───────────────
 
     let out = env.apm_as("philippe", &["state", &ticket_id, "ready"]);
-    assert!(out.status.success(), "apm state ready failed:\n{}", stderr(&out));
+    assert!(
+        out.status.success(),
+        "apm state ready failed:\n{}",
+        stderr(&out)
+    );
 
     let ticket = env.branch_content(&branch, &ticket_path);
-    assert!(ticket.contains("state = \"ready\""), "state not updated to ready");
+    assert!(
+        ticket.contains("state = \"ready\""),
+        "state not updated to ready"
+    );
     assert!(ticket.contains("| specd | ready |"), "history row missing");
 
     // ── Step 6: agent claims ticket — apm start ──────────────────────────────
@@ -444,16 +555,37 @@ immediately. Update the existing tests to cover the single-item case.
     let out = env.apm_as("test-agent", &["start", &ticket_id]);
     assert!(out.status.success(), "apm start failed:\n{}", stderr(&out));
     let start_out = stdout(&out);
-    assert!(start_out.contains("in_progress"), "unexpected output: {}", start_out);
-    assert!(start_out.contains("Worktree:"), "worktree path missing from output: {}", start_out);
+    assert!(
+        start_out.contains("in_progress"),
+        "unexpected output: {}",
+        start_out
+    );
+    assert!(
+        start_out.contains("Worktree:"),
+        "worktree path missing from output: {}",
+        start_out
+    );
 
     // Main worktree is still on main — agent works in the provisioned worktree.
-    assert_eq!(env.current_branch(), "main", "main worktree should stay on main");
+    assert_eq!(
+        env.current_branch(),
+        "main",
+        "main worktree should stay on main"
+    );
 
     let ticket = env.branch_content(&branch, &ticket_path);
-    assert!(ticket.contains("state = \"in_progress\""), "state not in_progress");
-    assert!(!ticket.contains("agent ="), "agent field must not be written");
-    assert!(ticket.contains("| ready | in_progress |"), "history row missing");
+    assert!(
+        ticket.contains("state = \"in_progress\""),
+        "state not in_progress"
+    );
+    assert!(
+        !ticket.contains("agent ="),
+        "agent field must not be written"
+    );
+    assert!(
+        ticket.contains("| ready | in_progress |"),
+        "history row missing"
+    );
 
     // Parse the worktree path from the output line "Worktree: /path/to/wt"
     let wt_path = start_out
@@ -500,8 +632,20 @@ mod tests {
 "#;
     std::fs::create_dir_all(wt_path.join("src")).unwrap();
     std::fs::write(wt_path.join("src/parser.rs"), fixed).unwrap();
-    git_ok(&wt_path, &["-c", "commit.gpgsign=false", "add", "src/parser.rs"]);
-    git_ok(&wt_path, &["-c", "commit.gpgsign=false", "commit", "-m", &format!("ticket({ticket_id}): fix parse_count off-by-one")]);
+    git_ok(
+        &wt_path,
+        &["-c", "commit.gpgsign=false", "add", "src/parser.rs"],
+    );
+    git_ok(
+        &wt_path,
+        &[
+            "-c",
+            "commit.gpgsign=false",
+            "commit",
+            "-m",
+            &format!("ticket({ticket_id}): fix parse_count off-by-one"),
+        ],
+    );
 
     // Code fix commit is on the ticket branch.
     let branch_commits = env.commits_on_branch(&branch, "main");
@@ -520,42 +664,90 @@ mod tests {
 
     let ticket_content = std::fs::read_to_string(wt_path.join(&ticket_path)).unwrap();
     let checked = ticket_content
-        .replace("- [ ] `parse_count(\"\")` returns 0 without panicking", "- [x] `parse_count(\"\")` returns 0 without panicking")
-        .replace("- [ ] `parse_count(\"a\")` returns 1", "- [x] `parse_count(\"a\")` returns 1")
-        .replace("- [ ] `parse_count(\"a,b,c\")` returns 3", "- [x] `parse_count(\"a,b,c\")` returns 3")
-        .replace("- [ ] Existing `parse_items` behaviour is unchanged", "- [x] Existing `parse_items` behaviour is unchanged");
+        .replace(
+            "- [ ] `parse_count(\"\")` returns 0 without panicking",
+            "- [x] `parse_count(\"\")` returns 0 without panicking",
+        )
+        .replace(
+            "- [ ] `parse_count(\"a\")` returns 1",
+            "- [x] `parse_count(\"a\")` returns 1",
+        )
+        .replace(
+            "- [ ] `parse_count(\"a,b,c\")` returns 3",
+            "- [x] `parse_count(\"a,b,c\")` returns 3",
+        )
+        .replace(
+            "- [ ] Existing `parse_items` behaviour is unchanged",
+            "- [x] Existing `parse_items` behaviour is unchanged",
+        );
     std::fs::write(wt_path.join(&ticket_path), &checked).unwrap();
-    git_ok(&wt_path, &["-c", "commit.gpgsign=false", "add", &ticket_path]);
-    git_ok(&wt_path, &["-c", "commit.gpgsign=false", "commit", "-m", &format!("ticket({ticket_id}): check acceptance criteria")]);
+    git_ok(
+        &wt_path,
+        &["-c", "commit.gpgsign=false", "add", &ticket_path],
+    );
+    git_ok(
+        &wt_path,
+        &[
+            "-c",
+            "commit.gpgsign=false",
+            "commit",
+            "-m",
+            &format!("ticket({ticket_id}): check acceptance criteria"),
+        ],
+    );
 
     // All boxes checked.
     let ticket = env.branch_content(&branch, &ticket_path);
     assert!(!ticket.contains("- [ ]"), "unchecked boxes remain");
-    assert_eq!(ticket.matches("- [x]").count(), 4, "expected 4 checked boxes");
+    assert_eq!(
+        ticket.matches("- [x]").count(),
+        4,
+        "expected 4 checked boxes"
+    );
 
     // ── Step 9: apm state in_progress → implemented ─────────────────────────
 
     let out = env.apm_as("test-agent", &["state", &ticket_id, "implemented"]);
-    assert!(out.status.success(), "apm state implemented failed:\n{}", stderr(&out));
+    assert!(
+        out.status.success(),
+        "apm state implemented failed:\n{}",
+        stderr(&out)
+    );
 
     let ticket = env.branch_content(&branch, &ticket_path);
-    assert!(ticket.contains("state = \"implemented\""), "state not implemented");
-    assert!(ticket.contains("| in_progress | implemented |"), "history row missing");
+    assert!(
+        ticket.contains("state = \"implemented\""),
+        "state not implemented"
+    );
+    assert!(
+        ticket.contains("| in_progress | implemented |"),
+        "history row missing"
+    );
 
     // ── Step 10: merge ticket branch into main ───────────────────────────────
     // Simulates a PR merge.
 
     git_ok(env.root(), &["checkout", "main"]);
-    git_ok(env.root(), &[
-        "-c", "commit.gpgsign=false",
-        "merge", "--no-ff", &branch,
-        "-m", &format!("Merge {branch} — Fix parse_count off-by-one"),
-    ]);
+    git_ok(
+        env.root(),
+        &[
+            "-c",
+            "commit.gpgsign=false",
+            "merge",
+            "--no-ff",
+            &branch,
+            "-m",
+            &format!("Merge {branch} — Fix parse_count off-by-one"),
+        ],
+    );
 
     // After merge: main has the fixed parser.rs.
     let src = env.read("src/parser.rs");
     assert!(!src.contains("- 1"), "merged main still has the bug");
-    assert!(src.contains("if input.is_empty()"), "fix not in main after merge");
+    assert!(
+        src.contains("if input.is_empty()"),
+        "fix not in main after merge"
+    );
 
     // ── Step 11: apm sync detects merged branch and offers to close ─────────────
     // --offline skips the remote fetch/push.
@@ -571,7 +763,10 @@ mod tests {
 
     // Ticket is still in implemented — no auto-close without --auto-close flag.
     let ticket_after = env.branch_content(&branch, &ticket_path);
-    assert!(ticket_after.contains("state = \"implemented\""), "state should still be implemented after sync");
+    assert!(
+        ticket_after.contains("state = \"implemented\""),
+        "state should still be implemented after sync"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -632,10 +827,24 @@ id    = "closed"
 label = "Closed"
 terminal = true
 "#,
-    ).unwrap();
+    )
+    .unwrap();
 
-    git_ok(p, &["-c", "commit.gpgsign=false", "add", ".apm/config.toml"]);
-    git_ok(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init", "--allow-empty"]);
+    git_ok(
+        p,
+        &["-c", "commit.gpgsign=false", "add", ".apm/config.toml"],
+    );
+    git_ok(
+        p,
+        &[
+            "-c",
+            "commit.gpgsign=false",
+            "commit",
+            "-m",
+            "init",
+            "--allow-empty",
+        ],
+    );
     std::fs::create_dir_all(p.join("tickets")).unwrap();
 
     // Create a ticket and write a valid spec body before transitioning to specd.
@@ -648,19 +857,29 @@ terminal = true
 
     // new → specd is allowed.
     let out = apm_env(p, "test-agent", &["state", &id1, "specd"]);
-    assert!(out.status.success(), "new → specd should be allowed:\n{}", stderr(&out));
+    assert!(
+        out.status.success(),
+        "new → specd should be allowed:\n{}",
+        stderr(&out)
+    );
 
     // specd → new is NOT allowed (no such transition defined, and new is not terminal).
     let out = apm_env(p, "test-agent", &["state", &id1, "new"]);
     assert!(!out.status.success(), "specd → new should be rejected");
     let err = stderr(&out);
-    assert!(err.contains("no transition"), "expected transition error, got: {err}");
+    assert!(
+        err.contains("no transition"),
+        "expected transition error, got: {err}"
+    );
     assert!(err.contains("specd"), "error should mention current state");
     assert!(err.contains("new"), "error should mention target state");
 
     // Terminal states are always reachable regardless of transition rules.
     let out = apm_env(p, "test-agent", &["state", &id1, "closed"]);
-    assert!(out.status.success(), "specd → closed should be allowed (terminal state)");
+    assert!(
+        out.status.success(),
+        "specd → closed should be allowed (terminal state)"
+    );
 
     // new → specd → ready via defined transitions (need a fresh ticket since #1 is now closed).
     let out = apm_env(p, "test-agent", &["new", "Second enforcement test"]);
@@ -689,7 +908,8 @@ fn next_respects_priority_and_actionable_states() {
     std::fs::write(
         env.root().join(".apm/local.toml"),
         "username = \"test-agent\"\n",
-    ).unwrap();
+    )
+    .unwrap();
 
     // Create three tickets with different priorities.
     let out = env.apm_as("test-agent", &["new", "Low priority task"]);
@@ -748,7 +968,9 @@ fn setup_resolve_repo(dir: &std::path::Path, ticket_id: &str) {
     fs::create_dir_all(dir.join(".apm/agents/claude")).unwrap();
     fs::create_dir_all(dir.join("tickets")).unwrap();
 
-    fs::write(dir.join(".apm/config.toml"), r#"
+    fs::write(
+        dir.join(".apm/config.toml"),
+        r#"
 [project]
 name = "resolve-test"
 default_branch = "main"
@@ -758,9 +980,13 @@ default = "claude/coder"
 
 [tickets]
 dir = "tickets"
-"#).unwrap();
+"#,
+    )
+    .unwrap();
 
-    fs::write(dir.join(".apm/workflow.toml"), r#"
+    fs::write(
+        dir.join(".apm/workflow.toml"),
+        r#"
 [[workflow.states]]
 id    = "ready"
 label = "Ready"
@@ -782,11 +1008,18 @@ worker_profile = "claude/coder"
 [[workflow.states]]
 id    = "done"
 label = "Done"
-"#).unwrap();
+"#,
+    )
+    .unwrap();
 
-    fs::write(dir.join(".apm/agents/claude/coder.toml"), "model = \"sonnet\"\n").unwrap();
+    fs::write(
+        dir.join(".apm/agents/claude/coder.toml"),
+        "model = \"sonnet\"\n",
+    )
+    .unwrap();
 
-    let ticket_content = format!(r#"+++
+    let ticket_content = format!(
+        r#"+++
 id = "{ticket_id}"
 title = "Resolve test ticket"
 state = "ready"
@@ -828,8 +1061,13 @@ Something.
 
 | When | From | To | By |
 |------|------|----|----|
-"#);
-    fs::write(dir.join(format!("tickets/{ticket_id}-resolve-test.md")), ticket_content).unwrap();
+"#
+    );
+    fs::write(
+        dir.join(format!("tickets/{ticket_id}-resolve-test.md")),
+        ticket_content,
+    )
+    .unwrap();
 
     git_ok(dir, &["init", "-q", "-b", "main"]);
     git_ok(dir, &["config", "user.email", "test@test.com"]);
@@ -839,8 +1077,14 @@ Something.
 
     let branch = format!("ticket/{ticket_id}-resolve-test");
     git_ok(dir, &["checkout", "-b", &branch]);
-    git_ok(dir, &["add", &format!("tickets/{ticket_id}-resolve-test.md")]);
-    git_ok(dir, &["-c", "commit.gpgsign=false", "commit", "-m", "add ticket"]);
+    git_ok(
+        dir,
+        &["add", &format!("tickets/{ticket_id}-resolve-test.md")],
+    );
+    git_ok(
+        dir,
+        &["-c", "commit.gpgsign=false", "commit", "-m", "add ticket"],
+    );
     git_ok(dir, &["checkout", "main"]);
 }
 
@@ -852,15 +1096,31 @@ fn agents_resolve_human_readable() {
     setup_resolve_repo(p, ticket_id);
 
     let out = apm(p, "apm", &["agents", "resolve", ticket_id]);
-    assert!(out.status.success(), "apm agents resolve failed:\n{}", stderr(&out));
+    assert!(
+        out.status.success(),
+        "apm agents resolve failed:\n{}",
+        stderr(&out)
+    );
     let text = stdout(&out);
 
-    assert!(text.contains("agent"), "output must include 'agent' field: {text}");
-    assert!(text.contains("role"), "output must include 'role' field: {text}");
-    assert!(text.contains("manifest"), "output must include 'manifest' field: {text}");
+    assert!(
+        text.contains("agent"),
+        "output must include 'agent' field: {text}"
+    );
+    assert!(
+        text.contains("role"),
+        "output must include 'role' field: {text}"
+    );
+    assert!(
+        text.contains("manifest"),
+        "output must include 'manifest' field: {text}"
+    );
     assert!(text.contains("claude"), "agent should be 'claude': {text}");
     assert!(text.contains("coder"), "role should be 'coder': {text}");
-    assert!(text.contains("[present]"), "manifest should be present: {text}");
+    assert!(
+        text.contains("[present]"),
+        "manifest should be present: {text}"
+    );
 }
 
 #[test]
@@ -871,7 +1131,11 @@ fn agents_resolve_json() {
     setup_resolve_repo(p, ticket_id);
 
     let out = apm(p, "apm", &["agents", "resolve", ticket_id, "--json"]);
-    assert!(out.status.success(), "apm agents resolve --json failed:\n{}", stderr(&out));
+    assert!(
+        out.status.success(),
+        "apm agents resolve --json failed:\n{}",
+        stderr(&out)
+    );
     let text = stdout(&out);
 
     let val: serde_json::Value = serde_json::from_str(&text)
@@ -880,7 +1144,10 @@ fn agents_resolve_json() {
     assert_eq!(val["role"], "coder", "role mismatch");
     assert_eq!(val["model"], "sonnet", "model mismatch");
     assert_eq!(val["dispatchable"], true, "should be dispatchable");
-    assert!(val["manifest_present"].as_bool().unwrap(), "manifest_present must be true");
+    assert!(
+        val["manifest_present"].as_bool().unwrap(),
+        "manifest_present must be true"
+    );
 }
 
 #[test]
@@ -892,7 +1159,10 @@ fn agents_resolve_unknown_id_exits_nonzero() {
     let out = apm(p, "apm", &["agents", "resolve", "no-such-ticket"]);
     assert!(!out.status.success(), "should exit non-zero for unknown id");
     let err = stderr(&out);
-    assert!(!err.is_empty(), "should print error message to stderr: {err}");
+    assert!(
+        !err.is_empty(),
+        "should print error message to stderr: {err}"
+    );
 }
 
 #[test]
@@ -900,7 +1170,11 @@ fn version_succeeds_with_valid_config() {
     let env = Env::setup();
 
     let out = env.apm(&["version"]);
-    assert!(out.status.success(), "apm version failed:\n{}", stderr(&out));
+    assert!(
+        out.status.success(),
+        "apm version failed:\n{}",
+        stderr(&out)
+    );
     let out_str = stdout(&out);
     assert!(
         out_str.contains(env!("CARGO_PKG_VERSION")),
@@ -953,13 +1227,22 @@ fn version_succeeds_with_missing_config() {
         apm_core::hash_stamp::read_stamp(env.root()).is_none(),
         "hash-trip stamp should not be written by apm version"
     );
+}
 fn version_works_outside_git_repo() {
     let dir = tempfile::tempdir().unwrap();
     let p = dir.path();
 
     let out = apm(p, "apm", &["version"]);
-    assert!(out.status.success(), "apm version failed:\n{}", stderr(&out));
-    assert!(stdout(&out).contains("apm "), "version output missing 'apm ': {}", stdout(&out));
+    assert!(
+        out.status.success(),
+        "apm version failed:\n{}",
+        stderr(&out)
+    );
+    assert!(
+        stdout(&out).contains("apm "),
+        "version output missing 'apm ': {}",
+        stdout(&out)
+    );
 }
 
 #[test]
@@ -969,7 +1252,11 @@ fn help_overview_works_outside_git_repo() {
 
     let out = apm(p, "apm", &["help"]);
     assert!(out.status.success(), "apm help failed:\n{}", stderr(&out));
-    assert!(stdout(&out).contains("Topics:"), "help output missing 'Topics:': {}", stdout(&out));
+    assert!(
+        stdout(&out).contains("Topics:"),
+        "help output missing 'Topics:': {}",
+        stdout(&out)
+    );
 }
 
 #[test]
@@ -978,8 +1265,16 @@ fn help_commands_works_outside_git_repo() {
     let p = dir.path();
 
     let out = apm(p, "apm", &["help", "commands"]);
-    assert!(out.status.success(), "apm help commands failed:\n{}", stderr(&out));
-    assert!(stdout(&out).contains("version"), "help commands output missing 'version': {}", stdout(&out));
+    assert!(
+        out.status.success(),
+        "apm help commands failed:\n{}",
+        stderr(&out)
+    );
+    assert!(
+        stdout(&out).contains("version"),
+        "help commands output missing 'version': {}",
+        stdout(&out)
+    );
 }
 
 #[test]
@@ -989,8 +1284,15 @@ fn help_topics_work_outside_git_repo() {
 
     for topic in ["config", "workflow", "ticket"] {
         let out = apm(p, "apm", &["help", topic]);
-        assert!(out.status.success(), "apm help {topic} failed:\n{}", stderr(&out));
-        assert!(!stdout(&out).is_empty(), "apm help {topic} produced empty output");
+        assert!(
+            out.status.success(),
+            "apm help {topic} failed:\n{}",
+            stderr(&out)
+        );
+        assert!(
+            !stdout(&out).is_empty(),
+            "apm help {topic} produced empty output"
+        );
     }
 }
 
@@ -1000,9 +1302,15 @@ fn help_unknown_topic_fails_outside_git_repo() {
     let p = dir.path();
 
     let out = apm(p, "apm", &["help", "nonexistent-topic"]);
-    assert!(!out.status.success(), "apm help nonexistent-topic should fail");
+    assert!(
+        !out.status.success(),
+        "apm help nonexistent-topic should fail"
+    );
     let err = stderr(&out);
-    assert!(err.contains("unknown help topic"), "expected 'unknown help topic' error: {err}");
+    assert!(
+        err.contains("unknown help topic"),
+        "expected 'unknown help topic' error: {err}"
+    );
 }
 
 #[test]
@@ -1011,64 +1319,13 @@ fn other_commands_still_require_git_repo() {
     let p = dir.path();
 
     let out = apm(p, "apm", &["list"]);
-    assert!(!out.status.success(), "apm list should fail outside a git repository");
+    assert!(
+        !out.status.success(),
+        "apm list should fail outside a git repository"
+    );
     let err = stderr(&out);
-    assert!(err.contains("not inside a git repository"), "expected 'not inside a git repository' error: {err}");
-fn version_succeeds_with_valid_config() {
-    let env = Env::setup();
-
-    let out = env.apm(&["version"]);
-    assert!(out.status.success(), "apm version failed:\n{}", stderr(&out));
-    let out_str = stdout(&out);
     assert!(
-        out_str.contains(env!("CARGO_PKG_VERSION")),
-        "expected version string in output: {out_str}"
-    );
-}
-
-#[test]
-fn version_succeeds_with_broken_config() {
-    let env = Env::setup();
-    env.write(
-        ".apm/config.toml",
-        "[workers]\n", // missing required field `default`
-    );
-
-    let out = env.apm(&["version"]);
-    assert!(
-        out.status.success(),
-        "apm version should succeed with broken config:\n{}",
-        stderr(&out)
-    );
-    let out_str = stdout(&out);
-    assert!(
-        out_str.contains(env!("CARGO_PKG_VERSION")),
-        "expected version string in output: {out_str}"
-    );
-    assert!(
-        apm_core::hash_stamp::read_stamp(env.root()).is_none(),
-        "hash-trip stamp should not be written by apm version"
-    );
-}
-
-#[test]
-fn version_succeeds_with_missing_config() {
-    let env = Env::setup();
-    std::fs::remove_file(env.root().join(".apm/config.toml")).unwrap();
-
-    let out = env.apm(&["version"]);
-    assert!(
-        out.status.success(),
-        "apm version should succeed with missing config:\n{}",
-        stderr(&out)
-    );
-    let out_str = stdout(&out);
-    assert!(
-        out_str.contains(env!("CARGO_PKG_VERSION")),
-        "expected version string in output: {out_str}"
-    );
-    assert!(
-        apm_core::hash_stamp::read_stamp(env.root()).is_none(),
-        "hash-trip stamp should not be written by apm version"
+        err.contains("not inside a git repository"),
+        "expected 'not inside a git repository' error: {err}"
     );
 }
