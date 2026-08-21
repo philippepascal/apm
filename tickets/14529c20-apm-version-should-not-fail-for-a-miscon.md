@@ -56,7 +56,10 @@ without first fixing the config that they may be trying to diagnose.
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Making `apm version` work outside a git repository — it still calls `repo_root()` and requires being inside a git repo, since that failure is unrelated to config parsing and not what this ticket reports
+- Exempting any command other than `Version` from the hash-trip/config-load check (e.g. `Help`, `Instructions`, etc. are already exempt; no other command is added here)
+- Changing `hash_trip::run`'s behavior for commands that legitimately need config (e.g. `apm list`, `apm next`) — those should continue to surface config errors
+- Changing the silent `if let Ok(ref config) = Config::load(&root)` logging-setup block earlier in `main()` — it already tolerates a broken config and is not the source of this bug
 
 ### Approach
 
