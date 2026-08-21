@@ -894,3 +894,63 @@ fn agents_resolve_unknown_id_exits_nonzero() {
     let err = stderr(&out);
     assert!(!err.is_empty(), "should print error message to stderr: {err}");
 }
+
+#[test]
+fn version_succeeds_with_valid_config() {
+    let env = Env::setup();
+
+    let out = env.apm(&["version"]);
+    assert!(out.status.success(), "apm version failed:\n{}", stderr(&out));
+    let out_str = stdout(&out);
+    assert!(
+        out_str.contains(env!("CARGO_PKG_VERSION")),
+        "expected version string in output: {out_str}"
+    );
+}
+
+#[test]
+fn version_succeeds_with_broken_config() {
+    let env = Env::setup();
+    env.write(
+        ".apm/config.toml",
+        "[workers]\n", // missing required field `default`
+    );
+
+    let out = env.apm(&["version"]);
+    assert!(
+        out.status.success(),
+        "apm version should succeed with broken config:\n{}",
+        stderr(&out)
+    );
+    let out_str = stdout(&out);
+    assert!(
+        out_str.contains(env!("CARGO_PKG_VERSION")),
+        "expected version string in output: {out_str}"
+    );
+    assert!(
+        apm_core::hash_stamp::read_stamp(env.root()).is_none(),
+        "hash-trip stamp should not be written by apm version"
+    );
+}
+
+#[test]
+fn version_succeeds_with_missing_config() {
+    let env = Env::setup();
+    std::fs::remove_file(env.root().join(".apm/config.toml")).unwrap();
+
+    let out = env.apm(&["version"]);
+    assert!(
+        out.status.success(),
+        "apm version should succeed with missing config:\n{}",
+        stderr(&out)
+    );
+    let out_str = stdout(&out);
+    assert!(
+        out_str.contains(env!("CARGO_PKG_VERSION")),
+        "expected version string in output: {out_str}"
+    );
+    assert!(
+        apm_core::hash_stamp::read_stamp(env.root()).is_none(),
+        "hash-trip stamp should not be written by apm version"
+    );
+}
