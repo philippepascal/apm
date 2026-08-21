@@ -16,7 +16,9 @@ updated_at = "2026-08-21T20:06:15.470880Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+The top-level `--version`/`--help` flags already work outside a git repository, because clap intercepts and handles them inside `Cli::parse()` before any of apm's own code runs. But the explicit `apm version` and `apm help [topic]` subcommands do not: `apm/src/main.rs` unconditionally calls `repo_root()` (which shells out to `git rev-parse --show-toplevel`) before dispatching to any subcommand handler, with a single carve-out for the hidden `path-guard` command. Outside a git repository, `repo_root()` bails with "not inside a git repository", so `apm version` and `apm help` never get a chance to run — even though neither needs a repository at all. `cmd::version::run()` only prints compile-time constants, and `cmd::help::run()` only introspects the statically-built `clap::Command` tree returned by `Cli::command()`; neither touches `root`, `.apm/config.toml`, or any ticket data.
+
+This is a rough edge for anyone evaluating apm for the first time (checking `apm version` or reading `apm help` before ever running `git init` or `apm init`), and for any script or CI step that wants to sanity-check the installed apm version from an arbitrary working directory.
 
 ### Acceptance criteria
 
@@ -33,13 +35,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
