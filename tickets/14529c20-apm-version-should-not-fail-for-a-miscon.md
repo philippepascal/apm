@@ -51,7 +51,7 @@ without first fixing the config that they may be trying to diagnose.
 - [x] `apm version` exits 0 and prints the version line when `.apm/config.toml` is absent entirely
 - [x] `apm version` exits 0 and prints the version line when `.apm/config.toml` is valid (no regression)
 - [x] `apm version`'s printed output is unchanged in format/content from before this fix when config is valid
-- [ ] Running `apm version` against a repo with a broken `.apm/config.toml` does not write or update the hash-trip stamp file
+- [x] Running `apm version` against a repo with a broken `.apm/config.toml` does not write or update the hash-trip stamp file
 - [ ] Other commands' handling of a broken `.apm/config.toml` (e.g. `apm list` still erroring, `apm validate` still exempt and reporting the issue) is unchanged
 
 ### Out of scope
