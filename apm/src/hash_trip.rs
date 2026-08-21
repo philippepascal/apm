@@ -18,6 +18,7 @@ pub fn is_exempt_command(cmd: &super::Command) -> bool {
             | super::Command::Help { .. }
             | super::Command::PathGuard
             | super::Command::Instructions { .. }
+            | super::Command::Version
     )
 }
 
@@ -92,6 +93,12 @@ mod tests {
             quiet: false,
             yes: false,
         };
+        assert!(is_exempt_command(&cmd));
+    }
+
+    #[test]
+    fn version_is_exempt() {
+        let cmd = super::super::Command::Version;
         assert!(is_exempt_command(&cmd));
     }
 
