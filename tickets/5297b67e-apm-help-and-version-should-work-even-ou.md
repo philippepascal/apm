@@ -1,7 +1,7 @@
 +++
 id = "5297b67e"
 title = "apm help and version should work even outside a repo"
-state = "in_design"
+state = "specd"
 priority = 3
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/5297b67e-apm-help-and-version-should-work-even-ou"
 created_at = "2026-08-21T19:59:20.649883Z"
-updated_at = "2026-08-21T20:09:36.009002Z"
+updated_at = "2026-08-21T20:09:42.721085Z"
 +++
 
 ## Spec
@@ -121,3 +121,4 @@ Run `cargo test --workspace` to confirm nothing else regresses (in particular, `
 | 2026-08-21T19:59Z | — | new | philippepascal |
 | 2026-08-21T19:59Z | new | groomed | philippepascal |
 | 2026-08-21T20:06Z | groomed | in_design | philippepascal |
+| 2026-08-21T20:09Z | in_design | specd | claude |
