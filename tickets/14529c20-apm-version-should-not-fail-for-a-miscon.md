@@ -1,7 +1,7 @@
 +++
 id = "14529c20"
 title = "apm version should not fail for a misconfiguration. it should not rely on any config"
-state = "ready"
+state = "in_progress"
 priority = 3
 effort = 1
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/14529c20-apm-version-should-not-fail-for-a-miscon"
 created_at = "2026-08-21T19:46:23.139006Z"
-updated_at = "2026-08-21T19:57:29.715187Z"
+updated_at = "2026-08-21T19:59:52.746959Z"
 +++
 
 ## Spec
@@ -141,3 +141,4 @@ Run `cargo test --workspace` before marking implemented.
 | 2026-08-21T19:52Z | groomed | in_design | philippepascal |
 | 2026-08-21T19:55Z | in_design | specd | claude |
 | 2026-08-21T19:57Z | specd | ready | philippepascal |
+| 2026-08-21T19:59Z | ready | in_progress | philippepascal |
