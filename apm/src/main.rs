@@ -1035,11 +1035,22 @@ pub fn repo_root() -> Result<PathBuf> {
 fn main() -> Result<()> {
     let cli = Cli::parse();
 
-    // path-guard is called by Claude Code's PreToolUse hook and must not depend
-    // on repo_root(). Dispatch it early before any git or config I/O.
-    if matches!(cli.command, Command::PathGuard) {
-        cmd::path_guard::run();
-        return Ok(());
+    // path-guard, version, and help need no git/config/ticket access and must
+    // keep working even outside a git repository. Dispatch them before
+    // repo_root() so a missing repo never blocks them.
+    match &cli.command {
+        Command::PathGuard => {
+            cmd::path_guard::run();
+            return Ok(());
+        }
+        Command::Version => {
+            cmd::version::run();
+            return Ok(());
+        }
+        Command::Help { topic } => {
+            return cmd::help::run(topic.as_deref(), Cli::command());
+        }
+        _ => {}
     }
 
     let root = repo_root()?;
@@ -1346,11 +1357,8 @@ fn main() -> Result<()> {
         }
         Command::Prompt { id, agent, role, system, message, explain } => cmd::prompt::run(&root, id.as_deref(), agent, role, system, message, explain),
         Command::Instructions { ticket_id, role } => cmd::instructions::run(Cli::command(), &root, role.as_deref(), ticket_id.as_deref()),
-        Command::Version => {
-            cmd::version::run();
-            Ok(())
-        }
-        Command::Help { topic } => cmd::help::run(topic.as_deref(), Cli::command()),
+        Command::Version => unreachable!("handled before repo_root()"),
+        Command::Help { .. } => unreachable!("handled before repo_root()"),
     }
 }
 
