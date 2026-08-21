@@ -4,12 +4,12 @@ title = "apm version should not fail for a misconfiguration. it should not rely 
 state = "in_design"
 priority = 0
 effort = 1
-risk = 0
+risk = 1
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/14529c20-apm-version-should-not-fail-for-a-miscon"
 created_at = "2026-08-21T19:46:23.139006Z"
-updated_at = "2026-08-21T19:54:37.519876Z"
+updated_at = "2026-08-21T19:54:44.294718Z"
 +++
 
 ## Spec
