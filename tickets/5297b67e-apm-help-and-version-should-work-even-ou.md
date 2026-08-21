@@ -107,6 +107,7 @@ Run `cargo test --workspace` to confirm nothing else regresses (in particular, `
 
 ### Open questions
 
+**Q:** - Blocked: apm state 5297b67e implemented produced a true merge conflict against local main (main.rs and apm/tests/e2e.rs overlap with ticket 14529c20's changes, merged into local main but not yet pushed to origin). Recovery per docs/merge-failed-recovery.md scenario A requires running `git merge` in the target_branch worktree to resolve conflicts, but this session's Bash tool permission denies `git merge`/`git rebase` entirely (even --help), so I cannot perform the merge from within my worktree, and path discipline additionally forbids operating in the main repo checkout outside my worktree. Needs supervisor intervention to resolve the conflict (git merge ticket/5297b67e-apm-help-and-version-should-work-even-ou into main, resolve, push) or to move the ticket back to in_progress/blocked.
 
 ### Amendment requests
 
@@ -116,7 +117,7 @@ Run `cargo test --workspace` to confirm nothing else regresses (in particular, `
 
 ### Merge notes
 
-merge conflict — resolve manually and push: 
+merge conflict — resolve manually and push:
 
 ## History
 
