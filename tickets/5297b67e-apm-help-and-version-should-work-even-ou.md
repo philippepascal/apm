@@ -1,7 +1,7 @@
 +++
 id = "5297b67e"
 title = "apm help and version should work even outside a repo"
-state = "merge_failed"
+state = "closed"
 priority = 3
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/5297b67e-apm-help-and-version-should-work-even-ou"
 created_at = "2026-08-21T19:59:20.649883Z"
-updated_at = "2026-08-21T20:32:58.903259Z"
+updated_at = "2026-08-21T21:27:31.393065Z"
 +++
 
 ## Spec
@@ -131,3 +131,4 @@ merge conflict — resolve manually and push:
 | 2026-08-21T20:28Z | ready | in_progress | philippepascal |
 | 2026-08-21T20:32Z | in_progress | implemented | claude |
 | 2026-08-21T20:32Z | implemented | merge_failed | claude |
+| 2026-08-21T21:27Z | merge_failed | closed | philippepascal |
