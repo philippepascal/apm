@@ -894,3 +894,67 @@ fn agents_resolve_unknown_id_exits_nonzero() {
     let err = stderr(&out);
     assert!(!err.is_empty(), "should print error message to stderr: {err}");
 }
+
+#[test]
+fn version_works_outside_git_repo() {
+    let dir = tempfile::tempdir().unwrap();
+    let p = dir.path();
+
+    let out = apm(p, "apm", &["version"]);
+    assert!(out.status.success(), "apm version failed:\n{}", stderr(&out));
+    assert!(stdout(&out).contains("apm "), "version output missing 'apm ': {}", stdout(&out));
+}
+
+#[test]
+fn help_overview_works_outside_git_repo() {
+    let dir = tempfile::tempdir().unwrap();
+    let p = dir.path();
+
+    let out = apm(p, "apm", &["help"]);
+    assert!(out.status.success(), "apm help failed:\n{}", stderr(&out));
+    assert!(stdout(&out).contains("Topics:"), "help output missing 'Topics:': {}", stdout(&out));
+}
+
+#[test]
+fn help_commands_works_outside_git_repo() {
+    let dir = tempfile::tempdir().unwrap();
+    let p = dir.path();
+
+    let out = apm(p, "apm", &["help", "commands"]);
+    assert!(out.status.success(), "apm help commands failed:\n{}", stderr(&out));
+    assert!(stdout(&out).contains("version"), "help commands output missing 'version': {}", stdout(&out));
+}
+
+#[test]
+fn help_topics_work_outside_git_repo() {
+    let dir = tempfile::tempdir().unwrap();
+    let p = dir.path();
+
+    for topic in ["config", "workflow", "ticket"] {
+        let out = apm(p, "apm", &["help", topic]);
+        assert!(out.status.success(), "apm help {topic} failed:\n{}", stderr(&out));
+        assert!(!stdout(&out).is_empty(), "apm help {topic} produced empty output");
+    }
+}
+
+#[test]
+fn help_unknown_topic_fails_outside_git_repo() {
+    let dir = tempfile::tempdir().unwrap();
+    let p = dir.path();
+
+    let out = apm(p, "apm", &["help", "nonexistent-topic"]);
+    assert!(!out.status.success(), "apm help nonexistent-topic should fail");
+    let err = stderr(&out);
+    assert!(err.contains("unknown help topic"), "expected 'unknown help topic' error: {err}");
+}
+
+#[test]
+fn other_commands_still_require_git_repo() {
+    let dir = tempfile::tempdir().unwrap();
+    let p = dir.path();
+
+    let out = apm(p, "apm", &["list"]);
+    assert!(!out.status.success(), "apm list should fail outside a git repository");
+    let err = stderr(&out);
+    assert!(err.contains("not inside a git repository"), "expected 'not inside a git repository' error: {err}");
+}
