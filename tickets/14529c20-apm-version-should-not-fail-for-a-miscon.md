@@ -1,7 +1,7 @@
 +++
 id = "14529c20"
 title = "apm version should not fail for a misconfiguration. it should not rely on any config"
-state = "in_design"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/14529c20-apm-version-should-not-fail-for-a-miscon"
 created_at = "2026-08-21T19:46:23.139006Z"
-updated_at = "2026-08-21T19:49:35.143249Z"
+updated_at = "2026-08-21T19:50:30.993994Z"
 +++
 
 ## Spec
@@ -54,3 +54,4 @@ How the implementation will work.
 | 2026-08-21T19:46Z | — | new | philippepascal |
 | 2026-08-21T19:49Z | new | groomed | philippepascal |
 | 2026-08-21T19:49Z | groomed | in_design | philippepascal |
+| 2026-08-21T19:50Z | in_design | groomed | philippepascal |
