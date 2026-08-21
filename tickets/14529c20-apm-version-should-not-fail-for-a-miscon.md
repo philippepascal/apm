@@ -63,7 +63,63 @@ without first fixing the config that they may be trying to diagnose.
 
 ### Approach
 
-How the implementation will work.
+#### Fix
+
+In `apm/src/hash_trip.rs`, add `super::Command::Version` to the `matches!` arm
+inside `is_exempt_command` (alongside `Validate`, `Init`, `Help`, `PathGuard`,
+and `Instructions`):
+
+```rust
+pub fn is_exempt_command(cmd: &super::Command) -> bool {
+    matches!(
+        cmd,
+        super::Command::Validate { .. }
+            | super::Command::Init { .. }
+            | super::Command::Help { .. }
+            | super::Command::PathGuard
+            | super::Command::Instructions { .. }
+            | super::Command::Version
+    )
+}
+```
+
+This is a one-line change. With `Version` exempt, `main()` in
+`apm/src/main.rs` skips the `hash_trip::run(&root)?` call entirely for `apm
+version`, so `Config::load` is never invoked on that path and a broken
+`.apm/config.toml` can no longer abort the command. `Command::Version` is a
+unit variant (`Command::Version` with no fields), so the match arm is a bare
+`super::Command::Version`, not `super::Command::Version { .. }`.
+
+Nothing else in `apm version`'s path touches config: `cmd::version::run()`
+(`apm/src/cmd/version.rs`) only prints `CARGO_PKG_VERSION` and
+`APM_GIT_DESCRIBE`, and `main()`'s earlier logging-setup block
+(`if let Ok(ref config) = apm_core::config::Config::load(&root) { ... }`)
+already discards `Config::load` errors via `if let Ok(...)`, so it does not
+need to change.
+
+`repo_root()` is still called unconditionally at the top of `main()` before
+command dispatch, so `apm version` still requires being run inside a git
+repository — that is unrelated to this ticket's config-parsing failure and is
+left as-is (see Out of scope).
+
+#### Tests
+
+Add a `hash_trip.rs` unit test mirroring the existing `validate_is_exempt` /
+`init_is_exempt` tests: construct `Command::Version` and assert
+`is_exempt_command` returns `true`.
+
+Add an `apm/tests/e2e.rs` test (pattern like `setup_resolve_repo` /
+`write_valid_spec_for_test`, which already write `.apm/config.toml` directly
+via `std::fs::write` into a temp repo): initialize a temp repo with `apm
+init`, then overwrite `.apm/config.toml` with TOML missing a required field
+(e.g. a `[workers]` table with no `default` key, matching the ticket's
+reported error), run `apm version`, and assert the process exits 0 and stdout
+contains the version string. Add a second case with `.apm/config.toml`
+deleted entirely, asserting the same. Also assert the hash-stamp file (see
+`apm_core::hash_stamp::read_stamp`) is unchanged/absent after running `apm
+version` against the broken config, to cover the stamp-not-written AC.
+
+Run `cargo test --workspace` before marking implemented.
 
 ### Open questions
 
