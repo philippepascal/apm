@@ -1,7 +1,7 @@
 +++
 id = "5297b67e"
 title = "apm help and version should work even outside a repo"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/5297b67e-apm-help-and-version-should-work-even-ou"
 created_at = "2026-08-21T19:59:20.649883Z"
-updated_at = "2026-08-21T19:59:20.649883Z"
+updated_at = "2026-08-21T19:59:45.900199Z"
 +++
 
 ## Spec
@@ -47,3 +47,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-08-21T19:59Z | — | new | philippepascal |
+| 2026-08-21T19:59Z | new | groomed | philippepascal |
