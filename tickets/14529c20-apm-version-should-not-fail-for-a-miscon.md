@@ -48,7 +48,7 @@ without first fixing the config that they may be trying to diagnose.
 ### Acceptance criteria
 
 - [x] `apm version` exits 0 and prints the version line when `.apm/config.toml` contains invalid TOML (e.g. a missing required field)
-- [ ] `apm version` exits 0 and prints the version line when `.apm/config.toml` is absent entirely
+- [x] `apm version` exits 0 and prints the version line when `.apm/config.toml` is absent entirely
 - [ ] `apm version` exits 0 and prints the version line when `.apm/config.toml` is valid (no regression)
 - [ ] `apm version`'s printed output is unchanged in format/content from before this fix when config is valid
 - [ ] Running `apm version` against a repo with a broken `.apm/config.toml` does not write or update the hash-trip stamp file
