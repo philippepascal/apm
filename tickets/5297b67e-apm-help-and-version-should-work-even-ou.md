@@ -3,13 +3,13 @@ id = "5297b67e"
 title = "apm help and version should work even outside a repo"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 2
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/5297b67e-apm-help-and-version-should-work-even-ou"
 created_at = "2026-08-21T19:59:20.649883Z"
-updated_at = "2026-08-21T20:06:15.470880Z"
+updated_at = "2026-08-21T20:09:19.721228Z"
 +++
 
 ## Spec
