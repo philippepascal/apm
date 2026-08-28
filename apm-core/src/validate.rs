@@ -1274,6 +1274,31 @@ terminal = true
     }
 
     #[test]
+    fn validate_depends_on_closed_branchless_dep_in_merged_list_ok() {
+        // Reproduces the bug: a closed dependency whose `ticket/*` branch has been
+        // deleted (e.g. by `apm clean`) but whose file survives on the default
+        // branch is merged into the tickets list by `merge_branchless`. Once merged,
+        // `validate_depends_on` must find it and not report "dep ... not found".
+        let config = strategy_config("merge");
+        let dep = make_full_ticket("hh000001", "closed", None, None, &[]);
+        let ticket = make_full_ticket("hh000002", "ready", None, None, &["hh000001"]);
+        let merged = vec![dep, ticket];
+        let result = validate_depends_on(&config, &merged);
+        assert!(result.is_empty(), "expected no violations, got {result:?}");
+    }
+
+    #[test]
+    fn validate_depends_on_dep_absent_from_list_still_errors() {
+        // Guards against a no-op fix: a dependency id that is not present in the
+        // list at all (no branch, no file) must still be reported.
+        let config = strategy_config("merge");
+        let ticket = make_full_ticket("ii000002", "ready", None, None, &["ii000001"]);
+        let result = validate_depends_on(&config, &[ticket]);
+        assert_eq!(result.len(), 1, "expected one violation, got {result:?}");
+        assert!(result[0].1.contains("ii000001") && result[0].1.contains("not found"), "message should report missing dep: {}", result[0].1);
+    }
+
+    #[test]
     fn validate_depends_on_pr_strategy_rejects_any_dep() {
         let config = strategy_config("pr");
         let dep = make_full_ticket("gg000001", "ready", None, None, &[]);

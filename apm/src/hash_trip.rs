@@ -47,8 +47,12 @@ pub fn run(root: &Path) -> Result<HashTripOutcome> {
     }
 
     let config = apm_core::config::Config::load(root)?;
-    let tickets =
-        apm_core::ticket::load_all_from_git(root, &config.tickets.dir).unwrap_or_default();
+    let tickets = apm_core::ticket::merge_branchless(
+        root,
+        &config.tickets.dir,
+        &config.project.default_branch,
+        apm_core::ticket::load_all_from_git(root, &config.tickets.dir).unwrap_or_default(),
+    );
 
     let mut issues: Vec<(String, String)> = Vec::new();
 
