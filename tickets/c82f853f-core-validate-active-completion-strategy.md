@@ -4,12 +4,12 @@ title = "core.validate.active_completion_strategy assumes states called in_progr
 state = "in_design"
 priority = 0
 effort = 3
-risk = 0
+risk = 3
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/c82f853f-core-validate-active-completion-strategy"
 created_at = "2026-08-28T00:47:20.903990Z"
-updated_at = "2026-08-28T07:18:56.925587Z"
+updated_at = "2026-08-28T07:19:01.665559Z"
 +++
 
 ## Spec
