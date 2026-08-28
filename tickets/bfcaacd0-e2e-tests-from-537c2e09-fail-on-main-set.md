@@ -16,7 +16,19 @@ updated_at = "2026-08-28T18:18:50.064653Z"
 
 ### Problem
 
-cargo test --workspace fails on main: sync_does_not_block_on_closed_branchless_dependency and new_still_fails_when_dependency_does_not_exist_anywhere (apm/tests/e2e.rs ~1338-1450) error with 'inconsistent completion strategies: state.in_progress.transition(implemented) uses merge, state.merge_failed.transition(implemented) uses pr_or_epic_merge'. The helper setup_merge_dep_repo only rewrites the in_progress->implemented completion line (two-space 'completion  = ') and misses merge_failed->implemented ('completion = '). That was valid until c82f853f added Rule 4 (one project-wide completion strategy). 537c2e09 was branched before c82f853f merged, so its tests passed in isolation. Fix: make the helper rewrite both completion lines to merge (or patch the workflow more robustly than string replace).
+`cargo test --workspace` fails on `main`: `sync_does_not_block_on_closed_branchless_dependency` and `new_still_fails_when_dependency_does_not_exist_anywhere` (`apm/tests/e2e.rs`, ~lines 1341-1454) both panic with:
+
+```
+config: config: workflow — inconsistent completion strategies: state.in_progress.transition(implemented) uses 'merge', state.merge_failed.transition(implemented) uses 'pr_or_epic_merge'; depends_on validation assumes one project-wide completion strategy
+error: config has changed and validation is failing.
+Mutating commands are blocked. Run apm validate to fix.
+```
+
+The shared test helper `setup_merge_dep_repo()` patches the generated `.apm/workflow.toml` so the `in_progress -> implemented` transition uses completion strategy `merge` instead of the default `pr_or_epic_merge` (needed so `depends_on` validation runs unconditionally for these tests). It does this with a single `String::replace` targeting only the two-space-indented line `completion  = "pr_or_epic_merge"`, which belongs to the `in_progress` transition. It misses the one-space-indented line `completion = "pr_or_epic_merge"` used by the `merge_failed -> implemented` transition, so after the patch the two transitions disagree on completion strategy.
+
+This was harmless until `apm-core/src/validate.rs` gained Rule 4 (`validate_config`, ~line 536): "at most one distinct non-`none` completion strategy across all transitions." Once a repo's workflow has mixed strategies, `apm validate` fails and `apm`'s mutating commands (`new`, `sync`, `state`, ...) refuse to run. `setup_merge_dep_repo()`'s output now always fails this check, so both tests that use it fail deterministically, breaking `cargo test --workspace` for every contributor and CI run on `main`.
+
+The fix pattern already exists in this same test file: `Env::new()` (`apm/tests/e2e.rs`, ~lines 130-143) chains two `.replace()` calls — one per indentation variant — to rewrite both the `in_progress` and `merge_failed` completion lines together when swapping in a different strategy. `setup_merge_dep_repo()` needs the equivalent second replace.
 
 ### Acceptance criteria
 
