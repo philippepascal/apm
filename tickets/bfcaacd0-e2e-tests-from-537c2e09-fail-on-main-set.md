@@ -33,7 +33,7 @@ The fix pattern already exists in this same test file: `Env::new()` (`apm/tests/
 ### Acceptance criteria
 
 - [x] `cargo test --workspace` passes with zero failures
-- [ ] `cargo test --test e2e sync_does_not_block_on_closed_branchless_dependency` passes in isolation
+- [x] `cargo test --test e2e sync_does_not_block_on_closed_branchless_dependency` passes in isolation
 - [ ] `cargo test --test e2e new_still_fails_when_dependency_does_not_exist_anywhere` passes in isolation
 - [ ] In the `.apm/workflow.toml` produced by `setup_merge_dep_repo()`, both the `in_progress -> implemented` transition and the `merge_failed -> implemented` transition have `completion = "merge"`, and no transition in that file still reads `pr_or_epic_merge`
 - [ ] `apm validate` run against a repo built by `setup_merge_dep_repo()` reports no "inconsistent completion strategies" error
