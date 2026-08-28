@@ -71,7 +71,77 @@ only half the story.
 
 ### Approach
 
-How the implementation will work.
+#### Generalize `active_completion_strategy`
+
+File: `apm-core/src/validate.rs`, function at line 28.
+
+Replace the hardcoded `.find(|s| s.id == "in_progress")` /
+`.find(|t| t.to == "implemented")` lookup with a scan across every state's
+`transitions` (e.g. `config.workflow.states.iter().flat_map(|s| &s.transitions)`)
+for the first `TransitionConfig` whose `completion != CompletionStrategy::None`,
+regardless of state id or `to` target. Return that transition's
+`completion.clone()`, defaulting to `CompletionStrategy::None` when no such
+transition exists (unchanged fallback for the no-completion-configured case).
+
+This makes the function agnostic to state names and naturally picks up any
+transition carrying a strategy — including a second one like
+`merge_failed → implemented` in the default workflow — instead of only ever
+looking at one hardcoded pair. Update the function's doc comment: it
+currently claims to return "the completion strategy configured for the
+`in_progress → implemented` transition"; replace with a description that it
+returns the workflow's single configured non-`none` completion strategy
+(see the consistency rule below for why "first found" is safe to rely on).
+
+#### Enforce completion-strategy consistency in `apm validate`
+
+File: `apm-core/src/validate.rs`, `validate_config_no_agents` (starts at line
+322). This function already has three numbered "Rule N" blocks: trigger/manual
+separation (~line 453), `worker_profile` shape (~line 489), and
+`command:start` dispatch-target validation (~line 513).
+
+Add a **Rule 4** block after Rule 3 and before the `worktrees.dir` gitignore
+check (line 534): walk every state's transitions and collect
+`(state.id, transition.to, strategy_name(&transition.completion))` for every
+transition whose `completion != CompletionStrategy::None` (`strategy_name` is
+the existing private helper at line 36). If more than one distinct strategy
+name appears among them, push an error to `errors` naming the conflicting
+transitions and strategies, e.g.:
+
+```
+config: workflow — inconsistent completion strategies: state.in_progress.transition(implemented)
+uses 'merge' but state.hotfix.transition(shipped) uses 'pr'; depends_on validation assumes one
+project-wide completion strategy
+```
+
+One combined error message listing every offending transition is sufficient;
+it does not need to be one error per pair. This is a hard error at the same
+severity tier as Rules 1–3, so it surfaces via `apm validate`,
+`hash_trip::run` (the config-hash-change gate in `apm/src/hash_trip.rs`), and
+`apply_config_migration_fixes`'s internal re-validation
+(`apm/src/cmd/validate.rs:174`). With this rule in place, whenever
+`validate_config` reports no errors, `active_completion_strategy`'s
+first-found-wins behaviour is unambiguous, because at most one distinct
+non-`none` strategy can exist in a passing config.
+
+#### Tests
+
+In `apm-core/src/validate.rs`'s inline `mod tests` (the `strategy_config`
+helper is around line 1040):
+
+- Add a test using non-default state ids (e.g. `coding` → `shipped` with
+  `completion = "merge"`) proving `active_completion_strategy` no longer
+  depends on the literal names `in_progress`/`implemented`.
+- Add a test with two transitions from different source states that both
+  carry the same non-`none` strategy (mirroring `in_progress → implemented`
+  + `merge_failed → implemented`), asserting `active_completion_strategy`
+  still resolves that single strategy correctly.
+- Add a test for the new Rule 4: a config with two transitions carrying
+  different non-`none` strategies (one `merge`, one `pr`), asserting
+  `validate_config` returns an error that names both transitions.
+- Keep the two existing tests (`strategy_finds_in_progress_to_implemented`,
+  `strategy_defaults_to_none_when_absent`) passing unchanged.
+
+Run `cargo test --workspace` before submitting; all tests must pass.
 
 ### Open questions
 
