@@ -62,7 +62,100 @@ diagnosis and turns it into a safe, repeatable recovery action.
 
 ### Approach
 
-How the implementation will work.
+Add `apm workers recover` as a new subcommand next to the existing
+`apm workers diag <id>` (see `WorkersCommand` in `apm/src/main.rs`, and
+`run_diag` / `list` / `kill` in `apm/src/cmd/workers.rs`, which already
+contains the crash-detection logic this command builds on).
+
+#### CLI surface
+
+In `apm/src/main.rs`, extend `WorkersCommand`:
+
+```
+Recover {
+    id: Option<String>,       // required unless --all
+    #[arg(long)] all: bool,
+    #[arg(long)] dry_run: bool,
+    #[arg(long)] to: Option<String>,  // explicit target state override
+}
+```
+
+Wire it into `Command::Workers { .. }` dispatch alongside `Diag`.
+
+#### Shared crash detection
+
+Factor the crashed-worker scan currently inlined in
+`apm/src/cmd/workers.rs::list()` (walk `worktree::list_ticket_worktrees`,
+read `.apm-worker.pid`, check `worker::is_alive`, compare ticket state
+against `ended_states` = states with `terminal || worker_end`) into a
+helper, e.g. `crashed_workers(root, &config) -> Result<Vec<CrashedWorker>>`
+with `CrashedWorker { ticket_id, state, pid_path, worktree }`. `list()` and
+the new `recover --all` both call it — no duplicated scan logic.
+
+#### Target-state resolution
+
+For a single `id`, resolve the ticket via `worktree_for_ticket` (already in
+`apm/src/util.rs`). Determine the recovery target state, in order:
+
+1. If `--to <state>` was given, validate it's a real, non-terminal state in
+   `config.workflow.states` and use it directly.
+2. Otherwise parse the ticket body's `## History` markdown table (simple
+   line-based split on `|`, skip the header/separator rows) and find the
+   *last* row whose `To` column equals the ticket's current state; use that
+   row's `From` column. This correctly distinguishes `groomed → in_design`
+   from `amend → in_design`, and `ready → in_progress` from
+   `fix → in_progress`.
+3. If History has no matching row, fall back to config: collect every
+   state with a `command:start` transition whose `to` equals the current
+   state. If exactly one exists, use it.
+4. If none of the above resolves a single target, bail with an error
+   listing the candidate states and instructing the caller to pass
+   `--to <state>` explicitly.
+
+#### Recovery action
+
+For each ticket to recover:
+
+- If `.apm-worker.pid` is missing → bail "nothing to recover" (AC 3).
+- If the PID is alive → bail, pointing at `apm workers --kill <id>` (AC 2).
+- Check worktree cleanliness with `git_util::is_worktree_dirty` (already
+  used in `clean.rs`); if dirty, print a warning but continue (AC 8) —
+  mirror the wording of the existing `in_progress → ready` transition
+  warning.
+- `--dry-run`: print `id`, current state, resolved target state, and the
+  pid file path that would be removed; do not call `state::transition` or
+  touch any files.
+- Otherwise call `apm_core::state::transition(root, id, target_state,
+  false, /*force=*/ true)`. `force = true` is required because the
+  rollback direction (e.g. `in_design → groomed`) is not a declared
+  forward transition in `workflow.toml`; force already exists precisely to
+  allow this kind of supervisor-directed correction and this command is
+  the safe, guarded wrapper around it.
+- On success, remove `.apm-worker.pid` from the ticket's worktree. Leave
+  `.apm-worker.log` / `.apm-worker.summary.json` in place — they're useful
+  for a postmortem via `apm workers diag <id>` and are already excluded
+  from `apm clean`'s untracked-file sweep only once the ticket reaches a
+  terminal state.
+
+#### Batch mode (`--all`)
+
+Call `crashed_workers()`, run the single-ticket recovery routine for each,
+catch and report per-ticket errors without aborting the loop (mirror the
+existing multi-id pattern in `apm/src/cmd/state.rs::run`), print one result
+line per ticket, and exit non-zero if any ticket failed.
+
+#### Tests
+
+- `apm-core`: unit tests for the target-state resolver — History match,
+  History/config disambiguation (groomed vs amend), config-fallback single
+  candidate, ambiguous-with-no-`--to` error.
+- `apm/tests/integration.rs`: end-to-end cases in a temp git repo —
+  crashed `in_progress` ticket recovers to `ready` and its pid file is
+  gone; crashed `in_design` ticket recovers to the correct History
+  predecessor; live-PID ticket refuses; missing-pid-file ticket refuses;
+  `--all` recovers two crashed tickets and reports a failure on a third
+  without stopping; `--dry-run` changes nothing; recovered ticket no
+  longer shows as `crashed` in `apm workers`.
 
 ### Open questions
 
