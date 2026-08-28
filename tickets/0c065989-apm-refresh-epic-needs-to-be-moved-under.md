@@ -37,7 +37,7 @@ top-level name, per the project's no-shim convention.
 - [x] `apm epic refresh <id> --auto` merges locally when clean and falls back to a PR on conflict, identical to current `apm refresh-epic --auto`
 - [x] `apm epic refresh <id> --merge --push` and `--merge --no-push` control the post-merge push exactly as `apm refresh-epic` did
 - [x] `apm refresh-epic <id>` no longer exists — running it fails with clap's unknown-subcommand error
-- [ ] `apm epic --help` lists `refresh` alongside `new`, `submit`, `close`, `list`, `show`, `set`
+- [x] `apm epic --help` lists `refresh` alongside `new`, `submit`, `close`, `list`, `show`, `set`
 - [ ] `apm help commands` no longer lists `refresh-epic` as a top-level command, and lists `refresh` nested under `epic`
 - [ ] `cargo test --workspace` passes, including integration tests exercising the relocated command under `apm epic refresh`
 
