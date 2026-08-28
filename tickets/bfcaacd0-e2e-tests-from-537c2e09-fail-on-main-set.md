@@ -4,12 +4,12 @@ title = "e2e tests from 537c2e09 fail on main: setup_merge_dep_repo leaves merge
 state = "in_design"
 priority = 0
 effort = 1
-risk = 0
+risk = 1
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/bfcaacd0-e2e-tests-from-537c2e09-fail-on-main-set"
 created_at = "2026-08-28T18:18:15.540678Z"
-updated_at = "2026-08-28T18:22:12.465332Z"
+updated_at = "2026-08-28T18:22:18.338055Z"
 +++
 
 ## Spec
