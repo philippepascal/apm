@@ -54,7 +54,11 @@ diagnosis and turns it into a safe, repeatable recovery action.
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Cleaning or discarding uncommitted/untracked files left in a crashed worker's worktree — that remains a manual step (or, once the ticket reaches a terminal state, `apm clean`)
+- Automatically re-dispatching a new worker after recovery — `apm start`/`apm work` will pick the recovered ticket up on its next normal run
+- Recovering from `merge_failed` — that state already has its own retry path (`merge_failed → implemented`)
+- Any apm-server / web UI surface for this command — CLI-only, consistent with `apm workers diag`, which also has no web equivalent
+- Changing how `apm workers` itself detects or labels a worker as `crashed` — that logic already exists and is reused as-is, not modified
 
 ### Approach
 
