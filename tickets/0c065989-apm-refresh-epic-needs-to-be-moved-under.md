@@ -43,7 +43,10 @@ top-level name, per the project's no-shim convention.
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- No change to the refresh logic itself: status printing, quiescence check, interactive prompt, local merge, or PR creation/update behaviour — this is a pure command relocation
+- No backward-compatible alias or deprecation warning for the old `apm refresh-epic` top-level invocation
+- No changes to other epic subcommands (`new`, `submit`, `close`, `list`, `show`, `set`)
+- No changes to the quiescence rules or `epic_is_quiescent` logic (covered by other tickets, e.g. 27439a80)
 
 ### Approach
 
