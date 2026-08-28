@@ -3,13 +3,13 @@ id = "537c2e09"
 title = "closed dependency is tripping apm sync"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 2
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/537c2e09-closed-dependency-is-tripping-apm-sync"
 created_at = "2026-08-28T00:48:10.874316Z"
-updated_at = "2026-08-28T07:19:26.968328Z"
+updated_at = "2026-08-28T07:23:48.136075Z"
 +++
 
 ## Spec
