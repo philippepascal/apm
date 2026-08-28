@@ -1,7 +1,7 @@
 +++
 id = "537c2e09"
 title = "closed dependency is tripping apm sync"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/537c2e09-closed-dependency-is-tripping-apm-sync"
 created_at = "2026-08-28T00:48:10.874316Z"
-updated_at = "2026-08-28T07:13:07.476822Z"
+updated_at = "2026-08-28T07:19:26.968328Z"
 +++
 
 ## Spec
@@ -53,3 +53,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-08-28T00:48Z | — | new | philippepascal |
 | 2026-08-28T07:13Z | new | groomed | philippepascal |
+| 2026-08-28T07:19Z | groomed | in_design | philippepascal |
