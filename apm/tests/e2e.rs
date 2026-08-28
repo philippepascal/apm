@@ -1354,10 +1354,15 @@ fn setup_merge_dep_repo() -> TempDir {
 
     let wf_path = p.join(".apm/workflow.toml");
     let wf = std::fs::read_to_string(&wf_path).unwrap();
-    let wf = wf.replace(
-        "  completion  = \"pr_or_epic_merge\"",
-        "  completion  = \"merge\"",
-    );
+    let wf = wf
+        .replace(
+            "  completion  = \"pr_or_epic_merge\"",
+            "  completion  = \"merge\"",
+        )
+        .replace(
+            "  completion = \"pr_or_epic_merge\"",
+            "  completion = \"merge\"",
+        );
     std::fs::write(&wf_path, wf).unwrap();
 
     let config_path = p.join(".apm/config.toml");
