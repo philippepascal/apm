@@ -54,7 +54,7 @@ only half the story.
 
 ### Acceptance criteria
 
-- [ ] `active_completion_strategy` returns the configured strategy for a workflow whose in-progress/implemented-equivalent states use custom ids (e.g. `coding` → `shipped` with `completion = "merge"`), instead of falling back to `none`
+- [x] `active_completion_strategy` returns the configured strategy for a workflow whose in-progress/implemented-equivalent states use custom ids (e.g. `coding` → `shipped` with `completion = "merge"`), instead of falling back to `none`
 - [ ] `active_completion_strategy` resolves correctly when a workflow has multiple transitions that all carry the same non-`none` completion strategy from different source states (e.g. the default workflow's `in_progress → implemented` and `merge_failed → implemented`, both `pr_or_epic_merge`)
 - [ ] `active_completion_strategy` still returns `CompletionStrategy::None` when no transition in the workflow sets a non-`none` completion
 - [ ] `apm validate` reports a config error when a workflow defines two or more transitions with different non-`none` completion strategies, naming the conflicting states/transitions and the strategies involved
