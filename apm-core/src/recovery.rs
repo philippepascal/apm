@@ -1,4 +1,5 @@
 use crate::config::{CompletionStrategy, WorkflowConfig};
+use anyhow::{anyhow, bail, Result};
 use std::collections::HashSet;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -96,6 +97,81 @@ pub fn classify_recovery_options(state_id: &str, workflow: &WorkflowConfig) -> V
         let label = if t.label.is_empty() { t.to.clone() } else { t.label.clone() };
         RecoveryOption { to: t.to.clone(), label, kind }
     }).collect()
+}
+
+/// Resolve the state a crashed worker's ticket should roll back to.
+///
+/// Resolution order:
+/// 1. `explicit_to`, if given — must name a real, non-terminal state.
+/// 2. The ticket's `## History` table in `body` — the *last* row whose `To`
+///    column equals `current_state`; that row's `From` column is used. This
+///    distinguishes e.g. `groomed → in_design` from `amend → in_design`.
+/// 3. Fallback: every state with a `command:start` transition targeting
+///    `current_state`. Used only if exactly one candidate exists.
+/// 4. Otherwise, an error listing the candidate states and instructing the
+///    caller to pass `--to <state>` explicitly.
+pub fn resolve_recovery_target(
+    body: &str,
+    current_state: &str,
+    workflow: &WorkflowConfig,
+    explicit_to: Option<&str>,
+) -> Result<String> {
+    if let Some(to) = explicit_to {
+        let state = workflow.states.iter().find(|s| s.id == to)
+            .ok_or_else(|| anyhow!("unknown state {to:?} — not defined in workflow"))?;
+        if state.terminal {
+            bail!("cannot recover into terminal state {to:?}");
+        }
+        return Ok(to.to_string());
+    }
+
+    if let Some(from) = history_predecessor(body, current_state) {
+        return Ok(from);
+    }
+
+    let candidates: Vec<&str> = workflow.states.iter()
+        .filter(|s| s.transitions.iter().any(|t| t.trigger == "command:start" && t.to == current_state))
+        .map(|s| s.id.as_str())
+        .collect();
+
+    match candidates.len() {
+        1 => Ok(candidates[0].to_string()),
+        0 => bail!(
+            "cannot determine a recovery target for {current_state:?} — no matching ## History \
+             row and no command:start transition targets it; pass --to <state>"
+        ),
+        _ => bail!(
+            "ambiguous recovery target for {current_state:?} — candidates: {} — pass --to <state>",
+            candidates.join(", ")
+        ),
+    }
+}
+
+/// Find the `From` column of the last `## History` row whose `To` column
+/// equals `current_state`. Returns `None` if the table has no such row.
+fn history_predecessor(body: &str, current_state: &str) -> Option<String> {
+    let idx = body.find("## History")?;
+    let mut result = None;
+    for line in body[idx..].lines() {
+        let line = line.trim();
+        if !line.starts_with('|') || !line.ends_with('|') {
+            continue;
+        }
+        let cols: Vec<&str> = line.trim_matches('|').split('|').map(str::trim).collect();
+        if cols.len() != 4 {
+            continue;
+        }
+        if cols[0].eq_ignore_ascii_case("when") {
+            continue; // header row
+        }
+        if !cols[0].is_empty() && cols[0].chars().all(|c| c == '-') {
+            continue; // separator row
+        }
+        if cols[2] == current_state {
+            result = Some(cols[1].to_string());
+        }
+    }
+    result
 }
 
 #[cfg(test)]
@@ -312,5 +388,150 @@ label = "Pr Failed"
         let wf = parse_workflow(renamed);
         assert!(is_merge_failure_state("pr_failed", &wf));
         assert!(!is_merge_failure_state("merge_failed", &wf));
+    }
+
+    const RECOVER_WF: &str = r#"[[states]]
+id    = "groomed"
+label = "Groomed"
+
+  [[states.transitions]]
+  to      = "in_design"
+  trigger = "command:start"
+
+[[states]]
+id    = "amend"
+label = "Amend"
+
+  [[states.transitions]]
+  to      = "in_design"
+  trigger = "command:start"
+
+[[states]]
+id    = "in_design"
+label = "In Design"
+
+[[states]]
+id    = "ready"
+label = "Ready"
+
+  [[states.transitions]]
+  to      = "in_progress"
+  trigger = "command:start"
+
+[[states]]
+id    = "fix"
+label = "Fix"
+
+  [[states.transitions]]
+  to      = "in_progress"
+  trigger = "command:start"
+
+[[states]]
+id    = "in_progress"
+label = "In Progress"
+
+[[states]]
+id       = "closed"
+label    = "Closed"
+terminal = true
+"#;
+
+    fn history_body(rows: &[(&str, &str)]) -> String {
+        let mut body = "## Spec\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|\n".to_string();
+        for (from, to) in rows {
+            body.push_str(&format!("| 2026-01-01T00:00Z | {from} | {to} | test |\n"));
+        }
+        body
+    }
+
+    #[test]
+    fn resolve_recovery_target_explicit_to_wins() {
+        let wf = parse_workflow(RECOVER_WF);
+        let body = history_body(&[("groomed", "in_design")]);
+        let target = resolve_recovery_target(&body, "in_design", &wf, Some("ready")).unwrap();
+        assert_eq!(target, "ready");
+    }
+
+    #[test]
+    fn resolve_recovery_target_explicit_to_rejects_unknown_state() {
+        let wf = parse_workflow(RECOVER_WF);
+        let err = resolve_recovery_target("", "in_design", &wf, Some("bogus")).unwrap_err();
+        assert!(format!("{err}").contains("bogus"));
+    }
+
+    #[test]
+    fn resolve_recovery_target_explicit_to_rejects_terminal_state() {
+        let wf = parse_workflow(RECOVER_WF);
+        let err = resolve_recovery_target("", "in_design", &wf, Some("closed")).unwrap_err();
+        assert!(format!("{err}").contains("terminal"));
+    }
+
+    #[test]
+    fn resolve_recovery_target_uses_history_amend_predecessor() {
+        let wf = parse_workflow(RECOVER_WF);
+        let body = history_body(&[("groomed", "amend"), ("amend", "in_design")]);
+        let target = resolve_recovery_target(&body, "in_design", &wf, None).unwrap();
+        assert_eq!(target, "amend");
+    }
+
+    #[test]
+    fn resolve_recovery_target_uses_history_groomed_predecessor() {
+        let wf = parse_workflow(RECOVER_WF);
+        let body = history_body(&[("groomed", "in_design")]);
+        let target = resolve_recovery_target(&body, "in_design", &wf, None).unwrap();
+        assert_eq!(target, "groomed");
+    }
+
+    #[test]
+    fn resolve_recovery_target_uses_last_matching_history_row() {
+        let wf = parse_workflow(RECOVER_WF);
+        // Ticket bounced groomed -> in_design -> question -> amend -> in_design;
+        // the LAST row into in_design (from amend) must win, not the first.
+        let body = history_body(&[
+            ("groomed", "in_design"),
+            ("in_design", "question"),
+            ("question", "amend"),
+            ("amend", "in_design"),
+        ]);
+        let target = resolve_recovery_target(&body, "in_design", &wf, None).unwrap();
+        assert_eq!(target, "amend");
+    }
+
+    #[test]
+    fn resolve_recovery_target_falls_back_to_config_when_no_history_match() {
+        // No ## History section at all, but only "ready" has a command:start
+        // transition into in_progress once "fix" is out of the picture.
+        let single_candidate_wf = r#"[[states]]
+id    = "ready"
+label = "Ready"
+
+  [[states.transitions]]
+  to      = "in_progress"
+  trigger = "command:start"
+
+[[states]]
+id    = "in_progress"
+label = "In Progress"
+"#;
+        let wf = parse_workflow(single_candidate_wf);
+        let target = resolve_recovery_target("## Spec\n\ncontent\n", "in_progress", &wf, None).unwrap();
+        assert_eq!(target, "ready");
+    }
+
+    #[test]
+    fn resolve_recovery_target_ambiguous_config_fallback_requires_to() {
+        let wf = parse_workflow(RECOVER_WF);
+        let body = "## Spec\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|\n";
+        let err = resolve_recovery_target(body, "in_design", &wf, None).unwrap_err();
+        let msg = format!("{err}");
+        assert!(msg.contains("--to"), "expected --to guidance: {msg}");
+        assert!(msg.contains("groomed") && msg.contains("amend"), "expected both candidates: {msg}");
+    }
+
+    #[test]
+    fn resolve_recovery_target_no_candidates_requires_to() {
+        let wf = parse_workflow(RECOVER_WF);
+        let err = resolve_recovery_target("", "closed", &wf, None).unwrap_err();
+        assert!(format!("{err}").contains("--to"));
     }
 }

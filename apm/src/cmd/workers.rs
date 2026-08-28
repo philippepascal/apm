@@ -1,5 +1,5 @@
 use anyhow::{bail, Result};
-use apm_core::{config::Config, denial, ticket, ticket_fmt, worker, worktree};
+use apm_core::{config::Config, denial, git, recovery, ticket, ticket_fmt, worker, worktree};
 use std::path::Path;
 use crate::util::worktree_for_ticket;
 
@@ -92,8 +92,28 @@ fn print_diag_report(summary: &denial::DenialSummary, log_path: &std::path::Path
     }
 }
 
-fn list(root: &Path) -> Result<()> {
-    let config = Config::load(root)?;
+/// One row of the crashed/running-worker scan shared by `list()` and `recover`.
+struct WorkerRow {
+    ticket_id: String,
+    title: String,
+    pid: Option<u32>,
+    state: String,
+    started_at: String,
+}
+
+/// Classify a dead worker's ticket state as either the ticket's real state
+/// (if that state is terminal or worker_end) or "crashed" otherwise.
+fn dead_worker_state(ticket_state: &str, ended_states: &std::collections::HashSet<&str>) -> String {
+    if ended_states.contains(ticket_state) {
+        ticket_state.to_string()
+    } else {
+        "crashed".to_string()
+    }
+}
+
+/// Walk every permanent ticket worktree with a `.apm-worker.pid` file and
+/// classify each as running or crashed. Shared by `list()` and `recover`.
+fn scan_workers(root: &Path, config: &Config) -> Result<Vec<WorkerRow>> {
     let ended_states: std::collections::HashSet<&str> = config
         .workflow
         .states
@@ -104,15 +124,7 @@ fn list(root: &Path) -> Result<()> {
     let worktrees = worktree::list_ticket_worktrees(root)?;
     let tickets = ticket::load_all_from_git(root, &config.tickets.dir).unwrap_or_default();
 
-    struct Row {
-        id: String,
-        title: String,
-        pid: String,
-        state: String,
-        elapsed: String,
-    }
-
-    let mut rows: Vec<Row> = Vec::new();
+    let mut rows = Vec::new();
 
     for (wt_path, branch) in &worktrees {
         let pid_path = wt_path.join(".apm-worker.pid");
@@ -133,37 +145,60 @@ fn list(root: &Path) -> Result<()> {
         });
 
         let title = t.map(|t| t.frontmatter.title.as_str()).unwrap_or("—").to_string();
+        let ticket_state = t.map(|t| t.frontmatter.state.as_str()).unwrap_or("");
         let state = if alive {
-            t.map(|t| t.frontmatter.state.as_str()).unwrap_or("—").to_string()
+            ticket_state.to_string()
         } else {
-            let ticket_state = t.map(|t| t.frontmatter.state.as_str()).unwrap_or("");
-            if ended_states.contains(ticket_state) {
-                ticket_state.to_string()
-            } else {
-                "crashed".to_string()
-            }
+            dead_worker_state(ticket_state, &ended_states)
         };
 
-        let pid_col = if alive {
-            pid.to_string()
-        } else {
-            "—".to_string()
-        };
-
-        let elapsed = if alive {
-            worker::elapsed_since(&pidfile.started_at)
-        } else {
-            "—".to_string()
-        };
-
-        rows.push(Row {
-            id: pidfile.ticket_id.clone(),
+        rows.push(WorkerRow {
+            ticket_id: pidfile.ticket_id.clone(),
             title,
-            pid: pid_col,
+            pid: if alive { Some(pid) } else { None },
             state,
-            elapsed,
+            started_at: pidfile.started_at.clone(),
         });
     }
+
+    Ok(rows)
+}
+
+/// A ticket currently shown as "crashed" by `apm workers`.
+struct CrashedWorker {
+    ticket_id: String,
+}
+
+fn crashed_workers(root: &Path, config: &Config) -> Result<Vec<CrashedWorker>> {
+    Ok(scan_workers(root, config)?
+        .into_iter()
+        .filter(|r| r.state == "crashed")
+        .map(|r| CrashedWorker { ticket_id: r.ticket_id })
+        .collect())
+}
+
+fn list(root: &Path) -> Result<()> {
+    let config = Config::load(root)?;
+    let scanned = scan_workers(root, &config)?;
+
+    struct Row {
+        id: String,
+        title: String,
+        pid: String,
+        state: String,
+        elapsed: String,
+    }
+
+    let rows: Vec<Row> = scanned
+        .into_iter()
+        .map(|r| Row {
+            id: r.ticket_id,
+            title: r.title,
+            pid: r.pid.map(|p| p.to_string()).unwrap_or_else(|| "—".to_string()),
+            state: r.state,
+            elapsed: r.pid.map(|_| worker::elapsed_since(&r.started_at)).unwrap_or_else(|| "—".to_string()),
+        })
+        .collect();
 
     if rows.is_empty() {
         println!("No workers running.");
@@ -237,19 +272,99 @@ fn kill(root: &Path, id_arg: &str) -> Result<()> {
     Ok(())
 }
 
+pub fn run_recover(root: &Path, id: Option<&str>, all: bool, dry_run: bool, to: Option<&str>) -> Result<()> {
+    if all {
+        if to.is_some() {
+            bail!("--to cannot be combined with --all");
+        }
+        if id.is_some() {
+            bail!("provide a ticket ID or --all, not both");
+        }
+        return recover_all(root, dry_run);
+    }
+    let Some(id) = id else {
+        bail!("provide a ticket ID or use --all");
+    };
+    let msg = recover_one(root, id, dry_run, to)?;
+    println!("{msg}");
+    Ok(())
+}
+
+fn recover_all(root: &Path, dry_run: bool) -> Result<()> {
+    let config = Config::load(root)?;
+    let crashed = crashed_workers(root, &config)?;
+    if crashed.is_empty() {
+        println!("No crashed workers to recover.");
+        return Ok(());
+    }
+    let total = crashed.len();
+    let mut failures = 0usize;
+    for c in &crashed {
+        match recover_one(root, &c.ticket_id, dry_run, None) {
+            Ok(msg) => println!("{msg}"),
+            Err(e) => {
+                #[allow(clippy::print_stderr)]
+                {
+                    eprintln!("{}: {e:#}", c.ticket_id);
+                }
+                failures += 1;
+            }
+        }
+    }
+    if failures > 0 {
+        bail!("{failures} of {total} recoveries failed");
+    }
+    Ok(())
+}
+
+/// Recover a single crashed ticket: validate the worker is really dead,
+/// resolve the pre-crash state, then roll the ticket back and drop the
+/// stale pid file.
+fn recover_one(root: &Path, id_arg: &str, dry_run: bool, to: Option<&str>) -> Result<String> {
+    let config = Config::load(root)?;
+    let (wt, id) = worktree_for_ticket(root, id_arg)?;
+    let pid_path = wt.join(".apm-worker.pid");
+    if !pid_path.exists() {
+        bail!("nothing to recover for ticket {id}: no .apm-worker.pid file");
+    }
+    let (pid, _) = worker::read_pid_file(&pid_path)?;
+    if worker::is_alive(pid) {
+        bail!("worker for ticket {id} is still running (PID {pid}) — run `apm workers --kill {id}` first");
+    }
+
+    let tickets = ticket::load_all_from_git(root, &config.tickets.dir)?;
+    let t = tickets.iter().find(|t| t.frontmatter.id == id)
+        .ok_or_else(|| anyhow::anyhow!("ticket {id:?} not found"))?;
+    let current_state = t.frontmatter.state.clone();
+
+    let target = recovery::resolve_recovery_target(&t.body, &current_state, &config.workflow, to)?;
+
+    if git::is_worktree_dirty_for_sync(&wt) {
+        #[allow(clippy::print_stderr)]
+        {
+            eprintln!("warning: worktree for ticket {id} has uncommitted changes — leaving them untouched");
+        }
+    }
+
+    if dry_run {
+        return Ok(format!(
+            "{id}: would recover {current_state} → {target} (would remove {})",
+            pid_path.display()
+        ));
+    }
+
+    apm_core::state::transition(root, &id, target.clone(), true, true)?;
+    let _ = std::fs::remove_file(&pid_path);
+    Ok(format!("{id}: recovered {current_state} → {target}"))
+}
+
 #[cfg(test)]
 mod tests {
     fn make_ended_states(ids: &[&'static str]) -> std::collections::HashSet<&'static str> {
         ids.iter().cloned().collect()
     }
 
-    fn dead_worker_state(ticket_state: &str, ended_states: &std::collections::HashSet<&str>) -> String {
-        if ended_states.contains(ticket_state) {
-            ticket_state.to_string()
-        } else {
-            "crashed".to_string()
-        }
-    }
+    use super::dead_worker_state;
 
     #[test]
     fn dead_worker_end_state_shows_state() {
