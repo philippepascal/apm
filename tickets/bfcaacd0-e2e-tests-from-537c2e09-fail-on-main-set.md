@@ -40,7 +40,10 @@ The fix pattern already exists in this same test file: `Env::new()` (`apm/tests/
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Changing the default `.apm/workflow.toml` template (`apm-core/src/default/workflow.toml`) — it keeps `pr_or_epic_merge` on both transitions; only the test helper's runtime patch is fixed.
+- Revisiting Rule 4 or the completion-strategy-consistency check in `apm-core/src/validate.rs` (~line 536) — that logic is working as intended and is not in question here.
+- Other test helpers that already patch `workflow.toml` correctly, e.g. `Env::new()` in `apm/tests/e2e.rs` (~lines 130-143) and `setup_merge_strategy_remote`-style helpers in `apm/tests/integration.rs` (~lines 5469-5480) — these already chain both replacements and need no change.
+- Any process fix for why 537c2e09 shipped without accounting for Rule 4 (c82f853f landed after 537c2e09 branched) — this ticket is a point fix to the test fixture only.
 
 ### Approach
 
