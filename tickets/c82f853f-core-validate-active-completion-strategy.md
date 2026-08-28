@@ -3,13 +3,13 @@ id = "c82f853f"
 title = "core.validate.active_completion_strategy assumes states called in_progress and implemented. Configs can have any state names and several transitions using a completion startegy, so this is the wrong assumption"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 3
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/c82f853f-core-validate-active-completion-strategy"
 created_at = "2026-08-28T00:47:20.903990Z"
-updated_at = "2026-08-28T07:14:19.931160Z"
+updated_at = "2026-08-28T07:18:56.925587Z"
 +++
 
 ## Spec
