@@ -63,7 +63,11 @@ only half the story.
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- The similar hardcoded state-name assumptions in `verify_tickets` (`apm-core/src/validate.rs:635-693`), which hardcode `in_progress`/`implemented`/`in_design` for branch and worktree invariant checks. This is a related but distinct bug (different function, different symptoms); file a follow-up ticket if it needs fixing.
+- Runtime completion-strategy resolution in `apm state` (`apm-core/src/state.rs:67-93`), which already reads the specific transition being fired rather than a hardcoded pair — it is not affected by this bug and needs no change.
+- Any change to the semantics of `check_depends_on_rules` itself (the `Pr`/`Merge`/`Pull`/`PrOrEpicMerge`/`None` dependency rules) — unchanged.
+- An automatic fix (`apm validate --fix`) for the new "inconsistent completion strategies" config error — this ticket only adds detection, not auto-repair.
+- Renaming `active_completion_strategy` or changing its public signature — it keeps returning `CompletionStrategy` (not `Result`), since the new config-validation rule guarantees at most one distinct non-`none` strategy exists in a valid config.
 
 ### Approach
 
