@@ -23,12 +23,14 @@ pub struct TransitionAudit {
     pub wrapper: String,
 }
 
-/// Return the completion strategy configured for the `in_progress → implemented`
-/// transition.  Falls back to `None` when the transition is absent.
+/// Return the workflow's single configured non-`none` completion strategy.
+/// Falls back to `None` when no transition configures one. A passing
+/// `validate_config` guarantees at most one distinct non-`none` strategy
+/// exists across all transitions, so returning the first one found is safe.
 pub fn active_completion_strategy(config: &Config) -> CompletionStrategy {
     config.workflow.states.iter()
-        .find(|s| s.id == "in_progress")
-        .and_then(|s| s.transitions.iter().find(|t| t.to == "implemented"))
+        .flat_map(|s| &s.transitions)
+        .find(|t| t.completion != CompletionStrategy::None)
         .map(|t| t.completion.clone())
         .unwrap_or(CompletionStrategy::None)
 }
@@ -528,6 +530,34 @@ fn validate_config_no_agents(config: &Config, root: &Path) -> Vec<String> {
                     ));
                 }
             }
+        }
+    }
+
+    // Rule 4 — at most one distinct non-`none` completion strategy across all transitions.
+    {
+        let mut strategies: Vec<(String, String, &'static str)> = Vec::new();
+        for state in &config.workflow.states {
+            for transition in &state.transitions {
+                if transition.completion != CompletionStrategy::None {
+                    strategies.push((
+                        state.id.clone(),
+                        transition.to.clone(),
+                        strategy_name(&transition.completion),
+                    ));
+                }
+            }
+        }
+        let distinct: HashSet<&str> = strategies.iter().map(|(_, _, name)| *name).collect();
+        if distinct.len() > 1 {
+            let detail = strategies
+                .iter()
+                .map(|(from, to, name)| format!("state.{from}.transition({to}) uses '{name}'"))
+                .collect::<Vec<_>>()
+                .join(", ");
+            errors.push(format!(
+                "config: workflow — inconsistent completion strategies: {detail}; \
+                 depends_on validation assumes one project-wide completion strategy"
+            ));
         }
     }
 
@@ -1092,6 +1122,66 @@ terminal = true
 "#;
         let config: Config = toml::from_str(toml).unwrap();
         assert_eq!(active_completion_strategy(&config), CompletionStrategy::None);
+    }
+
+    #[test]
+    fn strategy_finds_custom_state_names() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id    = "coding"
+label = "Coding"
+
+[[workflow.states.transitions]]
+to         = "shipped"
+completion = "merge"
+
+[[workflow.states]]
+id       = "shipped"
+label    = "Shipped"
+terminal = true
+"#;
+        let config: Config = toml::from_str(toml).unwrap();
+        assert_eq!(active_completion_strategy(&config), CompletionStrategy::Merge);
+    }
+
+    #[test]
+    fn strategy_resolves_multiple_matching_transitions() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id    = "in_progress"
+label = "In Progress"
+
+[[workflow.states.transitions]]
+to         = "implemented"
+completion = "pr_or_epic_merge"
+
+[[workflow.states]]
+id    = "merge_failed"
+label = "Merge Failed"
+
+[[workflow.states.transitions]]
+to         = "implemented"
+completion = "pr_or_epic_merge"
+
+[[workflow.states]]
+id       = "implemented"
+label    = "Implemented"
+terminal = true
+"#;
+        let config: Config = toml::from_str(toml).unwrap();
+        assert_eq!(active_completion_strategy(&config), CompletionStrategy::PrOrEpicMerge);
     }
 
     #[test]
@@ -3053,6 +3143,57 @@ to = "closed"
         assert!(
             errors.iter().any(|e| e.contains("dest") && e.contains("worker_profile")),
             "command:start to state with no worker_profile should be rejected; got: {errors:?}"
+        );
+    }
+
+    // --- Rule 4: completion strategy consistency ---
+
+    #[test]
+    fn inconsistent_completion_strategies_rejected() {
+        let toml = r#"
+[project]
+name = "test"
+
+[tickets]
+dir = "tickets"
+
+[[workflow.states]]
+id    = "in_progress"
+label = "In Progress"
+
+[[workflow.states.transitions]]
+to         = "implemented"
+completion = "merge"
+
+[[workflow.states]]
+id    = "hotfix"
+label = "Hotfix"
+
+[[workflow.states.transitions]]
+to         = "shipped"
+completion = "pr"
+
+[[workflow.states]]
+id       = "implemented"
+label    = "Implemented"
+terminal = true
+
+[[workflow.states]]
+id       = "shipped"
+label    = "Shipped"
+terminal = true
+"#;
+        let config = load_config(toml);
+        let errors = validate_config_no_agents(&config, Path::new("/tmp"));
+        assert!(
+            errors.iter().any(|e|
+                e.contains("inconsistent completion strategies")
+                    && e.contains("state.in_progress.transition(implemented)")
+                    && e.contains("'merge'")
+                    && e.contains("state.hotfix.transition(shipped)")
+                    && e.contains("'pr'")
+            ),
+            "conflicting completion strategies should be rejected naming both transitions; got: {errors:?}"
         );
     }
 
