@@ -1,7 +1,7 @@
 +++
 id = "bfcaacd0"
 title = "e2e tests from 537c2e09 fail on main: setup_merge_dep_repo leaves merge_failed transition on pr_or_epic_merge"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/bfcaacd0-e2e-tests-from-537c2e09-fail-on-main-set"
 created_at = "2026-08-28T18:18:15.540678Z"
-updated_at = "2026-08-28T18:18:15.540678Z"
+updated_at = "2026-08-28T18:18:45.726142Z"
 +++
 
 ## Spec
@@ -44,3 +44,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-08-28T18:18Z | — | new | philippepascal |
+| 2026-08-28T18:18Z | new | groomed | philippepascal |
