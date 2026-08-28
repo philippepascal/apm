@@ -1,7 +1,7 @@
 +++
 id = "537c2e09"
 title = "closed dependency is tripping apm sync"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 2
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/537c2e09-closed-dependency-is-tripping-apm-sync"
 created_at = "2026-08-28T00:48:10.874316Z"
-updated_at = "2026-08-28T07:24:05.464555Z"
+updated_at = "2026-08-28T17:22:47.353947Z"
 +++
 
 ## Spec
@@ -203,3 +203,4 @@ Run `cargo test --workspace` before finishing.
 | 2026-08-28T07:13Z | new | groomed | philippepascal |
 | 2026-08-28T07:19Z | groomed | in_design | philippepascal |
 | 2026-08-28T07:24Z | in_design | specd | claude |
+| 2026-08-28T17:22Z | specd | ready | philippepascal |
