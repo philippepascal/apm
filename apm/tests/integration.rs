@@ -3906,6 +3906,249 @@ fn workers_kill_stale_pid_errors() {
     );
 }
 
+// --- workers recover ---
+
+/// Write a ticket file directly to its own branch with a caller-supplied
+/// state and body (bypassing `state::transition`), so tests can control the
+/// `## History` table precisely.
+fn write_ticket_direct(dir: &std::path::Path, id: &str, slug: &str, state: &str, body: &str) -> String {
+    let branch = format!("ticket/{id}-{slug}");
+    let rel_path = format!("tickets/{id}-{slug}.md");
+    let content = format!(
+        "+++\nid = \"{id}\"\ntitle = \"{slug}\"\nstate = \"{state}\"\nbranch = \"{branch}\"\n+++\n\n{body}",
+    );
+    git(dir, &["checkout", "-b", &branch]);
+    std::fs::create_dir_all(dir.join("tickets")).unwrap();
+    std::fs::write(dir.join(&rel_path), &content).unwrap();
+    git(dir, &["-c", "commit.gpgsign=false", "add", &rel_path]);
+    git(dir, &["-c", "commit.gpgsign=false", "commit", "-m", &format!("add ticket {id}")]);
+    git(dir, &["checkout", "-"]);
+    branch
+}
+
+/// Provision a permanent worktree for `branch` under `<dir>/worktrees` and drop
+/// a `.apm-worker.pid` file recording `pid`. Returns the pid file path.
+fn write_crash_pid_file(dir: &std::path::Path, branch: &str, ticket_id: &str, pid: u32) -> std::path::PathBuf {
+    apm_core::worktree::ensure_worktree(dir, &dir.join("worktrees"), branch).unwrap();
+    let wt_path = dir.join("worktrees").join(branch.replace('/', "-"));
+    let pid_file = wt_path.join(".apm-worker.pid");
+    std::fs::write(
+        &pid_file,
+        format!(r#"{{"pid":{pid},"ticket_id":"{ticket_id}","started_at":"2026-01-01T00:00:00+00:00"}}"#),
+    )
+    .unwrap();
+    pid_file
+}
+
+#[test]
+fn recover_in_progress_crashed_rolls_back_to_ready() {
+    let dir = setup_with_worktrees();
+    let p = dir.path();
+    std::env::set_var("APM_AGENT_NAME", "test-agent");
+
+    let (id, branch) = write_ticket_to_branch(p, "ready", "recover-ready");
+    apm::cmd::state::run(p, &id, "in_progress".into(), true, false).unwrap();
+
+    let pid_file = write_crash_pid_file(p, &branch, &id, 99999999);
+
+    apm::cmd::workers::run_recover(p, Some(&id), false, false, None).unwrap();
+
+    let content = branch_content(p, &branch, &ticket_rel_path(&branch));
+    assert!(content.contains("state = \"ready\""), "expected rollback to ready: {content}");
+    assert!(!pid_file.exists(), "pid file should be removed after recovery");
+}
+
+#[test]
+fn recover_in_design_resolves_groomed_predecessor_from_history() {
+    let dir = init_repo();
+    let p = dir.path();
+    std::env::set_var("APM_AGENT_NAME", "test-agent");
+
+    let (id, branch) = write_ticket_to_branch(p, "groomed", "recover-groomed");
+    apm::cmd::state::run(p, &id, "in_design".into(), true, false).unwrap();
+
+    let wt_path = p.join(".apm--worktrees").join(branch.replace('/', "-"));
+    assert!(wt_path.is_dir(), "expected auto-provisioned worktree at {}", wt_path.display());
+    std::fs::write(
+        wt_path.join(".apm-worker.pid"),
+        format!(r#"{{"pid":99999999,"ticket_id":"{id}","started_at":"2026-01-01T00:00:00+00:00"}}"#),
+    )
+    .unwrap();
+
+    apm::cmd::workers::run_recover(p, Some(&id), false, false, None).unwrap();
+
+    let content = branch_content(p, &branch, &ticket_rel_path(&branch));
+    assert!(content.contains("state = \"groomed\""), "expected rollback to groomed: {content}");
+}
+
+#[test]
+fn recover_in_design_resolves_amend_predecessor_from_history() {
+    let dir = init_repo();
+    let p = dir.path();
+    std::env::set_var("APM_AGENT_NAME", "test-agent");
+
+    let (id, branch) = write_ticket_to_branch(p, "amend", "recover-amend");
+    apm::cmd::state::run(p, &id, "in_design".into(), true, false).unwrap();
+
+    let wt_path = p.join(".apm--worktrees").join(branch.replace('/', "-"));
+    std::fs::write(
+        wt_path.join(".apm-worker.pid"),
+        format!(r#"{{"pid":99999999,"ticket_id":"{id}","started_at":"2026-01-01T00:00:00+00:00"}}"#),
+    )
+    .unwrap();
+
+    apm::cmd::workers::run_recover(p, Some(&id), false, false, None).unwrap();
+
+    let content = branch_content(p, &branch, &ticket_rel_path(&branch));
+    assert!(content.contains("state = \"amend\""), "expected rollback to amend: {content}");
+}
+
+#[test]
+fn recover_refuses_when_worker_pid_is_alive() {
+    let dir = setup_with_worktrees();
+    let p = dir.path();
+    std::env::set_var("APM_AGENT_NAME", "test-agent");
+
+    let (id, branch) = write_ticket_to_branch(p, "in_progress", "recover-alive");
+    let alive_pid = std::process::id();
+    let pid_file = write_crash_pid_file(p, &branch, &id, alive_pid);
+
+    let err = apm::cmd::workers::run_recover(p, Some(&id), false, false, None).unwrap_err();
+    let msg = format!("{err:#}");
+    assert!(msg.contains("--kill"), "expected guidance to use --kill: {msg}");
+
+    let content = branch_content(p, &branch, &ticket_rel_path(&branch));
+    assert!(content.contains("state = \"in_progress\""), "state must be unchanged: {content}");
+    assert!(pid_file.exists(), "pid file must not be removed");
+}
+
+#[test]
+fn recover_refuses_when_no_pid_file() {
+    let dir = setup_with_worktrees();
+    let p = dir.path();
+    std::env::set_var("APM_AGENT_NAME", "test-agent");
+
+    let (id, branch) = write_ticket_to_branch(p, "in_progress", "recover-nopid");
+    apm_core::worktree::ensure_worktree(p, &p.join("worktrees"), &branch).unwrap();
+
+    let err = apm::cmd::workers::run_recover(p, Some(&id), false, false, None).unwrap_err();
+    let msg = format!("{err:#}");
+    assert!(msg.contains("nothing to recover"), "unexpected message: {msg}");
+}
+
+#[test]
+fn recover_falls_back_to_explicit_to_when_history_ambiguous() {
+    let dir = init_repo();
+    let p = dir.path();
+    std::env::set_var("APM_AGENT_NAME", "test-agent");
+
+    // "in_design" is reachable via command:start from both "groomed" and "amend" in
+    // the default workflow; with an empty ## History table there is nothing to
+    // disambiguate with, so resolution must fail and require --to.
+    let id = "bbbb2222";
+    let branch = write_ticket_direct(
+        p,
+        id,
+        "recover-ambiguous",
+        "in_design",
+        "## Spec\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|\n",
+    );
+    write_crash_pid_file(p, &branch, id, 99999999);
+
+    let err = apm::cmd::workers::run_recover(p, Some(id), false, false, None).unwrap_err();
+    let msg = format!("{err:#}");
+    assert!(msg.contains("--to"), "expected guidance to pass --to: {msg}");
+    assert!(msg.contains("groomed") && msg.contains("amend"), "expected both candidates listed: {msg}");
+
+    apm::cmd::workers::run_recover(p, Some(id), false, false, Some("groomed")).unwrap();
+    let content = branch_content(p, &branch, &ticket_rel_path(&branch));
+    assert!(content.contains("state = \"groomed\""), "expected rollback to explicit --to: {content}");
+}
+
+#[test]
+fn recover_dry_run_changes_nothing() {
+    let dir = setup_with_worktrees();
+    let p = dir.path();
+    std::env::set_var("APM_AGENT_NAME", "test-agent");
+
+    let (id, branch) = write_ticket_to_branch(p, "ready", "recover-dryrun");
+    apm::cmd::state::run(p, &id, "in_progress".into(), true, false).unwrap();
+    let pid_file = write_crash_pid_file(p, &branch, &id, 99999999);
+
+    apm::cmd::workers::run_recover(p, Some(&id), false, true, None).unwrap();
+
+    let content = branch_content(p, &branch, &ticket_rel_path(&branch));
+    assert!(content.contains("state = \"in_progress\""), "dry-run must not change state: {content}");
+    assert!(pid_file.exists(), "dry-run must not remove the pid file");
+}
+
+#[test]
+fn recover_recovered_ticket_no_longer_shows_as_crashed() {
+    let dir = setup_with_worktrees();
+    let p = dir.path();
+    std::env::set_var("APM_AGENT_NAME", "test-agent");
+
+    let (id, branch) = write_ticket_to_branch(p, "ready", "recover-nolonger");
+    apm::cmd::state::run(p, &id, "in_progress".into(), true, false).unwrap();
+    write_crash_pid_file(p, &branch, &id, 99999999);
+
+    apm::cmd::workers::run_recover(p, Some(&id), false, false, None).unwrap();
+
+    // scan_workers only lists worktrees with a .apm-worker.pid file; since recovery
+    // removed it, the ticket must not appear in `apm workers` at all any more.
+    let real_wt = apm_core::worktree::find_worktree_for_branch(p, &branch)
+        .expect("worktree must still be registered");
+    assert!(!real_wt.join(".apm-worker.pid").exists());
+    apm::cmd::workers::run(p, None, None).unwrap();
+}
+
+#[test]
+fn recover_all_recovers_crashed_tickets_and_reports_failure_without_stopping() {
+    let dir = init_repo();
+    let p = dir.path();
+    std::env::set_var("APM_AGENT_NAME", "test-agent");
+
+    // Ticket A: in_progress crashed, unambiguous History predecessor "ready".
+    let (id_a, branch_a) = write_ticket_to_branch(p, "ready", "recover-all-a");
+    apm::cmd::state::run(p, &id_a, "in_progress".into(), true, false).unwrap();
+    write_crash_pid_file(p, &branch_a, &id_a, 99999998);
+
+    // Ticket B: in_design crashed, unambiguous History predecessor "groomed".
+    let (id_b, branch_b) = write_ticket_to_branch(p, "groomed", "recover-all-b");
+    apm::cmd::state::run(p, &id_b, "in_design".into(), true, false).unwrap();
+    let wt_b = p.join(".apm--worktrees").join(branch_b.replace('/', "-"));
+    std::fs::write(
+        wt_b.join(".apm-worker.pid"),
+        format!(r#"{{"pid":99999997,"ticket_id":"{id_b}","started_at":"2026-01-01T00:00:00+00:00"}}"#),
+    )
+    .unwrap();
+
+    // Ticket C: in_design crashed with an empty History table — ambiguous between
+    // "groomed" and "amend", and --all never passes --to, so this one must fail.
+    let id_c = "cccc3333";
+    let branch_c = write_ticket_direct(
+        p,
+        id_c,
+        "recover-all-c",
+        "in_design",
+        "## Spec\n\n## History\n\n| When | From | To | By |\n|------|------|----|----|\n",
+    );
+    let pid_c = write_crash_pid_file(p, &branch_c, id_c, 99999996);
+
+    let result = apm::cmd::workers::run_recover(p, None, true, false, None);
+    assert!(result.is_err(), "expected --all to exit non-zero when one ticket fails");
+
+    let content_a = branch_content(p, &branch_a, &ticket_rel_path(&branch_a));
+    assert!(content_a.contains("state = \"ready\""), "ticket A should be recovered: {content_a}");
+
+    let content_b = branch_content(p, &branch_b, &ticket_rel_path(&branch_b));
+    assert!(content_b.contains("state = \"groomed\""), "ticket B should be recovered: {content_b}");
+
+    let content_c = branch_content(p, &branch_c, &ticket_rel_path(&branch_c));
+    assert!(content_c.contains("state = \"in_design\""), "ticket C should be left unchanged: {content_c}");
+    assert!(pid_c.exists(), "ticket C's pid file should remain since recovery failed");
+}
+
 fn setup_with_strict_transitions() -> TempDir {
     let dir = init_repo();
     // BYPASS: no apm command can replace the workflow post-init.

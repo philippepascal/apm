@@ -143,6 +143,37 @@ enum WorkersCommand {
         /// Ticket ID (8-char hex, 4+ char prefix, or plain integer)
         id: String,
     },
+    /// Roll a crashed ticket back to its pre-crash state
+    #[command(long_about = "Recover a ticket whose worker crashed (shown as \"crashed\" by `apm workers`).
+
+Transitions the ticket back to the state it was in immediately before the
+crashed worker started, and removes the stale .apm-worker.pid file.
+
+The recovery target is resolved in order:
+  1. --to <state>, if given (must be a real, non-terminal state)
+  2. the ticket's ## History table — the last entry into its current state
+  3. a single unambiguous command:start transition into its current state
+
+If none of these resolve a single target, pass --to explicitly.
+
+Examples:
+  apm workers recover 42            # recover ticket 42
+  apm workers recover 42 --dry-run  # preview without changing anything
+  apm workers recover 42 --to ready # override the resolved target state
+  apm workers recover --all         # recover every crashed ticket")]
+    Recover {
+        /// Ticket ID (8-char hex, 4+ char prefix, or plain integer); omit when using --all
+        id: Option<String>,
+        /// Recover every ticket currently shown as crashed by `apm workers`
+        #[arg(long)]
+        all: bool,
+        /// Preview the recovery without changing ticket state or removing files
+        #[arg(long)]
+        dry_run: bool,
+        /// Explicit target state override; required when History does not disambiguate
+        #[arg(long, value_name = "STATE")]
+        to: Option<String>,
+    },
 }
 
 #[derive(Subcommand)]
@@ -1308,13 +1339,13 @@ fn main() -> Result<()> {
             add_task,
             no_aggressive,
         ),
-        Command::Workers { log, kill, subcmd } => {
-            if let Some(WorkersCommand::Diag { id }) = subcmd {
-                cmd::workers::run_diag(&root, &id)
-            } else {
-                cmd::workers::run(&root, log.as_deref(), kill.as_deref())
+        Command::Workers { log, kill, subcmd } => match subcmd {
+            Some(WorkersCommand::Diag { id }) => cmd::workers::run_diag(&root, &id),
+            Some(WorkersCommand::Recover { id, all, dry_run, to }) => {
+                cmd::workers::run_recover(&root, id.as_deref(), all, dry_run, to.as_deref())
             }
-        }
+            None => cmd::workers::run(&root, log.as_deref(), kill.as_deref()),
+        },
         Command::Epic {
             command: EpicCommand::New { title },
         } => cmd::epic::run_new(&root, title),
