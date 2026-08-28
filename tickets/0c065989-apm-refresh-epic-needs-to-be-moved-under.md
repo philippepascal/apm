@@ -1,7 +1,7 @@
 +++
 id = "0c065989"
 title = "apm refresh-epic needs to be moved under apm epic refresh for consistency"
-state = "new"
+state = "groomed"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/0c065989-apm-refresh-epic-needs-to-be-moved-under"
 created_at = "2026-08-28T00:50:30.208076Z"
-updated_at = "2026-08-28T00:50:30.208076Z"
+updated_at = "2026-08-28T07:13:09.971730Z"
 +++
 
 ## Spec
@@ -47,3 +47,4 @@ How the implementation will work.
 | When | From | To | By |
 |------|------|----|----|
 | 2026-08-28T00:50Z | — | new | philippepascal |
+| 2026-08-28T07:13Z | new | groomed | philippepascal |
