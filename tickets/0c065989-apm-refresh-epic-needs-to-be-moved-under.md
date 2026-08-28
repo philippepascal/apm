@@ -2,14 +2,14 @@
 id = "0c065989"
 title = "apm refresh-epic needs to be moved under apm epic refresh for consistency"
 state = "in_design"
-priority = 0
+priority = 3
 effort = 2
 risk = 1
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/0c065989-apm-refresh-epic-needs-to-be-moved-under"
 created_at = "2026-08-28T00:50:30.208076Z"
-updated_at = "2026-08-28T07:26:21.456041Z"
+updated_at = "2026-08-28T07:26:31.488895Z"
 +++
 
 ## Spec
