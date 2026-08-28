@@ -1,7 +1,7 @@
 +++
 id = "ace77ab7"
 title = "need a new command to recover from crashed agents"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/ace77ab7-need-a-new-command-to-recover-from-crash"
 created_at = "2026-08-28T00:51:22.995736Z"
-updated_at = "2026-08-28T07:13:12.772318Z"
+updated_at = "2026-08-28T07:26:44.937595Z"
 +++
 
 ## Spec
@@ -48,3 +48,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-08-28T00:51Z | — | new | philippepascal |
 | 2026-08-28T07:13Z | new | groomed | philippepascal |
+| 2026-08-28T07:26Z | groomed | in_design | philippepascal |
