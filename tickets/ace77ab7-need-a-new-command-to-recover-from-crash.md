@@ -1,7 +1,7 @@
 +++
 id = "ace77ab7"
 title = "need a new command to recover from crashed agents"
-state = "specd"
+state = "ready"
 priority = 5
 effort = 5
 risk = 3
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/ace77ab7-need-a-new-command-to-recover-from-crash"
 created_at = "2026-08-28T00:51:22.995736Z"
-updated_at = "2026-08-28T07:31:13.881153Z"
+updated_at = "2026-08-28T17:22:52.124849Z"
 +++
 
 ## Spec
@@ -174,3 +174,4 @@ line per ticket, and exit non-zero if any ticket failed.
 | 2026-08-28T07:13Z | new | groomed | philippepascal |
 | 2026-08-28T07:26Z | groomed | in_design | philippepascal |
 | 2026-08-28T07:31Z | in_design | specd | claude |
+| 2026-08-28T17:22Z | specd | ready | philippepascal |
