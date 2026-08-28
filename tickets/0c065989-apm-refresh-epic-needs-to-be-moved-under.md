@@ -16,7 +16,18 @@ updated_at = "2026-08-28T07:24:17.681175Z"
 
 ### Problem
 
-What is broken or missing, and why it matters.
+`apm refresh-epic <id>` is a top-level command, even though every other
+epic-scoped operation (`new`, `submit`, `close`, `list`, `show`, `set`) lives
+under `apm epic <subcommand>`. This is the only epic operation that breaks the
+`apm epic ...` convention, which makes the CLI surface harder to discover
+(`apm epic --help` doesn't mention it) and inconsistent with the rest of the
+command tree documented in `apm main.rs`'s help template and `apm help
+commands`.
+
+The command should be relocated to `apm epic refresh <id>` so all epic
+operations are grouped under one subcommand namespace, with identical
+behaviour and flags. No backward-compatible alias is kept for the old
+top-level name, per the project's no-shim convention.
 
 ### Acceptance criteria
 
@@ -33,13 +44,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
