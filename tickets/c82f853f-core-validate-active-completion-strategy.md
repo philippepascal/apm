@@ -1,7 +1,7 @@
 +++
 id = "c82f853f"
 title = "core.validate.active_completion_strategy assumes states called in_progress and implemented. Configs can have any state names and several transitions using a completion startegy, so this is the wrong assumption"
-state = "in_design"
+state = "specd"
 priority = 5
 effort = 3
 risk = 3
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/c82f853f-core-validate-active-completion-strategy"
 created_at = "2026-08-28T00:47:20.903990Z"
-updated_at = "2026-08-28T07:19:11.157317Z"
+updated_at = "2026-08-28T07:19:17.738874Z"
 +++
 
 ## Spec
@@ -159,3 +159,4 @@ Run `cargo test --workspace` before submitting; all tests must pass.
 | 2026-08-28T00:47Z | — | new | philippepascal |
 | 2026-08-28T07:13Z | new | groomed | philippepascal |
 | 2026-08-28T07:14Z | groomed | in_design | philippepascal |
+| 2026-08-28T07:19Z | in_design | specd | claude |
