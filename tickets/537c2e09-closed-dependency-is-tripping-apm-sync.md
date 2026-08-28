@@ -59,7 +59,7 @@ others) already works around this by merging in tickets found via
 ### Acceptance criteria
 
 - [x] `apm sync` (and other mutating commands, e.g. `apm state`) do not print `dep <id> not found` and do not exit with "Mutating commands are blocked" when a non-closed ticket's `depends_on` references a ticket that is closed and whose `ticket/*` branch has already been deleted, but whose file still exists under `tickets/` on the default branch
-- [ ] `apm validate` reports no `depends_on` issue for the same scenario
+- [x] `apm validate` reports no `depends_on` issue for the same scenario
 - [ ] `apm new --depends-on <id>` succeeds when `<id>` refers to a closed ticket whose branch has been deleted
 - [ ] `depends_on` referencing an id that does not exist anywhere — no live branch and no file on the default branch — still produces a `dep <id> not found` error from all three entry points above
 - [ ] `cargo test --workspace` passes, including a new regression test that reproduces the original bug (closed dependency, branch deleted, dependent ticket non-closed) and asserts the affected command no longer fails
