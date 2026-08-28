@@ -47,7 +47,40 @@ The fix pattern already exists in this same test file: `Env::new()` (`apm/tests/
 
 ### Approach
 
-How the implementation will work.
+Single file changes, test-only: `apm/tests/e2e.rs`, function `setup_merge_dep_repo()` (currently ~lines 1341-1369).
+
+Current code (~lines 1356-1361):
+
+```rust
+let wf = wf.replace(
+    "  completion  = \"pr_or_epic_merge\"",
+    "  completion  = \"merge\"",
+);
+```
+
+This rewrites only the two-space-indented `completion  = "pr_or_epic_merge"` line, which is the `in_progress -> implemented` transition in the default template (`apm-core/src/default/workflow.toml` line 101). The one-space-indented `completion = "pr_or_epic_merge"` line for the `merge_failed -> implemented` transition (default template line 164) is left unchanged, so the two transitions end up with different completion strategies and trip Rule 4 in `validate_config` (`apm-core/src/validate.rs`, ~lines 536-561).
+
+Fix: chain a second `.replace()` for the one-space variant, mirroring the existing pattern in the same file used by `Env::new()` (~lines 130-143):
+
+```rust
+let wf = wf
+    .replace(
+        "  completion  = \"pr_or_epic_merge\"",
+        "  completion  = \"merge\"",
+    )
+    .replace(
+        "  completion = \"pr_or_epic_merge\"",
+        "  completion = \"merge\"",
+    );
+```
+
+Both replacements must happen before `std::fs::write(&wf_path, wf)`. No other lines in the default `workflow.toml` template contain `pr_or_epic_merge` (verified — it appears exactly twice, once per completion line), so these two chained replacements cover the whole file; no regex or more general parsing is needed.
+
+No production code changes are required — the bug is confined to this test fixture helper. `setup_merge_dep_repo()` is only used by the two failing tests (`sync_does_not_block_on_closed_branchless_dependency` and `new_still_fails_when_dependency_does_not_exist_anywhere`), so the fix is fully scoped to those.
+
+Verification steps after the change:
+1. `cargo test --test e2e sync_does_not_block_on_closed_branchless_dependency new_still_fails_when_dependency_does_not_exist_anywhere` — both pass.
+2. `cargo test --workspace` — full suite passes, confirming nothing else depended on the previous (broken) mixed-strategy behavior of this helper.
 
 ### Open questions
 
