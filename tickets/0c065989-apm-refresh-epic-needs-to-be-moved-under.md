@@ -34,7 +34,7 @@ top-level name, per the project's no-shim convention.
 - [x] `apm epic refresh <id>` (no flags) prints the ahead-count / clean-vs-conflicted status and, when stdout is a terminal, prompts for merge/PR/auto/skip — identical to the current `apm refresh-epic <id>` no-flag behaviour
 - [x] `apm epic refresh <id> --merge` performs a local merge of the default branch into the epic branch, identical to current `apm refresh-epic --merge`
 - [x] `apm epic refresh <id> --pr` opens or updates a PR from the default branch into the epic branch, identical to current `apm refresh-epic --pr`
-- [ ] `apm epic refresh <id> --auto` merges locally when clean and falls back to a PR on conflict, identical to current `apm refresh-epic --auto`
+- [x] `apm epic refresh <id> --auto` merges locally when clean and falls back to a PR on conflict, identical to current `apm refresh-epic --auto`
 - [ ] `apm epic refresh <id> --merge --push` and `--merge --no-push` control the post-merge push exactly as `apm refresh-epic` did
 - [ ] `apm refresh-epic <id>` no longer exists — running it fails with clap's unknown-subcommand error
 - [ ] `apm epic --help` lists `refresh` alongside `new`, `submit`, `close`, `list`, `show`, `set`
