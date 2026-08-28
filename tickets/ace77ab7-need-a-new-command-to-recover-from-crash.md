@@ -48,7 +48,7 @@ diagnosis and turns it into a safe, repeatable recovery action.
 - [x] `apm workers recover <id>` on a ticket with no `.apm-worker.pid` file fails with a "nothing to recover" error and makes no changes
 - [x] `apm workers recover <id>` on a ticket whose current state has more than one possible predecessor (e.g. `in_design`, reachable from both `groomed` and `amend`) resolves the correct one from the ticket's `## History` table rather than guessing, and falls back to requiring an explicit `--to <state>` when History does not disambiguate
 - [x] `apm workers recover --all` recovers every ticket currently shown as `crashed` by `apm workers`, continues past individual failures, prints a per-ticket result line, and exits non-zero if any ticket failed
-- [ ] `apm workers recover <id> --dry-run` prints the target state and the pid file that would be removed without changing ticket state or touching any files
+- [x] `apm workers recover <id> --dry-run` prints the target state and the pid file that would be removed without changing ticket state or touching any files
 - [ ] After a successful `apm workers recover <id>`, that ticket no longer appears as `crashed` in `apm workers`
 - [ ] `apm workers recover <id>` prints a warning (but still proceeds) when the ticket's worktree has uncommitted changes, and never discards or modifies those files
 
