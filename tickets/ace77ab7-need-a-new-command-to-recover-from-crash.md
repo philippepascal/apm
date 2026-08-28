@@ -2,14 +2,14 @@
 id = "ace77ab7"
 title = "need a new command to recover from crashed agents"
 state = "in_design"
-priority = 0
+priority = 5
 effort = 5
 risk = 3
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/ace77ab7-need-a-new-command-to-recover-from-crash"
 created_at = "2026-08-28T00:51:22.995736Z"
-updated_at = "2026-08-28T07:31:03.252187Z"
+updated_at = "2026-08-28T07:31:10.037429Z"
 +++
 
 ## Spec
