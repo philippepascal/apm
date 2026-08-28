@@ -92,11 +92,11 @@ target-branch topology, and violations are reported.
 ## Refresh and close: epic must be quiescent
 
 Long-running epics drift from the default branch. To pull updates in,
-`apm refresh-epic <id>` opens a PR from the default branch into the epic
+`apm epic refresh <id>` opens a PR from the default branch into the epic
 branch. The supervisor reviews and merges; subsequent worker starts in the
 epic see the updated tip.
 
-Both `apm refresh-epic` and `apm epic close` require the epic to be
+Both `apm epic refresh` and `apm epic close` require the epic to be
 **quiescent**: no ticket in the epic is in an actively-worked state
 (`in_design`, `in_progress`, or otherwise has a live worker). The check is
 shared between the two commands.
@@ -118,6 +118,6 @@ enforces the precondition; it does not stop running workers.
 4. `apm validate` enforces the dependency rules across all tickets.
 5. A hash-trip on `apm.toml` / `workflow.toml` triggers automatic
    re-validation; failures block mutating commands.
-6. `apm refresh-epic` is a new command that opens a PR from the default
-   branch into the epic. Both `refresh-epic` and `epic close` require epic
+6. `apm epic refresh` is a new command that opens a PR from the default
+   branch into the epic. Both `epic refresh` and `epic close` require epic
    quiescence.

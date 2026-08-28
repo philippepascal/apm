@@ -7454,7 +7454,7 @@ fn help_commands_includes_visible_top_level_commands() {
     let stdout = String::from_utf8(out.stdout).unwrap();
     for cmd in &["agents", "archive", "assign", "clean", "close", "epic",
                  "help", "init", "list", "move", "new", "next",
-                 "refresh-epic", "register", "review", "revoke",
+                 "register", "review", "revoke",
                  "sessions", "set", "show", "spec", "start", "state",
                  "sync", "validate", "version", "work",
                  "workers", "worktrees"] {
@@ -9118,7 +9118,7 @@ fn apm_list_shared_epic_stale_marker() {
     );
 }
 
-// --- refresh-epic --merge push / no-push behavior ---
+// --- epic refresh --merge push / no-push behavior ---
 
 fn setup_refresh_epic_for_push(epic_id: &str, slug: &str) -> (TempDir, TempDir) {
     let (bare, local) = init_remote_repo();
@@ -9145,7 +9145,7 @@ fn refresh_epic_merge_push_flag_pushes_to_origin() {
     let (bare, local) = setup_refresh_epic_for_push("ab12cd34", "push-test");
     let p = local.path();
 
-    let out = run_apm(p, &["refresh-epic", "ab12cd34", "--merge", "--push"]);
+    let out = run_apm(p, &["epic", "refresh", "ab12cd34", "--merge", "--push"]);
     let stdout = String::from_utf8_lossy(&out.stdout);
     assert!(
         stdout.contains("pushed"),
@@ -9169,7 +9169,7 @@ fn refresh_epic_merge_no_push_flag_skips_push() {
     // Record origin tip before the merge.
     let origin_before = rev_parse(bare.path(), "epic/cd56ef78-nopush-test");
 
-    let out = run_apm(p, &["refresh-epic", "cd56ef78", "--merge", "--no-push"]);
+    let out = run_apm(p, &["epic", "refresh", "cd56ef78", "--merge", "--no-push"]);
     let stderr = String::from_utf8_lossy(&out.stderr);
 
     // Origin should be unchanged.
@@ -9195,7 +9195,7 @@ fn refresh_epic_merge_noninteractive_skips_push() {
     let origin_before = rev_parse(bare.path(), "epic/ef901234-nointeractive-test");
 
     // No --push / --no-push; stdout is not a terminal in the test harness.
-    let out = run_apm(p, &["refresh-epic", "ef901234", "--merge"]);
+    let out = run_apm(p, &["epic", "refresh", "ef901234", "--merge"]);
     let stderr = String::from_utf8_lossy(&out.stderr);
 
     // Origin should be unchanged.
@@ -9212,10 +9212,10 @@ fn refresh_epic_merge_noninteractive_skips_push() {
     );
 }
 
-// --- refresh-epic no-flag non-interactive path ---
+// --- epic refresh no-flag non-interactive path ---
 
 /// When run non-interactively (stdout is not a tty) with no action flag and the
-/// epic branch is ahead of the default branch, `apm refresh-epic <id>` must
+/// epic branch is ahead of the default branch, `apm epic refresh <id>` must
 /// print the status line and exit 0 without performing a merge.
 #[test]
 fn refresh_epic_no_flag_noninteractive_prints_status_and_exits() {
@@ -9227,7 +9227,7 @@ fn refresh_epic_no_flag_noninteractive_prints_status_and_exits() {
 
     let bin = env!("CARGO_BIN_EXE_apm");
     let out = std::process::Command::new(bin)
-        .args(["refresh-epic", "aa11bb22"])
+        .args(["epic", "refresh", "aa11bb22"])
         .current_dir(p)
         .env("GIT_AUTHOR_NAME", "test")
         .env("GIT_AUTHOR_EMAIL", "test@test.com")
@@ -9238,7 +9238,7 @@ fn refresh_epic_no_flag_noninteractive_prints_status_and_exits() {
 
     assert!(
         out.status.success(),
-        "apm refresh-epic (no flag) should exit 0; stderr: {}",
+        "apm epic refresh (no flag) should exit 0; stderr: {}",
         String::from_utf8_lossy(&out.stderr)
     );
 
