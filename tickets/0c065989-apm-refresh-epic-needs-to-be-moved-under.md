@@ -1,7 +1,7 @@
 +++
 id = "0c065989"
 title = "apm refresh-epic needs to be moved under apm epic refresh for consistency"
-state = "implemented"
+state = "closed"
 priority = 3
 effort = 2
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/0c065989-apm-refresh-epic-needs-to-be-moved-under"
 created_at = "2026-08-28T00:50:30.208076Z"
-updated_at = "2026-08-28T17:49:51.677457Z"
+updated_at = "2026-08-28T18:29:35.753445Z"
 +++
 
 ## Spec
@@ -133,3 +133,4 @@ into `EpicCommand` as `Refresh`, with no change to the underlying logic.
 | 2026-08-28T17:22Z | specd | ready | philippepascal |
 | 2026-08-28T17:44Z | ready | in_progress | philippepascal |
 | 2026-08-28T17:49Z | in_progress | implemented | claude |
+| 2026-08-28T18:29Z | implemented | closed | philippepascal(apm-sync) |
