@@ -59,7 +59,7 @@ only half the story.
 - [x] `active_completion_strategy` still returns `CompletionStrategy::None` when no transition in the workflow sets a non-`none` completion
 - [x] `apm validate` reports a config error when a workflow defines two or more transitions with different non-`none` completion strategies, naming the conflicting states/transitions and the strategies involved
 - [x] `apm set <id> depends_on ...` and `apm new --depends-on ...` correctly enforce the project's actual configured completion-strategy dependency rules on a workflow that uses custom state names, instead of always rejecting with a `none`-strategy error
-- [ ] Existing behaviour for the built-in default workflow (`pr_or_epic_merge` on `in_progress → implemented`) is unchanged
+- [x] Existing behaviour for the built-in default workflow (`pr_or_epic_merge` on `in_progress → implemented`) is unchanged
 
 ### Out of scope
 
