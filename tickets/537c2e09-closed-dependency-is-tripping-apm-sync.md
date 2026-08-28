@@ -66,7 +66,10 @@ others) already works around this by merging in tickets found via
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- `apm_core::context::build_dependency_bundle` (the worker-prompt dependency context builder) has the same shaped gap — it will print `*Ticket not found.*` for a closed, branchless dependency — but this is cosmetic prompt content, not a blocking failure. Leave it as-is; file a follow-up ticket if it turns out to matter.
+- Changing what `apm clean` does with closed tickets' branches (it will keep deleting them).
+- Any change to `apm archive` / `archive_dir` behaviour.
+- Redesigning `hash_trip`'s stamp/re-validation mechanism itself (e.g. writing a stamp on failure) — the fix here is to stop the false positive at its source, not to change how failures are cached.
 
 ### Approach
 
