@@ -1329,3 +1329,126 @@ fn other_commands_still_require_git_repo() {
         "expected 'not inside a git repository' error: {err}"
     );
 }
+
+// ---------------------------------------------------------------------------
+// Closed dependency with a deleted branch (ticket 537c2e09)
+// ---------------------------------------------------------------------------
+
+/// Set up a repo whose `in_progress -> implemented` completion strategy is
+/// "merge" (which validates `depends_on` unconditionally, unlike
+/// `pr_or_epic_merge` which skips validation for standalone tickets) with a
+/// `[git_host]` provider configured so the strategy passes config validation.
+fn setup_merge_dep_repo() -> TempDir {
+    let dir = tempfile::tempdir().unwrap();
+    let p = dir.path();
+
+    git_ok(p, &["init", "-q", "-b", "main"]);
+    git_ok(p, &["config", "user.email", "test@test.com"]);
+    git_ok(p, &["config", "user.name", "test"]);
+    std::fs::write(p.join("README.md"), "test\n").unwrap();
+    git_ok(p, &["add", "README.md"]);
+    git_ok(p, &["-c", "commit.gpgsign=false", "commit", "-m", "init"]);
+
+    let out = apm(p, "apm", &["init", "--no-claude"]);
+    assert!(out.status.success(), "apm init failed:\n{}", stderr(&out));
+
+    let wf_path = p.join(".apm/workflow.toml");
+    let wf = std::fs::read_to_string(&wf_path).unwrap();
+    let wf = wf.replace(
+        "  completion  = \"pr_or_epic_merge\"",
+        "  completion  = \"merge\"",
+    );
+    std::fs::write(&wf_path, wf).unwrap();
+
+    let config_path = p.join(".apm/config.toml");
+    let mut config = std::fs::read_to_string(&config_path).unwrap();
+    config.push_str("\n[git_host]\nprovider = \"github\"\n");
+    std::fs::write(&config_path, config).unwrap();
+
+    dir
+}
+
+#[test]
+fn sync_does_not_block_on_closed_branchless_dependency() {
+    let dir = setup_merge_dep_repo();
+    let p = dir.path();
+
+    // Create ticket A, close it, then delete its local ticket/* branch —
+    // mirroring what `apm clean --remove-branches` does. Ticket A's file still
+    // exists on main because `ticket::close` merges it there before cleanup.
+    let out = apm(p, "apm", &["new", "Ticket A", "--no-edit"]);
+    assert!(out.status.success(), "apm new A failed:\n{}", stderr(&out));
+    let id_a = parse_new_ticket_id(&out);
+    let branch_a = parse_new_ticket_branch(&out);
+
+    let out = apm(p, "apm", &["close", &id_a]);
+    assert!(out.status.success(), "apm close A failed:\n{}", stderr(&out));
+
+    git_ok(p, &["branch", "-D", &branch_a]);
+
+    // Ticket B depends on the now-branchless closed ticket A.
+    let out = apm(
+        p,
+        "apm",
+        &["new", "Ticket B", "--no-edit", "--depends-on", &id_a],
+    );
+    assert!(
+        out.status.success(),
+        "apm new B --depends-on {id_a} should succeed for a closed, branchless dep:\n{}",
+        stderr(&out)
+    );
+    let id_b = parse_new_ticket_id(&out);
+
+    // `apm sync` (any mutating command) must not report the dep as missing or
+    // be blocked by the hash-trip preflight.
+    let out = apm(p, "apm", &["sync"]);
+    let combined = format!("{}{}", stdout(&out), stderr(&out));
+    assert!(out.status.success(), "apm sync should succeed, got:\n{combined}");
+    assert!(
+        !combined.contains("not found"),
+        "apm sync should not report a missing dep: {combined}"
+    );
+    assert!(
+        !combined.contains("Mutating commands are blocked"),
+        "apm sync should not be blocked: {combined}"
+    );
+
+    // `apm state` (another mutating command) is likewise unblocked.
+    let out = apm(p, "apm", &["state", &id_b, "groomed"]);
+    let combined = format!("{}{}", stdout(&out), stderr(&out));
+    assert!(out.status.success(), "apm state should succeed, got:\n{combined}");
+    assert!(
+        !combined.contains("not found") && !combined.contains("Mutating commands are blocked"),
+        "apm state should not report a missing dep or be blocked: {combined}"
+    );
+
+    // `apm validate` reports no depends_on issue for the same scenario.
+    let out = apm(p, "apm", &["validate"]);
+    let combined = format!("{}{}", stdout(&out), stderr(&out));
+    assert!(out.status.success(), "apm validate should succeed, got:\n{combined}");
+    assert!(
+        !combined.contains("not found"),
+        "apm validate should not report a missing dep: {combined}"
+    );
+}
+
+#[test]
+fn new_still_fails_when_dependency_does_not_exist_anywhere() {
+    let dir = setup_merge_dep_repo();
+    let p = dir.path();
+
+    let out = apm(
+        p,
+        "apm",
+        &["new", "Ticket X", "--no-edit", "--depends-on", "deadbeef"],
+    );
+    assert!(
+        !out.status.success(),
+        "apm new should fail when the dep has no branch and no file anywhere"
+    );
+    let combined = format!("{}{}", stdout(&out), stderr(&out));
+    assert!(
+        combined.contains("dep deadbeef not found"),
+        "expected 'dep deadbeef not found', got:\n{combined}"
+    );
+}

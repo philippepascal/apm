@@ -63,7 +63,12 @@ pub fn run(root: &Path, title: String, no_edit: bool, side_note: bool, context: 
 
     if let Some(ref dep_ids) = depends_on_parsed {
         if !dep_ids.is_empty() {
-            let all_tickets = apm_core::ticket::load_all_from_git(root, &config.tickets.dir)?;
+            let all_tickets = apm_core::ticket::merge_branchless(
+                root,
+                &config.tickets.dir,
+                &config.project.default_branch,
+                apm_core::ticket::load_all_from_git(root, &config.tickets.dir)?,
+            );
             let strategy = apm_core::validate::active_completion_strategy(&config);
             apm_core::validate::check_depends_on_rules(
                 &strategy,

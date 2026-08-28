@@ -251,6 +251,32 @@ pub fn load_from_default_branch(
     Ok(tickets)
 }
 
+/// Merge `tickets` (typically from `load_all_from_git`) with any tickets present
+/// in `tickets_dir_rel` on `default_branch` but not already in the list — i.e.
+/// tickets whose `ticket/*` branch no longer exists (e.g. a closed ticket after
+/// `apm clean` deletes its branch) but whose file survives on the default branch
+/// because `ticket::close` merges it there first. Existing entries win; the
+/// result is re-sorted by `created_at`.
+pub fn merge_branchless(
+    root: &Path,
+    tickets_dir_rel: &Path,
+    default_branch: &str,
+    mut tickets: Vec<Ticket>,
+) -> Vec<Ticket> {
+    let branchless = load_from_default_branch(root, tickets_dir_rel, default_branch)
+        .unwrap_or_default();
+    if !branchless.is_empty() {
+        let seen: HashSet<String> = tickets.iter().map(|t| t.frontmatter.id.clone()).collect();
+        for t in branchless {
+            if !seen.contains(&t.frontmatter.id) {
+                tickets.push(t);
+            }
+        }
+        tickets.sort_by_key(|t| t.frontmatter.created_at);
+    }
+    tickets
+}
+
 /// Read a ticket's state from a specific branch by relative path.
 pub fn state_from_branch(root: &Path, branch: &str, rel_path: &str) -> Option<String> {
     let content = crate::git::read_from_branch(root, branch, rel_path).ok()?;
@@ -1750,5 +1776,38 @@ terminal = true
             }
         }
         assert_eq!(branch_tickets.len(), 1, "ticket should appear exactly once");
+    }
+
+    // ── merge_branchless ─────────────────────────────────────────────────
+
+    #[test]
+    fn merge_branchless_appends_ticket_only_on_default_branch() {
+        let tmp = tempfile::tempdir().unwrap();
+        let p = tmp.path();
+        git_init_main(p);
+        let content = "+++\nid = \"abcd1234\"\ntitle = \"T\"\nstate = \"closed\"\n+++\n\nbody\n";
+        git_commit_file(p, "tickets/abcd1234-t.md", content);
+
+        let tickets = merge_branchless(p, Path::new("tickets"), "main", vec![]);
+        assert_eq!(tickets.len(), 1);
+        assert_eq!(tickets[0].frontmatter.id, "abcd1234");
+    }
+
+    #[test]
+    fn merge_branchless_prefers_existing_entry_when_id_seen() {
+        let tmp = tempfile::tempdir().unwrap();
+        let p = tmp.path();
+        git_init_main(p);
+        // Default-branch version has a different title from the "branch" version
+        // so the test can tell which one survived.
+        let default_content = "+++\nid = \"abcd1234\"\ntitle = \"Default title\"\nstate = \"closed\"\n+++\n\nbody\n";
+        git_commit_file(p, "tickets/abcd1234-t.md", default_content);
+
+        let branch_content = "+++\nid = \"abcd1234\"\ntitle = \"Branch title\"\nstate = \"closed\"\n+++\n\nbody\n";
+        let existing = Ticket::parse(Path::new("tickets/abcd1234-t.md"), branch_content).unwrap();
+
+        let tickets = merge_branchless(p, Path::new("tickets"), "main", vec![existing]);
+        assert_eq!(tickets.len(), 1, "no duplicate should be added");
+        assert_eq!(tickets[0].frontmatter.title, "Branch title");
     }
 }
