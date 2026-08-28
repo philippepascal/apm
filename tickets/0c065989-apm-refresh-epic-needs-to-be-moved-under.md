@@ -39,7 +39,7 @@ top-level name, per the project's no-shim convention.
 - [x] `apm refresh-epic <id>` no longer exists — running it fails with clap's unknown-subcommand error
 - [x] `apm epic --help` lists `refresh` alongside `new`, `submit`, `close`, `list`, `show`, `set`
 - [x] `apm help commands` no longer lists `refresh-epic` as a top-level command, and lists `refresh` nested under `epic`
-- [ ] `cargo test --workspace` passes, including integration tests exercising the relocated command under `apm epic refresh`
+- [x] `cargo test --workspace` passes, including integration tests exercising the relocated command under `apm epic refresh`
 
 ### Out of scope
 
