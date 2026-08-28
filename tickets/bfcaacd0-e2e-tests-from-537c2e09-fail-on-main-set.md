@@ -1,7 +1,7 @@
 +++
 id = "bfcaacd0"
 title = "e2e tests from 537c2e09 fail on main: setup_merge_dep_repo leaves merge_failed transition on pr_or_epic_merge"
-state = "in_design"
+state = "specd"
 priority = 8
 effort = 1
 risk = 1
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/bfcaacd0-e2e-tests-from-537c2e09-fail-on-main-set"
 created_at = "2026-08-28T18:18:15.540678Z"
-updated_at = "2026-08-28T18:22:25.491437Z"
+updated_at = "2026-08-28T18:22:34.095057Z"
 +++
 
 ## Spec
@@ -98,3 +98,4 @@ Verification steps after the change:
 | 2026-08-28T18:18Z | — | new | philippepascal |
 | 2026-08-28T18:18Z | new | groomed | philippepascal |
 | 2026-08-28T18:18Z | groomed | in_design | philippepascal |
+| 2026-08-28T18:22Z | in_design | specd | claude |
