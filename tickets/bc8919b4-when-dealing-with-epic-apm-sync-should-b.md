@@ -1,7 +1,7 @@
 +++
 id = "bc8919b4"
 title = "when dealing with epic, apm sync should be more advance"
-state = "specd"
+state = "amend"
 priority = 5
 effort = 4
 risk = 3
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/bc8919b4-when-dealing-with-epic-apm-sync-should-b"
 created_at = "2026-09-01T18:00:23.105706Z"
-updated_at = "2026-09-01T18:38:01.309683Z"
+updated_at = "2026-09-01T19:03:04.342994Z"
 +++
 
 ## Spec
@@ -101,3 +101,4 @@ Add one additional regression test for the `default_is_ahead` fix, in `apm/tests
 | 2026-09-01T18:34Z | specd | amend | philippepascal |
 | 2026-09-01T18:35Z | amend | in_design | philippepascal |
 | 2026-09-01T18:38Z | in_design | specd | claude |
+| 2026-09-01T19:03Z | specd | amend | philippepascal |
