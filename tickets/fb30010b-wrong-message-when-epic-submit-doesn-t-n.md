@@ -54,7 +54,64 @@ can most likely just be closed with `apm epic close`.
 
 ### Approach
 
-How the implementation will work.
+In `apm/src/cmd/epic.rs::run_submit`, add an upfront guard right after the
+epic branch is resolved (after the `epic_id`/`pr_title`/`default_branch`
+bindings around line 88-90) and before the existing "Determine whether to
+merge locally or push+PR" block (line 92 today). The guard runs unconditionally,
+before `do_merge` is computed, so it covers `--pr` (default), `--merge`, and
+`--auto` in one place without per-mode branching.
+
+Count commits reachable from `epic_branch` but not `default_branch`:
+
+```rust
+let ahead = apm_core::git_util::run(
+    root,
+    &["rev-list", "--count", &format!("{default_branch}..{epic_branch}")],
+)?
+.trim()
+.parse::<usize>()
+.unwrap_or(0);
+if ahead == 0 {
+    println!("epic has no commits beyond {default_branch}; nothing to submit");
+    println!("if this epic's work already landed, run `apm epic close {epic_id}`");
+    return Ok(());
+}
+```
+
+This mirrors the existing `rev-list --count base..branch` pattern already
+used in `apm-core/src/git_util.rs:928` and `apm-core/src/sync.rs:198`, and
+the existing "print and return Ok(())" early-exit pattern `run_refresh_epic`
+already uses for its analogous "epic branch is up to date with
+{default_branch}" case (`apm/src/cmd/epic.rs:353-356`).
+
+With this guard in place, the two reported symptoms both disappear at the
+source: the `--pr` path never reaches `gh_pr_create_or_update` (so `gh pr
+create`'s raw "No commits between..." GraphQL failure is never surfaced),
+and the `--merge` path never reaches `apm_core::git_util::merge_ref` (so the
+"Already up to date" no-op merge can no longer be misreported as "merge
+conflict"). No changes are needed to `merge_ref`, `gh_pr_create_or_update`,
+or `merge_tree_status` — the existing conflict-handling code after the guard
+(lines 98-156) is untouched and still applies whenever there genuinely are
+unmerged commits.
+
+Add integration tests in `apm/tests/integration.rs` near
+`epic_submit_merge_then_close` (~line 9823), reusing the existing
+`setup_epic_with_commit` / `setup_with_epic` helpers:
+
+- A test that merges the epic branch fully into main first (so `ahead == 0`,
+  as in `epic_close_succeeds_on_regular_merged_branch`'s setup at line
+  9621-9622), then calls `run_submit` with `merge=false, pr=false,
+  auto_mode=false` (default `--pr` path) and asserts `Ok(())` plus stdout
+  containing "nothing to submit" and "apm epic close".
+- The same setup, but calling `run_submit` with `merge=true` and asserting
+  the same message and `Ok(())`, with no "merge conflict" text anywhere in
+  the error/output.
+- The same setup with `auto_mode=true`, asserting the same short-circuit.
+- A regression test that constructs a genuine conflict (epic and main both
+  modify the same file differently, as in
+  `merge_ref_conflict_aborts_and_warns` in `apm-core/src/git_util.rs:2183`)
+  and asserts `run_submit` with `merge=true` still returns the unchanged
+  `merge conflict — resolve manually ...` error.
 
 ### Open questions
 
