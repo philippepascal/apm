@@ -24,7 +24,16 @@ This affects operators running `apm sync` interactively at the end of a work ses
 
 ### Acceptance criteria
 
-Checkboxes; each one independently testable.
+- [ ] Running `apm sync` (not `--quiet`) that closes the last non-terminal ticket of an epic prints a submit prompt for that epic in the same invocation — a second `apm sync` run is not required to see it
+- [ ] When more than one epic becomes submit-ready in the same run, each is prompted separately with its own `[1] Merge locally / [2] Open or update PR / [3] Auto / [4] Skip` menu, not one combined yes/no for all epics
+- [ ] Choosing "Merge locally" merges the epic branch into the default branch the same way `apm epic submit --merge <id>` does today
+- [ ] Choosing "Open or update PR" pushes the epic branch and creates/updates a PR the same way `apm epic submit --pr <id>` does today
+- [ ] Choosing "Auto" merges when the merge would be clean and falls back to opening a PR on conflict, the same way `apm epic submit --auto <id>` does today
+- [ ] Choosing "Skip" (including the non-interactive/EOF default) leaves the epic branch untouched — not merged, no PR opened
+- [ ] After an epic is successfully submitted (its branch becomes content-merged into the default branch), `apm sync` asks in the same run whether to close it, without a second `apm sync` invocation
+- [ ] An epic that was already merged into the default branch from a previous run, but not yet closed, is still offered a close prompt
+- [ ] Accepting a close prompt deletes the epic branch locally and on origin the same way `apm epic close <id>` does today, including its live-worker and implemented-state safety checks; declining leaves the branch (and worktree, if any) in place
+- [ ] `apm sync --quiet` performs ticket closing without printing or prompting for any epic submit/close action, matching today's non-interactive behaviour
 
 ### Out of scope
 
