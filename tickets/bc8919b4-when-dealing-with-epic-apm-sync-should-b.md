@@ -80,6 +80,7 @@ pub fn epic_hints(root: &Path, config: &Config) -> Result<EpicHints>
 ### Amendment requests
 
 - [x] Approach: default_is_ahead is computed in Block 1 (apm/src/cmd/sync.rs:30) before the epic flow runs, so after a '[1] Merge locally' (or '[3] Auto' that merged) submit, Block 3 never offers to push main; an immediate 'yes' to the close prompt then runs git push origin --delete on the epic branch while the merged commits exist only on unpushed local main. After the epic submit loop, set default_is_ahead = true whenever any submit merged locally (i.e. main's tip changed), so the existing 'push main to origin now?' prompt at sync.rs:127-132 fires in the same run. Add an AC for this.
+- [ ] Tests: the default_is_ahead regression e2e cannot assert on the 'push {default_branch} to origin now?' prompt — it is gated on is_tty && !quiet (apm/src/cmd/sync.rs:128, is_tty from stdin is_terminal at sync.rs:17), and piped stdin is not a terminal, so the prompt never appears under the test harness even with a correct implementation. Rework: give the temp repo a file:// origin with the default branch starting in sync, run apm sync --push-default with stdin piped '1\n', and assert origin's default-branch tip advances to include the epic merge — --push-default bypasses the tty-gated prompt but the push still sits inside the outer 'if default_is_ahead', so the advancing remote tip proves the epic flow set it.
 
 ### Code review
 
