@@ -4,12 +4,12 @@ title = "wrong message when epic submit doesn't need to merge anything"
 state = "in_design"
 priority = 0
 effort = 2
-risk = 0
+risk = 2
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/fb30010b-wrong-message-when-epic-submit-doesn-t-n"
 created_at = "2026-09-01T00:59:43.049321Z"
-updated_at = "2026-09-01T01:07:31.648871Z"
+updated_at = "2026-09-01T01:07:36.682221Z"
 +++
 
 ## Spec
