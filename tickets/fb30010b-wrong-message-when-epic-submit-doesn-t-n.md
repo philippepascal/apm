@@ -47,7 +47,10 @@ can most likely just be closed with `apm epic close`.
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- Fixing the general conflation in `apm_core::git_util::merge_ref`, where a `None` return means either "already up to date" or "real conflict" — this ticket only needs `apm epic submit` to stop reaching that call at all when there's nothing to merge. Other callers (`apm-core/src/start.rs`, `apm epic refresh` in `apm/src/cmd/epic.rs`) are unaffected: `run_refresh_epic` already guards this exact case with its own upfront `ahead == 0` check before calling `merge_ref`.
+- Adding quiescence or live-worker checks to `apm epic submit` — only `apm epic close` has those today.
+- Any change to `apm epic close` behaviour.
+- Auto-closing the epic when there is nothing left to submit — the fix only suggests `apm epic close <id>` as the next step, it does not run it.
 
 ### Approach
 
