@@ -1,7 +1,7 @@
 +++
 id = "fb30010b"
 title = "wrong message when epic submit doesn't need to merge anything"
-state = "amend"
+state = "in_design"
 priority = 0
 effort = 2
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/fb30010b-wrong-message-when-epic-submit-doesn-t-n"
 created_at = "2026-09-01T00:59:43.049321Z"
-updated_at = "2026-09-01T01:11:13.408447Z"
+updated_at = "2026-09-01T01:34:28.409116Z"
 +++
 
 ## Spec
@@ -133,3 +133,4 @@ Add integration tests in `apm/tests/integration.rs` near
 | 2026-09-01T01:04Z | groomed | in_design | philippepascal |
 | 2026-09-01T01:07Z | in_design | specd | claude |
 | 2026-09-01T01:11Z | specd | amend | philippepascal |
+| 2026-09-01T01:34Z | amend | in_design | philippepascal |
