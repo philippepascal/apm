@@ -3,13 +3,13 @@ id = "bc8919b4"
 title = "when dealing with epic, apm sync should be more advance"
 state = "in_design"
 priority = 0
-effort = 0
+effort = 4
 risk = 0
 author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/bc8919b4-when-dealing-with-epic-apm-sync-should-b"
 created_at = "2026-09-01T18:00:23.105706Z"
-updated_at = "2026-09-01T18:03:53.553660Z"
+updated_at = "2026-09-01T18:09:10.558551Z"
 +++
 
 ## Spec
