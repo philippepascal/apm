@@ -79,7 +79,7 @@ pub fn epic_hints(root: &Path, config: &Config) -> Result<EpicHints>
 
 ### Amendment requests
 
-- [ ] Approach: default_is_ahead is computed in Block 1 (apm/src/cmd/sync.rs:30) before the epic flow runs, so after a '[1] Merge locally' (or '[3] Auto' that merged) submit, Block 3 never offers to push main; an immediate 'yes' to the close prompt then runs git push origin --delete on the epic branch while the merged commits exist only on unpushed local main. After the epic submit loop, set default_is_ahead = true whenever any submit merged locally (i.e. main's tip changed), so the existing 'push main to origin now?' prompt at sync.rs:127-132 fires in the same run. Add an AC for this.
+- [x] Approach: default_is_ahead is computed in Block 1 (apm/src/cmd/sync.rs:30) before the epic flow runs, so after a '[1] Merge locally' (or '[3] Auto' that merged) submit, Block 3 never offers to push main; an immediate 'yes' to the close prompt then runs git push origin --delete on the epic branch while the merged commits exist only on unpushed local main. After the epic submit loop, set default_is_ahead = true whenever any submit merged locally (i.e. main's tip changed), so the existing 'push main to origin now?' prompt at sync.rs:127-132 fires in the same run. Add an AC for this.
 
 ### Code review
 
