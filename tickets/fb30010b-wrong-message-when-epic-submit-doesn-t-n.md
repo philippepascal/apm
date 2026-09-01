@@ -118,6 +118,7 @@ Add integration tests in `apm/tests/integration.rs` near
 
 ### Amendment requests
 
+- [ ] Approach: apm_core::git_util::run is pub(crate) (apm-core/src/git_util.rs:7) and cannot be called from the apm crate. Replace the rev-list snippet with a std::process::Command call, mirroring the existing rev-list --count in run_close (apm/src/cmd/epic.rs:251-255), or state that git_util::run must be made pub.
 
 ### Code review
 
