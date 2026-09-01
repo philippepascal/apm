@@ -34,6 +34,7 @@ This affects operators running `apm sync` interactively at the end of a work ses
 - [ ] An epic that was already merged into the default branch from a previous run, but not yet closed, is still offered a close prompt
 - [ ] Accepting a close prompt deletes the epic branch locally and on origin the same way `apm epic close <id>` does today, including its live-worker and implemented-state safety checks; declining leaves the branch (and worktree, if any) in place
 - [ ] `apm sync --quiet` performs ticket closing without printing or prompting for any epic submit/close action, matching today's non-interactive behaviour
+- [ ] When an epic is merged locally (via Merge locally or Auto-fallback-to-merge) during the epic submit flow, apm sync offers to push the default branch to origin in the same run, even if it was not already ahead before the epic flow ran
 
 ### Out of scope
 
