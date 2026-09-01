@@ -15,6 +15,67 @@ pub struct Candidates {
     pub epic_close_hints: Vec<(String, String)>,
 }
 
+pub struct EpicHints {
+    pub submit: Vec<(String, String)>,
+    pub close: Vec<(String, String)>,
+}
+
+/// Scan local epic branches for submit/close hints. Cheap enough to call
+/// again right after `apply()` closes tickets, so callers can react to
+/// epics that just became submit/close-ready in the same pass.
+pub fn epic_hints(root: &Path, config: &Config) -> Result<EpicHints> {
+    let default_branch = &config.project.default_branch;
+    let remote_ref = format!("refs/remotes/origin/{default_branch}");
+    let main_ref = if git::run(root, &["rev-parse", "--verify", &remote_ref]).is_ok() {
+        format!("origin/{default_branch}")
+    } else {
+        default_branch.clone()
+    };
+
+    let mut submit: Vec<(String, String)> = Vec::new();
+    let mut close: Vec<(String, String)> = Vec::new();
+
+    let epic_branches = crate::epic::epic_branches(root).unwrap_or_default();
+    if !epic_branches.is_empty() {
+        let all_tickets = crate::ticket::load_all_from_git(root, &config.tickets.dir)
+            .unwrap_or_default();
+        for branch in &epic_branches {
+            let id = crate::epic::epic_id_from_branch(branch);
+            let title = crate::epic::branch_to_title(branch);
+            let epic_tickets: Vec<_> = all_tickets
+                .iter()
+                .filter(|t| t.frontmatter.epic.as_deref() == Some(id))
+                .collect();
+            let state_cfgs: Vec<&crate::config::StateConfig> = epic_tickets
+                .iter()
+                .filter_map(|t| config.workflow.states.iter().find(|s| s.id == t.frontmatter.state))
+                .collect();
+            let derived = crate::epic::derive_epic_state(&state_cfgs);
+            // An epic branch with no commits beyond its merge-base with main was never
+            // developed; is_ancestor returns true for such branches (their tip is literally
+            // reachable from main), producing false positives in close hints.
+            let has_own_commits = git::run(root, &["merge-base", &main_ref, branch])
+                .ok()
+                .and_then(|base| {
+                    git::run(root, &["rev-list", "--count", &format!("{base}..{branch}")]).ok()
+                })
+                .and_then(|s| s.trim().parse::<usize>().ok())
+                .map(|n| n > 0)
+                .unwrap_or(false);
+
+            let is_merged = has_own_commits
+                && git::is_branch_content_merged(root, default_branch, branch).unwrap_or(false);
+            if is_merged {
+                close.push((id.to_string(), title));
+            } else if derived == "done" {
+                submit.push((id.to_string(), title));
+            }
+        }
+    }
+
+    Ok(EpicHints { submit, close })
+}
+
 pub struct ApplyOutput {
     pub closed: Vec<String>,
     pub closed_branches: Vec<String>,
@@ -50,8 +111,6 @@ pub fn detect(root: &Path, config: &Config) -> Result<Candidates> {
 
     let mut close = Vec::new();
     let mut hints = Vec::new();
-    let mut epic_submit_hints: Vec<(String, String)> = Vec::new();
-    let mut epic_close_hints: Vec<(String, String)> = Vec::new();
 
     // Case 1: non-terminal tickets on merged branches.
     for branch in &branches {
@@ -172,46 +231,14 @@ pub fn detect(root: &Path, config: &Config) -> Result<Candidates> {
         }
     }
 
-    // Epic detection pass: scan local epic branches for submit/close hints.
-    let epic_branches = crate::epic::epic_branches(root).unwrap_or_default();
-    if !epic_branches.is_empty() {
-        let all_tickets = crate::ticket::load_all_from_git(root, &config.tickets.dir)
-            .unwrap_or_default();
-        for branch in &epic_branches {
-            let id = crate::epic::epic_id_from_branch(branch);
-            let title = crate::epic::branch_to_title(branch);
-            let epic_tickets: Vec<_> = all_tickets
-                .iter()
-                .filter(|t| t.frontmatter.epic.as_deref() == Some(id))
-                .collect();
-            let state_cfgs: Vec<&crate::config::StateConfig> = epic_tickets
-                .iter()
-                .filter_map(|t| config.workflow.states.iter().find(|s| s.id == t.frontmatter.state))
-                .collect();
-            let derived = crate::epic::derive_epic_state(&state_cfgs);
-            // An epic branch with no commits beyond its merge-base with main was never
-            // developed; is_ancestor returns true for such branches (their tip is literally
-            // reachable from main), producing false positives in epic_close_hints.
-            let has_own_commits = git::run(root, &["merge-base", &main_ref, branch])
-                .ok()
-                .and_then(|base| {
-                    git::run(root, &["rev-list", "--count", &format!("{base}..{branch}")]).ok()
-                })
-                .and_then(|s| s.trim().parse::<usize>().ok())
-                .map(|n| n > 0)
-                .unwrap_or(false);
+    let epic_hints_result = epic_hints(root, config)?;
 
-            let is_merged = has_own_commits
-                && git::is_branch_content_merged(root, default_branch, branch).unwrap_or(false);
-            if is_merged {
-                epic_close_hints.push((id.to_string(), title));
-            } else if derived == "done" {
-                epic_submit_hints.push((id.to_string(), title));
-            }
-        }
-    }
-
-    Ok(Candidates { close, hints, epic_submit_hints, epic_close_hints })
+    Ok(Candidates {
+        close,
+        hints,
+        epic_submit_hints: epic_hints_result.submit,
+        epic_close_hints: epic_hints_result.close,
+    })
 }
 
 pub fn apply(root: &Path, config: &Config, candidates: &Candidates, author: &str, aggressive: bool) -> Result<ApplyOutput> {

@@ -1,6 +1,6 @@
 use anyhow::Result;
 use apm_core::{config::Config, git, sync};
-use std::io::IsTerminal;
+use std::io::{BufRead, IsTerminal, Write};
 use std::path::Path;
 
 pub fn run(root: &Path, offline: bool, quiet: bool, no_aggressive: bool, auto_close: bool, push_default: bool, push_refs: bool) -> Result<()> {
@@ -107,16 +107,67 @@ pub fn run(root: &Path, offline: bool, quiet: bool, no_aggressive: bool, auto_cl
         }
     }
 
-    if !quiet && !candidates.epic_submit_hints.is_empty() {
-        println!("\nEpics ready to submit (apm epic submit <id>):");
-        for (id, title) in &candidates.epic_submit_hints {
-            println!("  {id:<8}  {title}");
+    if !quiet {
+        // Re-detect fresh (not the pre-apply `candidates` snapshot) so an epic whose
+        // last ticket just closed above is offered a submit prompt in this same run.
+        let default_before = git::branch_tip(root, &config.project.default_branch);
+
+        // Epics submitted via "Merge locally"/"Auto" in the loop below, tracked
+        // separately from `epic_hints().close` — epic_hints' merged-detection
+        // requires the branch to still show commits beyond its merge-base with
+        // main, which a fresh merge just folded away, so it can't be relied on
+        // to notice a merge that happened moments ago in this very run.
+        let mut freshly_merged: Vec<(String, String)> = Vec::new();
+
+        let submit_hints = sync::epic_hints(root, &config)?;
+        for (id, title) in &submit_hints.submit {
+            println!("\nEpic {id} — {title}: no tickets remain open.");
+            print!(
+                "  [1] Merge locally\n  [2] Open / update PR\n  [3] Auto (merge if clean, fall back to PR)\n  [4] Skip\nChoice [1-4]: "
+            );
+            std::io::stdout().flush()?;
+            let mut choice = String::new();
+            std::io::stdin().lock().read_line(&mut choice)?;
+            let (merge, auto_mode) = match choice.trim() {
+                "1" => (true, false),
+                "2" => (false, false),
+                "3" => (false, true),
+                _ => continue,
+            };
+            match crate::cmd::epic::run_submit(root, id, merge, false, auto_mode) {
+                Ok(()) => {
+                    let branch = apm_core::epic::find_epic_branches(root, id).into_iter().next();
+                    let now_merged = branch
+                        .map(|b| git::is_branch_content_merged(root, &config.project.default_branch, &b).unwrap_or(false))
+                        .unwrap_or(false);
+                    if now_merged {
+                        freshly_merged.push((id.clone(), title.clone()));
+                    }
+                }
+                Err(e) => eprintln!("warning: could not submit epic {id}: {e:#}"),
+            }
         }
-    }
-    if !quiet && !candidates.epic_close_hints.is_empty() {
-        println!("\nEpics ready to close (apm epic close <id>):");
-        for (id, title) in &candidates.epic_close_hints {
-            println!("  {id:<8}  {title}");
+
+        // A "Merge locally" (or an "Auto" that resolved to a clean local merge) moves
+        // the default branch tip forward without going through Block 1's ahead check —
+        // fold that into default_is_ahead so Block 3 offers to push it in this run.
+        let default_after = git::branch_tip(root, &config.project.default_branch);
+        if default_before != default_after {
+            default_is_ahead = true;
+        }
+
+        // Re-detect: any pre-existing merged-but-undeleted epics, plus epics just
+        // merged locally above (when epic_hints' own heuristic still catches them).
+        let close_hints = sync::epic_hints(root, &config)?;
+        let mut seen: std::collections::HashSet<String> = std::collections::HashSet::new();
+        for (id, title) in close_hints.close.iter().chain(freshly_merged.iter()) {
+            if !seen.insert(id.clone()) { continue; }
+            let prompt = format!("Close epic {id} — {title}? [y/N] ");
+            if crate::util::prompt_yes_no(&prompt)? {
+                if let Err(e) = crate::cmd::epic::run_close(root, id, false) {
+                    eprintln!("warning: could not close epic {id}: {e:#}");
+                }
+            }
         }
     }
 
