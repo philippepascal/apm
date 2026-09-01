@@ -42,7 +42,7 @@ can most likely just be closed with `apm epic close`.
 - [x] `apm epic submit <id> --auto` on an epic branch with zero commits ahead of the default branch also short-circuits with the "nothing to submit" message and exits 0, without attempting a merge or a PR
 - [x] The "nothing to submit" message names the default branch and suggests `apm epic close <id>` as the next step
 - [x] `apm epic submit <id> --merge` on an epic branch that has unmerged commits and a genuine merge conflict still reports `merge conflict — resolve manually ...` unchanged
-- [ ] `apm epic submit <id> --merge` on an epic branch with unmerged, cleanly-mergeable commits still merges into the default branch and reports success unchanged
+- [x] `apm epic submit <id> --merge` on an epic branch with unmerged, cleanly-mergeable commits still merges into the default branch and reports success unchanged
 - [ ] `apm epic submit <id>` (default `--pr`) on an epic branch with unmerged commits still opens or updates a PR unchanged
 
 ### Out of scope
