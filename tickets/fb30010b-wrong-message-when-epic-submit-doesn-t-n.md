@@ -137,7 +137,7 @@ in-process call is not visible to the test's own assertions, only
 
 ### Amendment requests
 
-- [ ] Approach: apm_core::git_util::run is pub(crate) (apm-core/src/git_util.rs:7) and cannot be called from the apm crate. Replace the rev-list snippet with a std::process::Command call, mirroring the existing rev-list --count in run_close (apm/src/cmd/epic.rs:251-255), or state that git_util::run must be made pub.
+- [x] Approach: apm_core::git_util::run is pub(crate) (apm-core/src/git_util.rs:7) and cannot be called from the apm crate. Replace the rev-list snippet with a std::process::Command call, mirroring the existing rev-list --count in run_close (apm/src/cmd/epic.rs:251-255), or state that git_util::run must be made pub.
 - [ ] Tests: the three 'nothing to submit' tests cannot assert on stdout by calling run_submit directly, since println! output is not capturable. Drive them through the run_apm helper (apm/tests/integration.rs:16) with args epic submit <id> [--merge|--auto] and assert on the returned Output stdout and exit status. The conflict regression test may still call run_submit directly since it asserts on the returned error.
 
 ### Code review
