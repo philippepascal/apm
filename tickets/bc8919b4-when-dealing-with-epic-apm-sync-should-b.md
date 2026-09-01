@@ -1,7 +1,7 @@
 +++
 id = "bc8919b4"
 title = "when dealing with epic, apm sync should be more advance"
-state = "specd"
+state = "amend"
 priority = 5
 effort = 4
 risk = 3
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/bc8919b4-when-dealing-with-epic-apm-sync-should-b"
 created_at = "2026-09-01T18:00:23.105706Z"
-updated_at = "2026-09-01T18:32:25.526510Z"
+updated_at = "2026-09-01T18:34:51.412880Z"
 +++
 
 ## Spec
@@ -95,3 +95,4 @@ pub fn epic_hints(root: &Path, config: &Config) -> Result<EpicHints>
 | 2026-09-01T18:13Z | specd | amend | philippepascal |
 | 2026-09-01T18:31Z | amend | in_design | philippepascal |
 | 2026-09-01T18:32Z | in_design | specd | claude |
+| 2026-09-01T18:34Z | specd | amend | philippepascal |
