@@ -37,7 +37,7 @@ can most likely just be closed with `apm epic close`.
 
 ### Acceptance criteria
 
-- [ ] `apm epic submit <id>` (default `--pr` behaviour) on an epic branch with zero commits ahead of the default branch prints a "nothing to submit" message and exits 0, without invoking `gh pr create`
+- [x] `apm epic submit <id>` (default `--pr` behaviour) on an epic branch with zero commits ahead of the default branch prints a "nothing to submit" message and exits 0, without invoking `gh pr create`
 - [ ] `apm epic submit <id> --merge` on an epic branch with zero commits ahead of the default branch prints the same "nothing to submit" message and exits 0, without attempting `git merge` and without any "merge conflict" text
 - [ ] `apm epic submit <id> --auto` on an epic branch with zero commits ahead of the default branch also short-circuits with the "nothing to submit" message and exits 0, without attempting a merge or a PR
 - [ ] The "nothing to submit" message names the default branch and suggests `apm epic close <id>` as the next step
