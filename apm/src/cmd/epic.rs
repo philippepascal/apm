@@ -89,7 +89,19 @@ pub fn run_submit(root: &Path, id_arg: &str, merge: bool, _pr: bool, auto_mode: 
     let pr_title = branch_to_title(&epic_branch);
     let default_branch = &config.project.default_branch;
 
-    // 2. Determine whether to merge locally or push+PR.
+    // 2. Nothing to submit if the epic branch has no commits beyond default_branch.
+    let count_out = std::process::Command::new("git")
+        .current_dir(root)
+        .args(["rev-list", "--count", &format!("{default_branch}..{epic_branch}")])
+        .output()?;
+    let ahead = String::from_utf8_lossy(&count_out.stdout).trim().parse::<u64>().unwrap_or(0);
+    if ahead == 0 {
+        println!("epic has no commits beyond {default_branch}; nothing to submit");
+        println!("if this epic's work already landed, run `apm epic close {epic_id}`");
+        return Ok(());
+    }
+
+    // 3. Determine whether to merge locally or push+PR.
     let do_merge = merge || (auto_mode && {
         let s = apm_core::epic::merge_tree_status(root, default_branch, &epic_branch)?;
         s.clean

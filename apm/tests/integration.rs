@@ -9865,6 +9865,92 @@ fn epic_submit_merge_then_close() {
 }
 
 #[test]
+fn epic_submit_pr_nothing_to_submit() {
+    let (dir, epic_id) = setup_epic_with_commit();
+    let p = dir.path();
+    let epic_branch = format!("epic/{epic_id}-my-epic");
+
+    // No-ff merge the epic into main so it has zero commits beyond main.
+    git(p, &["-c", "commit.gpgsign=false", "merge", "--no-ff", &epic_branch, "-m", "merge epic"]);
+
+    let out = run_apm(p, &["epic", "submit", &epic_id]);
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(
+        stdout.contains("nothing to submit"),
+        "expected 'nothing to submit' message; got: {stdout}"
+    );
+    assert!(
+        stdout.contains("apm epic close"),
+        "expected 'apm epic close' suggestion; got: {stdout}"
+    );
+}
+
+#[test]
+fn epic_submit_merge_nothing_to_submit() {
+    let (dir, epic_id) = setup_epic_with_commit();
+    let p = dir.path();
+    let epic_branch = format!("epic/{epic_id}-my-epic");
+
+    // No-ff merge the epic into main so it has zero commits beyond main.
+    git(p, &["-c", "commit.gpgsign=false", "merge", "--no-ff", &epic_branch, "-m", "merge epic"]);
+
+    let out = run_apm(p, &["epic", "submit", &epic_id, "--merge"]);
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(
+        stdout.contains("nothing to submit"),
+        "expected 'nothing to submit' message; got: {stdout}"
+    );
+    assert!(
+        !stdout.contains("merge conflict") && !stderr.contains("merge conflict"),
+        "should not report a merge conflict; stdout: {stdout}, stderr: {stderr}"
+    );
+}
+
+#[test]
+fn epic_submit_auto_nothing_to_submit() {
+    let (dir, epic_id) = setup_epic_with_commit();
+    let p = dir.path();
+    let epic_branch = format!("epic/{epic_id}-my-epic");
+
+    // No-ff merge the epic into main so it has zero commits beyond main.
+    git(p, &["-c", "commit.gpgsign=false", "merge", "--no-ff", &epic_branch, "-m", "merge epic"]);
+
+    let out = run_apm(p, &["epic", "submit", &epic_id, "--auto"]);
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(
+        stdout.contains("nothing to submit"),
+        "expected 'nothing to submit' message; got: {stdout}"
+    );
+}
+
+#[test]
+fn epic_submit_merge_conflict_unchanged() {
+    let (dir, epic_id) = setup_epic_with_commit();
+    let p = dir.path();
+    let epic_branch = format!("epic/{epic_id}-my-epic");
+
+    // Create the same file on both branches with different content so the
+    // merge has a genuine, non-trivial conflict.
+    git(p, &["checkout", &epic_branch]);
+    std::fs::write(p.join("f.txt"), "epic version\n").unwrap();
+    git(p, &["add", "f.txt"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "epic change"]);
+    git(p, &["checkout", "main"]);
+    std::fs::write(p.join("f.txt"), "main version\n").unwrap();
+    git(p, &["add", "f.txt"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "main change"]);
+
+    let result = apm::cmd::epic::run_submit(p, &epic_id, true, false, false);
+    let err = result.unwrap_err();
+    let msg = err.to_string();
+    assert!(
+        msg.contains("merge conflict — resolve manually"),
+        "expected unchanged merge-conflict error; got: {msg}"
+    );
+}
+
+#[test]
 fn sync_detect_epic_submit_hint() {
     // Epic whose derived state is "done" (all tickets closed) but not merged
     // → appears in epic_submit_hints.
