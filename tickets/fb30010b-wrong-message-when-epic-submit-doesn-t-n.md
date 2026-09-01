@@ -56,21 +56,23 @@ can most likely just be closed with `apm epic close`.
 
 In `apm/src/cmd/epic.rs::run_submit`, add an upfront guard right after the
 epic branch is resolved (after the `epic_id`/`pr_title`/`default_branch`
-bindings around line 88-90) and before the existing "Determine whether to
-merge locally or push+PR" block (line 92 today). The guard runs unconditionally,
-before `do_merge` is computed, so it covers `--pr` (default), `--merge`, and
+bindings at lines 88-90) and before the existing "Determine whether to merge
+locally or push+PR" block (line 92). The guard runs unconditionally, before
+`do_merge` is computed, so it covers `--pr` (default), `--merge`, and
 `--auto` in one place without per-mode branching.
 
-Count commits reachable from `epic_branch` but not `default_branch`:
+Count commits reachable from `epic_branch` but not `default_branch` using
+`std::process::Command` directly — `apm_core::git_util::run` is `pub(crate)`
+inside `apm-core` (`apm-core/src/git_util.rs:7`) and is not visible from the
+`apm` crate. Mirror the existing rev-list pattern already used in
+`run_close` (`apm/src/cmd/epic.rs:251-255`):
 
 ```rust
-let ahead = apm_core::git_util::run(
-    root,
-    &["rev-list", "--count", &format!("{default_branch}..{epic_branch}")],
-)?
-.trim()
-.parse::<usize>()
-.unwrap_or(0);
+let count_out = std::process::Command::new("git")
+    .current_dir(root)
+    .args(["rev-list", "--count", &format!("{default_branch}..{epic_branch}")])
+    .output()?;
+let ahead = String::from_utf8_lossy(&count_out.stdout).trim().parse::<u64>().unwrap_or(0);
 if ahead == 0 {
     println!("epic has no commits beyond {default_branch}; nothing to submit");
     println!("if this epic's work already landed, run `apm epic close {epic_id}`");
@@ -78,11 +80,19 @@ if ahead == 0 {
 }
 ```
 
-This mirrors the existing `rev-list --count base..branch` pattern already
-used in `apm-core/src/git_util.rs:928` and `apm-core/src/sync.rs:198`, and
-the existing "print and return Ok(())" early-exit pattern `run_refresh_epic`
-already uses for its analogous "epic branch is up to date with
-{default_branch}" case (`apm/src/cmd/epic.rs:353-356`).
+Do not source this `ahead` value from `apm_core::epic::merge_tree_status`
+(already called at line 94 for `auto_mode`'s clean check) — its `ahead`
+field counts `{epic_branch}..{default_branch}` (commits `default_branch` has
+that `epic_branch` doesn't; the direction `run_refresh_epic` needs to decide
+whether the epic needs refreshing from main). Submit needs the opposite
+direction — commits `epic_branch` has that `default_branch` doesn't — so
+this must be a separate `rev-list --count` call in the
+`default_branch..epic_branch` order as above; reusing `merge_tree_status`'s
+`ahead` here would silently check the wrong direction.
+
+This early-return mirrors the existing "print and return Ok(())" pattern
+`run_refresh_epic` already uses for its analogous "epic branch is up to date
+with {default_branch}" case (`apm/src/cmd/epic.rs:353-356`).
 
 With this guard in place, the two reported symptoms both disappear at the
 source: the `--pr` path never reaches `gh_pr_create_or_update` (so `gh pr
@@ -96,22 +106,31 @@ unmerged commits.
 
 Add integration tests in `apm/tests/integration.rs` near
 `epic_submit_merge_then_close` (~line 9823), reusing the existing
-`setup_epic_with_commit` / `setup_with_epic` helpers:
+`setup_epic_with_commit` helper and the `run_apm` subprocess helper
+(`apm/tests/integration.rs:16`). The three "nothing to submit" tests must go
+through `run_apm`, not a direct `run_submit` call: `println!` output from an
+in-process call is not visible to the test's own assertions, only
+`run_apm`'s subprocess `Output.stdout` is capturable.
 
-- A test that merges the epic branch fully into main first (so `ahead == 0`,
-  as in `epic_close_succeeds_on_regular_merged_branch`'s setup at line
-  9621-9622), then calls `run_submit` with `merge=false, pr=false,
-  auto_mode=false` (default `--pr` path) and asserts `Ok(())` plus stdout
-  containing "nothing to submit" and "apm epic close".
-- The same setup, but calling `run_submit` with `merge=true` and asserting
-  the same message and `Ok(())`, with no "merge conflict" text anywhere in
-  the error/output.
-- The same setup with `auto_mode=true`, asserting the same short-circuit.
+- No-ff merge the epic branch fully into main first (so `ahead == 0`, as in
+  `epic_close_succeeds_on_regular_merged_branch`'s setup at line 9621-9622),
+  then call `run_apm(p, &["epic", "submit", &epic_id])` (default `--pr`
+  path) and assert the returned `Output.stdout` contains "nothing to submit"
+  and "apm epic close". `run_apm` already asserts `status.success()`
+  internally, so a successful return is itself the exit-0 assertion.
+- The same setup, but `run_apm(p, &["epic", "submit", &epic_id, "--merge"])`,
+  asserting the same stdout message and that neither stdout nor stderr
+  contains "merge conflict".
+- The same setup with `run_apm(p, &["epic", "submit", &epic_id, "--auto"])`,
+  asserting the same short-circuit message.
 - A regression test that constructs a genuine conflict (epic and main both
   modify the same file differently, as in
   `merge_ref_conflict_aborts_and_warns` in `apm-core/src/git_util.rs:2183`)
-  and asserts `run_submit` with `merge=true` still returns the unchanged
-  `merge conflict — resolve manually ...` error.
+  and calls `apm::cmd::epic::run_submit` directly with `merge=true` — unlike
+  the three tests above, this one only needs to assert on the returned `Err`
+  string, not on stdout, so it can keep the in-process call style already
+  used by `epic_submit_merge_then_close` — asserting the error is unchanged:
+  `merge conflict — resolve manually ...`.
 
 ### Open questions
 
