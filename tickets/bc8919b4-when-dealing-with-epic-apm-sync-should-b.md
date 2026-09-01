@@ -37,7 +37,11 @@ This affects operators running `apm sync` interactively at the end of a work ses
 
 ### Out of scope
 
-Explicit list of what this ticket does not cover.
+- A non-interactive flag to auto-submit or auto-close ready epics without prompting (e.g. a hypothetical `--auto-epic`); `--quiet` remains the only opt-out and it fully suppresses epic handling, same as today
+- Changes to `apm epic submit` / `apm epic close` themselves — `apm sync` only calls into their existing logic
+- Changes to how epic membership or "done" state is derived (`derive_epic_state`, the ticket `epic` frontmatter field) — untouched
+- Surfacing this flow in `apm-server` (web UI) — CLI only
+- Making `apm sync --offline` fully support the PR/auto submit choices — an offline PR attempt fails with the same network error `apm epic submit --pr` already produces today; not addressed here
 
 ### Approach
 
