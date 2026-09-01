@@ -16,12 +16,24 @@ updated_at = "2026-09-01T01:04:15.158538Z"
 
 ### Problem
 
-syn git:(main) apm epic submit 565f --pr
-Error: gh pr create failed: pull request create failed: GraphQL: No commits between main and epic/565fe172-manual-test-observations-consumer-folder (createPullRequest)
-➜  syn git:(main) git merge epic/565fe172-manual-test-observations-consumer-folder
-Already up to date.
-➜  syn git:(main) apm epic submit 565f --merge
-Error: merge conflict — resolve manually after checking out main, or use --pr to open a PR instead
+`apm epic submit` produces misleading, actionable-free errors when the epic
+branch has no commits beyond the default branch — e.g. because its tickets
+already landed via another path, or the branch was already merged manually.
+
+With the default `--pr` mode, `run_submit` (`apm/src/cmd/epic.rs`) shells out
+straight to `gh pr create`. When there is nothing to submit, `gh` fails with
+a raw GraphQL error that gets surfaced verbatim: `Error: gh pr create failed:
+... GraphQL: No commits between main and epic/... (createPullRequest)`. With
+`--merge`, `apm_core::git_util::merge_ref` treats "Already up to date" (a
+successful no-op `git merge`) identically to a real conflict — both paths
+return `None` — so `run_submit` reports `Error: merge conflict — resolve
+manually after checking out main, or use --pr to open a PR instead`, even
+though there is no conflict: `git merge` itself would report "Already up to
+date."
+
+Both messages send the user chasing a nonexistent problem instead of telling
+them the real situation: there is nothing new to submit, and the epic branch
+can most likely just be closed with `apm epic close`.
 
 ### Acceptance criteria
 
@@ -38,13 +50,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
