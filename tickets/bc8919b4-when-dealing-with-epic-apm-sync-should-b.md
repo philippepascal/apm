@@ -16,10 +16,11 @@ updated_at = "2026-09-01T18:03:53.553660Z"
 
 ### Problem
 
-After closing tickets and pushing tickets to origin.
-if some of the tickets being closed by syn belong to an epic, it should check if that epic still has work to be done.
-if not (all ticket of epic are closed) it should ask the user if they want to submit that epic to main, and how (merge, PR, auto). it should do it for each epic one by one, as choice may vary.
-once done, for epics that have been submitted, if should ask if the user wants to close the epic.
+`apm sync` already detects epics whose tickets are all in a terminal state (`Candidates.epic_submit_hints` in `apm-core/src/sync.rs`) and epics whose branch is already merged into the default branch but not yet deleted (`Candidates.epic_close_hints`). Today `apm/src/cmd/sync.rs` only *prints* these as passive text ("Epics ready to submit (apm epic submit <id>):" / "...to close..."). The operator has to remember to run `apm epic submit <id>` and `apm epic close <id>` by hand afterwards, once per epic, choosing the right submit method (merge / PR / auto) themselves.
+
+Two gaps compound this. First, the hints are computed once, before `sync::apply` closes this run's tickets, so an epic that only becomes fully done as a direct result of tickets closing during *this* `apm sync` invocation is not reported until the *next* `apm sync` run. Second, there is no way to act on a hint in the moment — the operator must re-run a separate command per epic, even though `apm epic submit`/`apm epic close` already implement the exact decision needed (see `run_refresh_epic`'s existing `[1] Merge / [2] PR / [3] Auto / [4] Skip` menu, which this ticket reuses in spirit).
+
+This affects operators running `apm sync` interactively at the end of a work session, which is precisely when several tickets in an epic tend to finish in the same pass.
 
 ### Acceptance criteria
 
@@ -36,13 +37,10 @@ How the implementation will work.
 ### Open questions
 
 
-
 ### Amendment requests
 
 
-
 ### Code review
-
 
 
 ## History
