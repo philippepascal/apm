@@ -1,7 +1,7 @@
 +++
 id = "fb30010b"
 title = "wrong message when epic submit doesn't need to merge anything"
-state = "specd"
+state = "ready"
 priority = 0
 effort = 2
 risk = 2
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/fb30010b-wrong-message-when-epic-submit-doesn-t-n"
 created_at = "2026-09-01T00:59:43.049321Z"
-updated_at = "2026-09-01T01:36:34.882260Z"
+updated_at = "2026-09-01T01:44:43.926370Z"
 +++
 
 ## Spec
@@ -154,3 +154,4 @@ in-process call is not visible to the test's own assertions, only
 | 2026-09-01T01:11Z | specd | amend | philippepascal |
 | 2026-09-01T01:34Z | amend | in_design | philippepascal |
 | 2026-09-01T01:36Z | in_design | specd | claude |
+| 2026-09-01T01:44Z | specd | ready | philippepascal |
