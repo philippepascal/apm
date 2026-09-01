@@ -6056,6 +6056,97 @@ fn sync_main_no_remote_skips() {
     assert!(result.is_ok(), "no remote: sync must return Ok, got: {result:?}");
 }
 
+// Regression: a "Merge locally" epic-submit choice made mid-`apm sync` moves the
+// default branch tip forward, but default_is_ahead is computed in Block 1 — before
+// the epic submit flow runs. Without folding the epic merge into default_is_ahead,
+// Block 3 never offers to push, and an immediate "yes" to the close-epic prompt
+// would delete the epic branch while its merged commits sit unpushed on local main.
+#[test]
+fn sync_epic_submit_merge_sets_default_is_ahead_for_push() {
+    let (origin, local) = setup_sync_repo();
+    let l = local.path();
+    std::fs::write(l.join(".apm/local.toml"), "username = \"test\"\n").unwrap();
+
+    // Create the epic and give its branch a commit of its own — otherwise
+    // `apm epic submit` has "nothing to submit" and no merge commit is made.
+    let out = run_apm(l, &["epic", "new", "My Epic"]);
+    let epic_branch = String::from_utf8_lossy(&out.stdout).trim().to_string();
+    let epic_id = epic_branch
+        .trim_start_matches("epic/")
+        .split('-')
+        .next()
+        .unwrap()
+        .to_string();
+    git(l, &["checkout", &epic_branch]);
+    std::fs::write(l.join("epic-work.txt"), "epic work").unwrap();
+    git(l, &["add", "epic-work.txt"]);
+    git(l, &["-c", "commit.gpgsign=false", "commit", "-m", "epic work"]);
+    git(l, &["checkout", "main"]);
+
+    // Create the epic's only ticket, force it to "implemented", and merge its
+    // branch into main (simulating an already-landed PR) — a Case 1 close
+    // candidate. Push main so local and origin start this test in sync.
+    let out = run_apm(l, &["new", "--no-edit", "--no-aggressive", "--epic", &epic_id, "Epic ticket"]);
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let line = stdout.lines().find(|ln| ln.starts_with("Created ticket")).unwrap();
+    let ticket_branch = line.split("(branch: ").nth(1).unwrap().trim_end_matches(')').to_string();
+    let ticket_id = line.split_whitespace().nth(2).unwrap().trim_end_matches(':').to_string();
+    run_apm(l, &["spec", &ticket_id, "--section", "Acceptance criteria", "--set", "- [x] Done", "--no-aggressive"]);
+    run_apm(l, &["state", &ticket_id, "implemented", "--force", "--no-aggressive"]);
+    git(l, &["-c", "commit.gpgsign=false", "merge", "--no-ff", &ticket_branch, "--no-edit"]);
+    git(l, &["push", "origin", "main"]);
+
+    // Sanity check: local and origin main must start in sync (default_is_ahead
+    // false going in) so any push at the end can only be due to the epic flow.
+    assert_eq!(
+        rev_parse(l, "main"), rev_parse(origin.path(), "main"),
+        "local and origin main must start in sync"
+    );
+
+    // Run the real binary: --auto-close confirms ticket closing without reading
+    // stdin, leaving the piped "1\n" free for the epic submit menu ("Merge
+    // locally"); the subsequent close-epic prompt reads EOF and declines.
+    use std::io::Write as _;
+    let mut input = tempfile::NamedTempFile::new().unwrap();
+    writeln!(input, "1").unwrap();
+    input.flush().unwrap();
+    let input_file = std::fs::File::open(input.path()).unwrap();
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
+        .args(["sync", "--push-default", "--auto-close"])
+        .current_dir(l)
+        .env("GIT_AUTHOR_NAME", "test")
+        .env("GIT_AUTHOR_EMAIL", "test@test.com")
+        .env("GIT_COMMITTER_NAME", "test")
+        .env("GIT_COMMITTER_EMAIL", "test@test.com")
+        .stdin(std::process::Stdio::from(input_file))
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "apm sync failed:\nstdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr),
+    );
+
+    // The epic-merge commit only exists on local main; the push at the end of
+    // Block 3 can only reach origin if the epic submit loop set default_is_ahead.
+    assert_eq!(
+        rev_parse(origin.path(), "main"), rev_parse(l, "main"),
+        "origin main must advance to include the epic merge commit"
+    );
+
+    // The close-epic prompt read EOF (stdin was exhausted by the submit menu) and
+    // declined — the epic branch must still exist.
+    let branches = std::process::Command::new("git")
+        .args(["branch", "--list", &epic_branch])
+        .current_dir(l)
+        .output().unwrap();
+    assert!(
+        !String::from_utf8_lossy(&branches.stdout).trim().is_empty(),
+        "epic branch should still exist — close prompt read EOF and must decline"
+    );
+}
+
 // ── sync_non_checked_out_refs integration tests ───────────────────────────────
 //
 // Each test uses a bare origin and a local clone. Tests call sync_non_checked_out_refs
@@ -10033,6 +10124,206 @@ fn sync_empty_epic_behind_main_not_in_close_hints() {
         candidates.epic_submit_hints.iter().all(|(id, _)| id != epic_id),
         "epic {epic_id} with no own commits should NOT appear in epic_submit_hints; got: {:?}",
         candidates.epic_submit_hints
+    );
+}
+
+#[test]
+fn epic_hints_reflects_ticket_close_in_same_process() {
+    // apm_core::sync::epic_hints must reflect a ticket-close commit made
+    // moments earlier in the same process — no fresh process/re-read needed.
+    let (dir, epic_id) = setup_epic_with_commit();
+    let p = dir.path();
+
+    let config_before_close = apm_core::config::Config::load(p).unwrap();
+    // Before closing: ticket is still "implemented" (non-terminal), so the
+    // epic must not yet be submit-ready.
+    let before_setup = apm_core::sync::epic_hints(p, &config_before_close).unwrap();
+    assert!(
+        before_setup.submit.iter().all(|(eid, _)| eid != &epic_id),
+        "epic {epic_id} should NOT be submit-ready with no tickets; got: {:?}",
+        before_setup.submit
+    );
+
+    setup_epic_ticket_ready_to_close(p, &epic_id);
+
+    let config = apm_core::config::Config::load(p).unwrap();
+
+    // Ticket is merged in but still "implemented" (non-terminal); epic must
+    // not yet be submit-ready.
+    let before = apm_core::sync::epic_hints(p, &config).unwrap();
+    assert!(
+        before.submit.iter().all(|(eid, _)| eid != &epic_id),
+        "epic {epic_id} should NOT be submit-ready before its ticket closes; got: {:?}",
+        before.submit
+    );
+
+    let candidates = apm_core::sync::detect(p, &config).unwrap();
+    assert!(
+        !candidates.close.is_empty(),
+        "expected a close candidate for the epic ticket"
+    );
+    apm_core::sync::apply(p, &config, &candidates, "test", false).unwrap();
+
+    // Immediately after, in the same process: the epic must now be submit-ready.
+    let after = apm_core::sync::epic_hints(p, &config).unwrap();
+    assert!(
+        after.submit.iter().any(|(eid, _)| eid == &epic_id),
+        "expected epic {epic_id} in submit hints right after its last ticket closed; got: {:?}",
+        after.submit
+    );
+    assert!(
+        after.close.iter().all(|(eid, _)| eid != &epic_id),
+        "epic {epic_id} should NOT be close-ready — its own branch was never merged; got: {:?}",
+        after.close
+    );
+}
+
+/// Create an epic ticket, force it into `implemented`, and merge its branch into
+/// main — leaving it one `apm sync --auto-close` away from making the epic
+/// submit-ready. Returns the epic branch name.
+fn setup_epic_ticket_ready_to_close(p: &std::path::Path, epic_id: &str) -> String {
+    let out = run_apm(p, &["new", "--no-edit", "--no-aggressive", "--epic", epic_id, "Epic ticket"]);
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let line = stdout.lines().find(|l| l.starts_with("Created ticket")).unwrap();
+    let id = line.split_whitespace().nth(2).unwrap().trim_end_matches(':').to_string();
+    let branch = line.split("(branch: ").nth(1).unwrap().trim_end_matches(')').to_string();
+    run_apm(p, &["spec", &id, "--section", "Acceptance criteria", "--set", "- [x] Done", "--no-aggressive"]);
+    run_apm(p, &["state", &id, "implemented", "--force", "--no-aggressive"]);
+    git(p, &["-c", "commit.gpgsign=false", "merge", "--no-ff", &branch, "--no-edit"]);
+    branch
+}
+
+#[test]
+fn sync_prints_epic_submit_banner_when_epic_becomes_ready_mid_run() {
+    // Closing an epic's last open ticket should surface the submit banner/menu
+    // for that epic in the very same `apm sync` invocation — no second run needed.
+    let (dir, epic_id) = setup_epic_with_commit();
+    let p = dir.path();
+    setup_epic_ticket_ready_to_close(p, &epic_id);
+    let epic_branch = format!("epic/{epic_id}-my-epic");
+
+    let out = run_apm(p, &["sync", "--offline", "--auto-close", "--no-aggressive"]);
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(
+        stdout.contains(&format!("Epic {epic_id}")) && stdout.contains("no tickets remain open"),
+        "expected submit banner for epic {epic_id}; got: {stdout}"
+    );
+    assert!(
+        stdout.contains("[1] Merge locally") && stdout.contains("[4] Skip"),
+        "expected submit menu text; got: {stdout}"
+    );
+
+    // Stdin is EOF (inherited, closed) — the menu defaults to skip, so the
+    // epic branch must remain untouched.
+    let branches = std::process::Command::new("git")
+        .args(["branch", "--list", &epic_branch])
+        .current_dir(p)
+        .output().unwrap();
+    assert!(
+        !String::from_utf8_lossy(&branches.stdout).trim().is_empty(),
+        "epic branch should still exist after a skipped submit prompt"
+    );
+}
+
+#[test]
+fn sync_quiet_suppresses_epic_submit_prompt() {
+    let (dir, epic_id) = setup_epic_with_commit();
+    let p = dir.path();
+    setup_epic_ticket_ready_to_close(p, &epic_id);
+    let epic_branch = format!("epic/{epic_id}-my-epic");
+
+    let out = run_apm(p, &["sync", "--offline", "--auto-close", "--quiet", "--no-aggressive"]);
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    assert!(
+        !stdout.contains(&format!("Epic {epic_id}")) && !stdout.contains("no tickets remain open"),
+        "quiet sync must not print the epic submit banner; got: {stdout}"
+    );
+    assert!(
+        !stdout.contains("Choice [1-4]"),
+        "quiet sync must not print the epic submit menu; got: {stdout}"
+    );
+
+    let branches = std::process::Command::new("git")
+        .args(["branch", "--list", &epic_branch])
+        .current_dir(p)
+        .output().unwrap();
+    assert!(
+        !String::from_utf8_lossy(&branches.stdout).trim().is_empty(),
+        "epic branch should still exist — quiet sync must not act on it"
+    );
+}
+
+#[test]
+fn sync_close_prompt_fires_after_epic_submit_in_same_run() {
+    // Answering "1" (merge locally) at the submit menu, then "y" at the close
+    // prompt, must merge AND delete the epic branch in one `apm sync` invocation.
+    let (dir, epic_id) = setup_epic_with_commit();
+    let p = dir.path();
+    let epic_branch = format!("epic/{epic_id}-my-epic");
+
+    // Create the epic's ticket, force it to "implemented", and land it in the
+    // epic branch (not main) — the real shape of an epic-scoped ticket whose PR
+    // merged into its target_branch (Case 4), matching how `--epic` tickets
+    // actually complete.
+    let out = run_apm(p, &["new", "--no-edit", "--no-aggressive", "--epic", &epic_id, "Epic ticket"]);
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let line = stdout.lines().find(|ln| ln.starts_with("Created ticket")).unwrap();
+    let ticket_branch = line.split("(branch: ").nth(1).unwrap().trim_end_matches(')').to_string();
+    let ticket_id = line.split_whitespace().nth(2).unwrap().trim_end_matches(':').to_string();
+    run_apm(p, &["spec", &ticket_id, "--section", "Acceptance criteria", "--set", "- [x] Done", "--no-aggressive"]);
+    run_apm(p, &["state", &ticket_id, "implemented", "--force", "--no-aggressive"]);
+    git(p, &["checkout", &epic_branch]);
+    git(p, &["-c", "commit.gpgsign=false", "merge", "--no-ff", &ticket_branch, "--no-edit"]);
+    git(p, &["checkout", "main"]);
+
+    // Give main a commit the epic branch doesn't have, so the eventual "Merge
+    // locally" produces a real merge commit instead of a fast-forward — after a
+    // fast-forward, the epic branch's tip and main's tip become identical, which
+    // would (separately, pre-existing behaviour) hide it from close_hints again.
+    std::fs::write(p.join("main-only.txt"), "main work").unwrap();
+    git(p, &["add", "main-only.txt"]);
+    git(p, &["-c", "commit.gpgsign=false", "commit", "-m", "unrelated main work"]);
+
+    use std::io::Write as _;
+    let mut input = tempfile::NamedTempFile::new().unwrap();
+    writeln!(input, "1").unwrap();
+    writeln!(input, "y").unwrap();
+    input.flush().unwrap();
+    let input_file = std::fs::File::open(input.path()).unwrap();
+    let out = std::process::Command::new(env!("CARGO_BIN_EXE_apm"))
+        .args(["sync", "--offline", "--auto-close", "--no-aggressive"])
+        .current_dir(p)
+        .env("GIT_AUTHOR_NAME", "test")
+        .env("GIT_AUTHOR_EMAIL", "test@test.com")
+        .env("GIT_COMMITTER_NAME", "test")
+        .env("GIT_COMMITTER_EMAIL", "test@test.com")
+        .stdin(std::process::Stdio::from(input_file))
+        .output()
+        .unwrap();
+    assert!(
+        out.status.success(),
+        "apm sync failed:\nstdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr),
+    );
+
+    let branches = std::process::Command::new("git")
+        .args(["branch", "--list", &epic_branch])
+        .current_dir(p)
+        .output().unwrap();
+    assert!(
+        String::from_utf8_lossy(&branches.stdout).trim().is_empty(),
+        "epic branch should be deleted after accepting merge + close in the same run"
+    );
+
+    let head = std::process::Command::new("git")
+        .args(["log", "--oneline", "-1", "main"])
+        .current_dir(p)
+        .output().unwrap();
+    let head_log = String::from_utf8_lossy(&head.stdout);
+    assert!(
+        head_log.to_lowercase().contains("merge") || head_log.contains(&epic_id),
+        "expected the epic merge to land on main; got: {head_log}"
     );
 }
 
