@@ -1,7 +1,7 @@
 +++
 id = "bc8919b4"
 title = "when dealing with epic, apm sync should be more advance"
-state = "groomed"
+state = "in_design"
 priority = 0
 effort = 0
 risk = 0
@@ -9,7 +9,7 @@ author = "philippepascal"
 owner = "philippepascal"
 branch = "ticket/bc8919b4-when-dealing-with-epic-apm-sync-should-b"
 created_at = "2026-09-01T18:00:23.105706Z"
-updated_at = "2026-09-01T18:03:46.619342Z"
+updated_at = "2026-09-01T18:03:53.553660Z"
 +++
 
 ## Spec
@@ -51,3 +51,4 @@ How the implementation will work.
 |------|------|----|----|
 | 2026-09-01T18:00Z | — | new | philippepascal |
 | 2026-09-01T18:03Z | new | groomed | philippepascal |
+| 2026-09-01T18:03Z | groomed | in_design | philippepascal |
